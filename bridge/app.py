@@ -60,7 +60,7 @@ DEFAULT_VELOCITY = 80
 DEFAULT_DRUM_VELOCITY = 90
 DEFAULT_KEYSWITCH_VELOCITY = 100
 
-BASE_SYSTEM_PROMPT = """You are an expert composer. Output ONLY valid JSON, no markdown.
+BASE_SYSTEM_PROMPT = """You are an expert composer. Create realistic, humanised musical parts that sound like they were performed by a real musician. Output ONLY valid JSON, no markdown.
 
 CRITICAL RULE - USE ONLY ALLOWED PITCHES:
 You will be given a list of ALLOWED PITCHES (MIDI numbers). Use ONLY those exact pitch values.
@@ -142,7 +142,7 @@ REPAIR_SYSTEM_PROMPT = (
     "Return valid JSON only. Do not include any extra text or markdown."
 )
 
-FREE_MODE_SYSTEM_PROMPT = """You are an expert composer with COMPLETE CREATIVE FREEDOM. Output ONLY valid JSON, no markdown.
+FREE_MODE_SYSTEM_PROMPT = """You are an expert composer with COMPLETE CREATIVE FREEDOM. Create realistic, humanised musical parts that sound like they were performed by a real musician. Output ONLY valid JSON, no markdown.
 
 CRITICAL PRINCIPLE - MATCH COMPLEXITY TO USER REQUEST:
 Read the user's request carefully. Your output complexity should MATCH what they ask for:
