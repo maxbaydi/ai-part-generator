@@ -76,23 +76,40 @@ OUTPUT FORMAT:
   "articulation": "legato"
 }
 
-DYNAMICS CURVES RULES:
-- 'curves.dynamics' controls expression (CC1), values 0-127
-- Dynamics shape MUST match the musical style and context you are given
-- DO NOT always use crescendo-decrescendo. Match dynamics to the mood:
-  * Constant intensity: use flat or minimal variation (e.g., steady 80-90)
-  * Crescendo only: start low, build to peak (e.g., 40 → 100)
-  * Decrescendo only: start high, fade out (e.g., 100 → 40)
-  * Terraced dynamics: sudden jumps between levels (e.g., 60 → 100 → 60, no gradual transitions)
-  * Wave/pulsing: rhythmic swells matching phrases
-  * Explosive accents: mostly quiet with sudden spikes
-- Include 3-8 breakpoints, distributed across the duration
-- Follow user instructions for dynamics if provided
+TWO-LAYER DYNAMICS SYSTEM:
+There are TWO independent dynamics controls - use BOTH for expressive parts:
+
+1. VELOCITY (vel: 1-127) - PER-NOTE dynamics, controls:
+   - Attack intensity of each individual note
+   - Critical for SHORT articulations (staccato, pizzicato, spiccato) where velocity IS the dynamics
+   - Use to create accents, ghost notes, phrase shaping within a passage
+   - Vary velocity to avoid mechanical feel: accented notes 100-127, normal 70-90, soft 40-60
+
+2. CC1 CURVE (curves.dynamics) - PHRASE/GLOBAL dynamics, controls:
+   - Overall expression/volume envelope over time
+   - Critical for LONG articulations (sustain, legato, tremolo) where CC1 shapes the sound
+   - Use for crescendos, decrescendos, swells, phrase arcs
+   - Values 0-127, include 3-8 breakpoints
+
+DYNAMICS STRATEGIES:
+- Melodic lines: Vary velocity per note (phrase peaks louder), CC1 for overall arc
+- Chords/Pads: Similar velocity across chord, CC1 for slow swells
+- Rhythmic parts: Velocity for accents (beat 1 louder), CC1 relatively flat
+- Accented passage: High velocity on accents, lower between, CC1 supports
+- Smooth legato: Even velocity, CC1 does all expression work
+
+DO NOT always use crescendo-decrescendo. Match dynamics to the mood:
+- Constant intensity: flat CC1 (80-90), even velocities
+- Building tension: CC1 crescendo (40→100), velocities increase
+- Fading: CC1 decrescendo (100→40), velocities decrease
+- Terraced: sudden CC1 jumps, velocity groups at each level
+- Accented: spiky velocities (40-50 vs 100-120), CC1 supports
 
 CRITICAL: 
 - Use ONLY pitches from the ALLOWED PITCHES list
-- Generate 12+ notes spread across the entire duration
-- MUST include 'curves' with 'dynamics' that matches the requested style"""
+- Generate enough notes spread across the entire duration
+- MUST include 'curves' with 'dynamics' that matches the requested style
+- VARY velocity values - do not use same velocity for all notes"""
 
 REPAIR_SYSTEM_PROMPT = (
     "Return valid JSON only. Do not include any extra text or markdown."
@@ -100,59 +117,67 @@ REPAIR_SYSTEM_PROMPT = (
 
 FREE_MODE_SYSTEM_PROMPT = """You are an expert composer with COMPLETE CREATIVE FREEDOM. Output ONLY valid JSON, no markdown.
 
-In FREE MODE you are NOT restricted to a single articulation. You can and SHOULD use MULTIPLE articulations to create a more expressive and interesting musical part.
+CRITICAL PRINCIPLE - MATCH COMPLEXITY TO USER REQUEST:
+Read the user's request carefully. Your output complexity should MATCH what they ask for:
+- If they ask for "simple chords" or "basic triads" → generate SIMPLE, STRAIGHTFORWARD chords
+- If they ask for "Hans Zimmer style pads" → use sustained whole-note chords with slow CC1 swells
+- If they ask for "complex melody" or "virtuosic passage" → then be creative and elaborate
+- If they ask for "accompanying part" → support, don't dominate
+DO NOT over-complicate simple requests. Professional composers know when to be simple.
 
 CRITICAL RULE - USE ONLY ALLOWED PITCHES:
 You will be given a list of ALLOWED PITCHES (MIDI numbers). Use ONLY those exact pitch values.
 DO NOT use any pitch that is not in the allowed list. This ensures notes stay in the correct key/scale.
 
-CREATIVE GUIDELINES:
-1. CHOOSE the best generation TYPE for the context (melody, arpeggio, chords, bass, etc.)
-2. CHOOSE the best STYLE/MOOD that fits the context and user instructions
-3. USE MULTIPLE ARTICULATIONS where musically appropriate:
-   - Mix legato passages with staccato accents
-   - Use pizzicato for rhythmic punctuation
-   - Add tremolo for intensity
-   - Combine sustains with spiccato for contrast
-4. Create VARIED and INTERESTING musical content - avoid repetitive patterns
-5. Pay attention to the musical context and complement other instruments
+ARTICULATION USAGE:
+You CAN use multiple articulations, but ONLY when musically justified:
+- For SIMPLE PARTS (pads, sustained chords, basic accompaniment): use ONE articulation (usually "sustain")
+- For MELODIC/EXPRESSIVE parts: mix articulations tastefully
+- For RHYTHMIC parts: consider staccato/spiccato for punch
+- NEVER add articulation variety just for variety's sake
 
-MUSIC THEORY RULES:
-1. MELODY: Use stepwise motion (2nds, 3rds) mostly. Leaps (4ths, 5ths) create tension - resolve by step.
-2. HARMONY: Play chord tones on strong beats. Use passing tones (from the scale) on weak beats.
-3. RHYTHM: Vary note lengths. Longer notes = emphasis. Start phrases on beat 1.
-4. PHRASING: Create 2-4 bar phrases. End phrases on stable scale degrees (1, 3, 5).
-5. CONTOUR: Melodies should have a shape - build up to a climax, then resolve down.
+TWO-LAYER DYNAMICS SYSTEM:
+1. VELOCITY (vel: 1-127) - PER-NOTE dynamics:
+   - Attack intensity of each note
+   - For SHORT articulations (staccato, pizzicato): velocity IS the dynamics
+   - Vary for accents, phrase shaping: strong beats 90-110, weak 60-80, accents 100-127, ghost notes 40-55
+   
+2. CC1 CURVE (curves.dynamics) - PHRASE dynamics:
+   - Overall expression envelope over time
+   - For LONG articulations (sustain, legato): CC1 shapes the sound
+   - Use for crescendos, swells, phrase arcs
 
-OUTPUT FORMAT (FREE MODE - with articulation changes):
+DYNAMICS STRATEGIES BY PART TYPE:
+- Sustained pads/chords: FLAT or slow-swell CC1, uniform velocity across chord
+- Melodic lines: Varied velocity (phrase peaks), CC1 for overall arc
+- Rhythmic parts: Velocity for accents, CC1 relatively flat
+- Building intensity: Both velocity and CC1 increase together
+- Intimate/soft: Low velocity (50-70), low CC1 (40-60)
+
+OUTPUT FORMAT:
 {
   "notes": [
-    {"start_q": 0, "dur_q": 2, "pitch": 72, "vel": 90, "chan": 1, "articulation": "sustain"},
-    {"start_q": 2, "dur_q": 0.5, "pitch": 74, "vel": 85, "chan": 1, "articulation": "staccato"},
-    {"start_q": 2.5, "dur_q": 1, "pitch": 76, "vel": 95, "chan": 1, "articulation": "sustain"},
+    {"start_q": 0, "dur_q": 4, "pitch": 60, "vel": 85, "chan": 1, "articulation": "sustain"},
+    {"start_q": 0, "dur_q": 4, "pitch": 64, "vel": 85, "chan": 1, "articulation": "sustain"},
+    {"start_q": 0, "dur_q": 4, "pitch": 67, "vel": 85, "chan": 1, "articulation": "sustain"},
     ...
   ],
-  "curves": {"dynamics": {"interp": "cubic", "breakpoints": [{"time_q": X, "value": Y}, ...]}},
-  "generation_type": "Melody",
-  "generation_style": "Heroic"
+  "curves": {"dynamics": {"interp": "cubic", "breakpoints": [{"time_q": 0, "value": 70}, {"time_q": 8, "value": 85}, ...]}},
+  "generation_type": "Chords",
+  "generation_style": "Cinematic"
 }
 
-IMPORTANT - ARTICULATION PER NOTE:
-- Each note can have its OWN "articulation" field
-- When articulation changes, a new keyswitch will be inserted automatically
-- Use this to create expressive, varied performances
-- Available articulations will be listed in the user prompt
-
-DYNAMICS CURVES RULES:
-- 'curves.dynamics' controls expression (CC1), values 0-127
-- Match dynamics to the musical style you choose
-- Include 3-8 breakpoints, distributed across the duration
+IMPORTANT:
+- Each note CAN have "articulation" field (optional if all notes use same articulation)
+- For simple pad/chord parts, you may omit per-note articulation and set global "articulation": "sustain"
+- VARY velocity values appropriately - not all notes should have same velocity
+- Include 'generation_type' and 'generation_style' in response
 
 CRITICAL: 
 - Use ONLY pitches from the ALLOWED PITCHES list
 - Generate enough notes to fill the duration musically
 - MUST include 'curves' with 'dynamics'
-- Include 'generation_type' and 'generation_style' in your response to show what you chose"""
+- MATCH the complexity of your output to what the user actually requested"""
 
 NOTE_RE = re.compile(r"^([A-Ga-g])([#b]?)(-?\d+)$")
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -1225,11 +1250,26 @@ def build_articulation_list_for_prompt(profile: Dict[str, Any]) -> str:
     if not art_map:
         return "No articulations available"
     
-    art_list = []
+    short_arts = []
+    long_arts = []
+    
     for name, data in sorted(art_map.items()):
         desc = data.get("description", name)
-        art_list.append(f"- {name}: {desc}")
-    return "\n".join(art_list)
+        dynamics_type = data.get("dynamics", "cc1")
+        if dynamics_type == "velocity":
+            short_arts.append(f"  - {name}: {desc}")
+        else:
+            long_arts.append(f"  - {name}: {desc}")
+    
+    result_parts = []
+    if long_arts:
+        result_parts.append("LONG articulations (dynamics via CC1 curve):")
+        result_parts.extend(long_arts)
+    if short_arts:
+        result_parts.append("SHORT articulations (dynamics via velocity):")
+        result_parts.extend(short_arts)
+    
+    return "\n".join(result_parts)
 
 
 def build_prompt(
@@ -1521,6 +1561,7 @@ This is the ending. The generated material should:
             f"## FREE MODE COMPOSITION for {profile.get('name', 'instrument')}",
             f"",
             f"YOU DECIDE: Choose the best generation type, style, and articulations for this context.",
+            f"IMPORTANT: Match your output complexity to what the user requests. Simple request = simple output.",
             f"",
             f"### MUSICAL CONTEXT",
             f"- Key: {final_key}",
@@ -1528,8 +1569,10 @@ This is the ending. The generated material should:
             f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
             f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
             f"",
-            f"### AVAILABLE ARTICULATIONS (use multiple for variety):",
+            f"### AVAILABLE ARTICULATIONS:",
             articulation_list_str,
+            f"",
+            f"Note: For LONG articulations, use CC1 curve for dynamics. For SHORT articulations, use velocity.",
         ]
     else:
         user_prompt_parts = [
@@ -1557,18 +1600,27 @@ This is the ending. The generated material should:
             f"- ALLOWED PITCHES (use ONLY these): {valid_pitches_str}",
             f"- Pitch range: MIDI {pitch_low}-{pitch_high}",
             f"- Channel: {midi_channel}",
-            f"- Generate {min_notes}-{max_notes} notes, distributed across all {bars} bars",
+            f"- Generate appropriate number of notes for the part type",
             f"",
             f"### YOUR CREATIVE CHOICES",
-            f"- Choose the best generation TYPE (Melody, Arpeggio, Chords, Bass, etc.)",
-            f"- Choose the best STYLE (Heroic, Romantic, Dark, Playful, etc.)",
-            f"- Use MULTIPLE articulations to create an expressive performance",
-            f"- Each note can have its own 'articulation' field",
+            f"- Choose generation TYPE based on user request or context (Melody, Arpeggio, Chords, Pad, Bass, etc.)",
+            f"- Choose STYLE that fits (Heroic, Romantic, Dark, Cinematic, etc.)",
+            f"- Articulations: use ONE for simple parts (pads, chords), MULTIPLE only for expressive melodic parts",
             f"",
-            f"### DYNAMICS CURVE (CC1 expression)",
-            f"- Create dynamics that match your chosen style",
+            f"### TWO-LAYER DYNAMICS",
+            f"1. VELOCITY (vel): Individual note dynamics. Vary for accents and phrase shaping.",
+            f"   - For SHORT articulations (staccato, pizzicato): velocity IS the main dynamics control",
+            f"   - Accent notes: 100-127, normal: 70-90, soft: 40-60",
+            f"2. CC1 CURVE (curves.dynamics): Overall phrase/expression envelope.",
+            f"   - For LONG articulations (sustain, legato): CC1 shapes the dynamics over time",
+            f"   - For simple pads: use flat or slow-swell curve",
+            f"   - For melodic lines: create phrase-shaped arcs",
         ])
     else:
+        short_articulations = profile.get("articulations", {}).get("short_articulations", [])
+        is_short_art = articulation.lower() in [a.lower() for a in short_articulations]
+        velocity_hint = "Use velocity for note-to-note dynamics (accents: 100-120, normal: 75-95, soft: 50-70)" if is_short_art else "Vary velocity for phrase shaping (phrase peaks: 90-100, between: 70-85)"
+        
         user_prompt_parts.extend([
             f"",
             f"### COMPOSITION RULES",
@@ -1579,15 +1631,21 @@ This is the ending. The generated material should:
             f"- Channel: {midi_channel}",
             f"- Articulation: {articulation}",
             f"",
-            f"### DYNAMICS CURVE (CC1 expression)",
-            f"- {dynamics_hint}",
+            f"### TWO-LAYER DYNAMICS",
+            f"1. VELOCITY (vel): {velocity_hint}",
+            f"2. CC1 CURVE: {dynamics_hint}",
         ])
 
     if request.user_prompt and request.user_prompt.strip():
         user_prompt_parts.append(f"")
-        user_prompt_parts.append(f"### USER REQUEST (follow these instructions, they override defaults):")
+        user_prompt_parts.append(f"### USER REQUEST (PRIORITY - follow these instructions, they override defaults):")
         user_prompt_parts.append(f"{request.user_prompt}")
-        user_prompt_parts.append(f"(If user mentions dynamics, volume, intensity, crescendo, decrescendo, etc. - follow their instructions for the dynamics curve)")
+        user_prompt_parts.append(f"")
+        user_prompt_parts.append(f"INTERPRET USER REQUEST:")
+        user_prompt_parts.append(f"- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output")
+        user_prompt_parts.append(f"- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to CC1 curve AND velocity")
+        user_prompt_parts.append(f"- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach")
+        user_prompt_parts.append(f"- If user asks for chords/pads → use sustained notes, minimal articulation changes")
 
     user_prompt_parts.extend([
         f"",
