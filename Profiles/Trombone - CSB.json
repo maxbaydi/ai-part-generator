@@ -1,0 +1,53 @@
+{
+  "id": "trombone_csb",
+  "name": "Trombone - CSB",
+  "family": "brass",
+  "vendor": "Cinematic Studio Series",
+  "description": "Cinematic Studio Brass Trombone. Powerful, resonant tone with wide dynamic range. Excellent for bold statements and dramatic passages.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "mono",
+    "is_drum": false
+  },
+  "range": {
+    "absolute": ["E2", "Bb4"],
+    "preferred": ["G2", "F4"]
+  },
+  "fix_policy": "octave_shift_to_fit",
+  "articulations": {
+    "mode": "cc",
+    "cc_number": 58,
+    "default": "sustain",
+    "short_articulations": ["staccatissimo", "staccato", "sforzando", "mute_short", "double_staccato", "marcato"],
+    "map": {
+      "sustain": { "cc_value": 0, "description": "Sustain / Legato", "dynamics": "cc1" },
+      "repetitions": { "cc_value": 1, "description": "Repetitions", "dynamics": "velocity" },
+      "staccatissimo": { "cc_value": 2, "description": "Staccatissimo", "dynamics": "velocity" },
+      "staccato": { "cc_value": 3, "description": "Staccato", "dynamics": "velocity" },
+      "sforzando": { "cc_value": 4, "description": "Sforzando", "dynamics": "velocity" },
+      "mute_long": { "cc_value": 5, "description": "Mute Long", "dynamics": "cc1" },
+      "mute_short": { "cc_value": 6, "description": "Mute Short", "dynamics": "velocity" },
+      "flutter": { "cc_value": 7, "description": "Flutter", "dynamics": "cc1" },
+      "trills": { "cc_value": 8, "description": "Trills", "dynamics": "cc1" },
+      "double_staccato": { "cc_value": 9, "description": "Double Tongue", "dynamics": "velocity" },
+      "marcato": { "cc_value": 10, "description": "Marcato", "dynamics": "velocity" },
+      "rips": { "cc_value": 11, "description": "Rips", "dynamics": "velocity" }
+    }
+  },
+  "controllers": {
+    "semantic_to_cc": {
+      "dynamics": 1,
+      "expression": 11,
+      "vibrato": 21
+    },
+    "smoothing": {
+      "min_step": "1/32",
+      "interp": "cubic",
+      "mode": "fixed",
+      "write_every_step": true
+    }
+  },
+  "ai": {
+    "system_prompt_template": "Generate trombone parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. The trombone has a powerful, majestic tone with wide dynamic range. Playable range is E2-Bb4, preferred range G2-F4."
+  }
+}

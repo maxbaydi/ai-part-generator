@@ -1,0 +1,48 @@
+{
+  "id": "drums_gm",
+  "name": "Drums - GM",
+  "family": "drums",
+  "midi": {
+    "channel": 10,
+    "polyphony": "poly",
+    "is_drum": true,
+    "drum_map": {
+      "kick": 36,
+      "snare": 38,
+      "rim": 37,
+      "clap": 39,
+      "hihat_closed": 42,
+      "hihat_open": 46,
+      "hihat_pedal": 44,
+      "tom_low": 41,
+      "tom_mid": 45,
+      "tom_high": 48,
+      "ride": 51,
+      "crash": 49,
+      "splash": 55
+    }
+  },
+  "range": {
+    "absolute": [35, 81],
+    "preferred": [36, 55]
+  },
+  "fix_policy": "clamp",
+  "articulations": {
+    "mode": "none",
+    "map": {}
+  },
+  "controllers": {
+    "semantic_to_cc": {
+      "dynamics": 1
+    },
+    "smoothing": {
+      "min_step": "1/32",
+      "interp": "linear",
+      "mode": "adaptive",
+      "write_every_step": false
+    }
+  },
+  "ai": {
+    "system_prompt_template": "Generate drum patterns. Use kick (36), snare (38), hi-hat (42), toms, cymbals. Vary velocities."
+  }
+}

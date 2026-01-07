@@ -1,0 +1,55 @@
+{
+  "id": "piccolo_csw",
+  "name": "Piccolo - CSW",
+  "family": "woodwinds",
+  "vendor": "Cinematic Studio Series",
+  "description": "Cinematic Studio Woodwinds Piccolo. Brilliant, piercing high register providing orchestral sparkle. Powerful despite small size.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "mono",
+    "is_drum": false
+  },
+  "range": {
+    "absolute": ["D5", "C8"],
+    "preferred": ["D5", "C7"]
+  },
+  "fix_policy": "octave_shift_to_fit",
+  "articulations": {
+    "mode": "cc",
+    "cc_number": 58,
+    "default": "sustain",
+    "short_articulations": ["staccatissimo", "staccato", "sforzando", "marcato"],
+    "map": {
+      "sustain": { "cc_value": 0, "description": "Sustain", "dynamics": "cc1" },
+      "sustain_nv": { "cc_value": 1, "description": "Sustain (No Vibrato)", "dynamics": "cc1" },
+      "legato": { "cc_value": 2, "description": "Legato", "dynamics": "cc1" },
+      "legato_nv": { "cc_value": 3, "description": "Legato (No Vibrato)", "dynamics": "cc1" },
+      "repetitions": { "cc_value": 4, "description": "Repetitions", "dynamics": "velocity" },
+      "staccatissimo": { "cc_value": 5, "description": "Staccatissimo", "dynamics": "velocity" },
+      "staccato": { "cc_value": 6, "description": "Staccato", "dynamics": "velocity" },
+      "sforzando": { "cc_value": 7, "description": "Sforzando", "dynamics": "velocity" },
+      "trills_half": { "cc_value": 8, "description": "Trill (Half)", "dynamics": "cc1" },
+      "trills_whole": { "cc_value": 9, "description": "Trill (Whole)", "dynamics": "cc1" },
+      "flutter": { "cc_value": 10, "description": "Flutter", "dynamics": "cc1" },
+      "marcato": { "cc_value": 11, "description": "Marcato", "dynamics": "velocity" },
+      "runs": { "cc_value": 12, "description": "Runs", "dynamics": "cc1" },
+      "measured_reps": { "cc_value": 13, "description": "Measured Reps", "dynamics": "velocity" }
+    }
+  },
+  "controllers": {
+    "semantic_to_cc": {
+      "dynamics": 1,
+      "expression": 11,
+      "vibrato": 21
+    },
+    "smoothing": {
+      "min_step": "1/32",
+      "interp": "cubic",
+      "mode": "fixed",
+      "write_every_step": true
+    }
+  },
+  "ai": {
+    "system_prompt_template": "Generate piccolo parts for Cinematic Studio Woodwinds. Use CC1 for dynamics on long articulations, velocity for short articulations. The piccolo is the highest-pitched orchestral woodwind with a brilliant, piercing tone. Written range is D5-C8, preferred range D5-C7."
+  }
+}

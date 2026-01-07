@@ -1,0 +1,54 @@
+{
+  "id": "violin_css",
+  "name": "Violin - CSS",
+  "family": "strings",
+  "vendor": "Cinematic Studio Series",
+  "description": "Cinematic Studio Strings Violin. Bright, expressive tone with rich overtones. Ideal for melodic lines and emotional passages.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "poly",
+    "is_drum": false
+  },
+  "range": {
+    "absolute": ["G3", "E7"],
+    "preferred": ["G3", "B6"]
+  },
+  "fix_policy": "octave_shift_to_fit",
+  "articulations": {
+    "mode": "cc",
+    "cc_number": 58,
+    "default": "sustain",
+    "short_articulations": ["spiccato", "staccatissimo", "staccato", "sforzando", "pizzicato", "col_legno", "marcato"],
+    "map": {
+      "sustain": { "cc_value": 0, "description": "Sustain / Legato", "dynamics": "cc1" },
+      "spiccato": { "cc_value": 1, "description": "Spiccato", "dynamics": "velocity" },
+      "staccatissimo": { "cc_value": 2, "description": "Staccatissimo", "dynamics": "velocity" },
+      "staccato": { "cc_value": 3, "description": "Staccato", "dynamics": "velocity" },
+      "sforzando": { "cc_value": 4, "description": "Sforzando", "dynamics": "velocity" },
+      "pizzicato": { "cc_value": 5, "description": "Pizzicato", "dynamics": "velocity" },
+      "col_legno": { "cc_value": 6, "description": "Col Legno", "dynamics": "velocity" },
+      "harmonics": { "cc_value": 7, "description": "Harmonics", "dynamics": "cc1" },
+      "tremolo": { "cc_value": 8, "description": "Tremolo", "dynamics": "cc1" },
+      "trills": { "cc_value": 9, "description": "Trills", "dynamics": "cc1" },
+      "measured_tremolo": { "cc_value": 10, "description": "Measured Tremolo", "dynamics": "cc1" },
+      "marcato": { "cc_value": 11, "description": "Marcato / Runs", "dynamics": "velocity" },
+      "con_sordino": { "cc_value": 12, "description": "Con Sordino", "dynamics": "cc1" }
+    }
+  },
+  "controllers": {
+    "semantic_to_cc": {
+      "dynamics": 1,
+      "expression": 11,
+      "vibrato": 21
+    },
+    "smoothing": {
+      "min_step": "1/32",
+      "interp": "cubic",
+      "mode": "fixed",
+      "write_every_step": true
+    }
+  },
+  "ai": {
+    "system_prompt_template": "Generate expressive violin parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. The violin has a bright, penetrating tone with rich overtones. Playable range is G3-E7, preferred range G3-B6."
+  }
+}

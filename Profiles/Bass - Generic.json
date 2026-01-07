@@ -1,0 +1,33 @@
+{
+  "id": "bass_generic",
+  "name": "Bass - Generic",
+  "family": "bass",
+  "midi": {
+    "channel": 1,
+    "polyphony": "mono",
+    "is_drum": false
+  },
+  "range": {
+    "absolute": ["E1", "G3"],
+    "preferred": ["E1", "D3"]
+  },
+  "fix_policy": "octave_shift_to_fit",
+  "articulations": {
+    "mode": "none",
+    "map": {}
+  },
+  "controllers": {
+    "semantic_to_cc": {
+      "dynamics": 1
+    },
+    "smoothing": {
+      "min_step": "1/32",
+      "interp": "cubic",
+      "mode": "adaptive",
+      "write_every_step": false
+    }
+  },
+  "ai": {
+    "system_prompt_template": "Generate bass lines. Keep monophonic (one note at a time). Focus on root notes and fifths."
+  }
+}
