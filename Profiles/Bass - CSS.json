@@ -11,7 +11,7 @@
   },
   "range": {
     "absolute": ["E1", "G4"],
-    "preferred": ["E1", "D4"]
+    "preferred": ["E2", "D4"]
   },
   "fix_policy": "octave_shift_to_fit",
   "articulations": {

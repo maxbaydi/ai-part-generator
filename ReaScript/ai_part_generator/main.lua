@@ -338,7 +338,7 @@ local function apply_step()
   utils.log("apply_step WARNING: unknown phase=" .. tostring(phase))
 end
 
-local function begin_apply(response, profile_id, target_track, start_sec, end_sec)
+local function begin_apply(response, profile_id, profile, articulation_name, target_track, start_sec, end_sec)
   utils.log("begin_apply: starting...")
 
   if not reaper.ValidatePtr(target_track, "MediaTrack*") then
@@ -369,6 +369,28 @@ local function begin_apply(response, profile_id, target_track, start_sec, end_se
   local cc_events = response.cc_events or {}
   local keyswitches = response.keyswitches or {}
   local program_changes = response.program_changes or {}
+
+  local response_articulation = tostring(response.articulation or "")
+  local effective_articulation = tostring(articulation_name or "")
+  if response_articulation ~= "" and response_articulation ~= const.ARTICULATION_MIXED then
+    effective_articulation = response_articulation
+  end
+
+  if profiles.is_legato_articulation(profile, effective_articulation) then
+    midi.apply_legato_overlap(notes, const.LEGATO_NOTE_OVERLAP_Q)
+  elseif response_articulation == const.ARTICULATION_MIXED then
+    local changes = profiles.get_articulation_changes(profile, response)
+    if #changes > 0 then
+      midi.apply_legato_overlap_by_articulation_changes(
+        notes,
+        const.LEGATO_NOTE_OVERLAP_Q,
+        changes,
+        function(name)
+          return profiles.is_legato_articulation(profile, name)
+        end
+      )
+    end
+  end
 
   utils.log(string.format("begin_apply: to insert: notes=%d cc=%d ks=%d pc=%d",
     #notes, #cc_events, #keyswitches, #program_changes))
@@ -414,6 +436,8 @@ local function poll_generation()
 
   http.cleanup(pending.handle)
   local profile_id = pending.profile_id
+  local profile = pending.profile
+  local articulation_name = pending.articulation_name
   local target_track = pending.target_track
   local start_sec = pending.start_sec
   local end_sec = pending.end_sec
@@ -437,7 +461,7 @@ local function poll_generation()
   utils.log("  keyswitches: " .. tostring(data.keyswitches and #data.keyswitches or 0))
   utils.log("  program_changes: " .. tostring(data.program_changes and #data.program_changes or 0))
 
-  begin_apply(data, profile_id, target_track, start_sec, end_sec)
+  begin_apply(data, profile_id, profile, articulation_name, target_track, start_sec, end_sec)
 end
 
 local function run_generation_after_bridge(state, profiles_by_id, start_sec, end_sec)
@@ -521,9 +545,11 @@ local function run_generation_after_bridge(state, profiles_by_id, start_sec, end
   pending = {
     handle = handle,
     profile_id = profile.id,
+    profile = profile,
     target_track = target_track,
     start_sec = start_sec,
     end_sec = end_sec,
+    articulation_name = state.articulation_name or "",
   }
   reaper.defer(poll_generation)
 end
@@ -574,7 +600,7 @@ local function apply_compose_result_and_continue()
     utils.log(string.format("Compose: applying results for '%s' (%d/%d)",
       current.track_name, compose_state.current_index, compose_state.total_tracks))
     
-    begin_apply(current.response, current.profile_id, current.target_track,
+    begin_apply(current.response, current.profile_id, current.profile, current.articulation_name, current.target_track,
       compose_state.start_sec, compose_state.end_sec)
     
     table.insert(compose_state.generated_parts, {
@@ -637,9 +663,11 @@ local function poll_compose_generation()
       response = data,
       profile_id = current_track.profile.id,
       profile_name = current_track.profile.name,
+      profile = current_track.profile,
       target_track = current_track.track,
       track_name = current_track.name,
       role = current_track.role,
+      articulation_name = compose_state.current_articulation_name or "",
     }
     
     reaper.defer(apply_compose_result_and_continue)
@@ -665,6 +693,7 @@ function start_next_compose_generation()
     current_track.name, current_track.role or "unknown"))
   
   local articulation_name = profiles.get_default_articulation(profile)
+  compose_state.current_articulation_name = articulation_name
   local ctx = context.build_context(compose_state.use_selected_tracks, current_track.track,
     compose_state.start_sec, compose_state.end_sec)
   

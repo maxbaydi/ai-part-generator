@@ -9,7 +9,7 @@
   },
   "range": {
     "absolute": ["E1", "G3"],
-    "preferred": ["E1", "D3"]
+    "preferred": ["E2", "D3"]
   },
   "fix_policy": "octave_shift_to_fit",
   "articulations": {

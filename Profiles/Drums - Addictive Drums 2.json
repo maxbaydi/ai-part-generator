@@ -1,0 +1,62 @@
+{
+  "id": "drums_ad2",
+  "name": "Drums - Addictive Drums 2",
+  "family": "drums",
+  "vendor": "XLN Audio",
+  "description": "XLN Audio Addictive Drums 2. Professional drum kit with extensive articulations including rimshots, bell hits, chokes, and multiple hi-hat positions. Standard Steinberg keymap.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "poly",
+    "is_drum": true,
+    "drum_map": {
+      "kick": 36,
+      "snare": 38,
+      "snare_rimshot": 37,
+      "snare_sidestick": 42,
+      "hihat_pedal_closed": 48,
+      "hihat_closed": 49,
+      "hihat_closed_bell": 53,
+      "hihat_open": 54,
+      "hihat_pedal_open": 59,
+      "ride_tip": 60,
+      "ride_bell": 61,
+      "ride_shaft": 62,
+      "tom4": 65,
+      "tom4_rimshot": 66,
+      "tom3": 67,
+      "tom3_rimshot": 68,
+      "tom2": 69,
+      "tom2_rimshot": 70,
+      "tom1": 71,
+      "tom1_rimshot": 72,
+      "crash1": 77,
+      "crash1_choke": 78,
+      "crash2": 79,
+      "crash2_choke": 80,
+      "crash3": 81,
+      "crash3_choke": 82
+    }
+  },
+  "range": {
+    "absolute": [36, 82],
+    "preferred": [36, 72]
+  },
+  "fix_policy": "clamp",
+  "articulations": {
+    "mode": "none",
+    "map": {}
+  },
+  "controllers": {
+    "semantic_to_cc": {},
+    "smoothing": {
+      "min_step": "1/32",
+      "interp": "linear",
+      "mode": "adaptive",
+      "write_every_step": false
+    }
+  },
+  "ai": {
+    "system_prompt_template": "Generate drum patterns for XLN Audio Addictive Drums 2 using Steinberg keymap.\n\nDRUM MAP:\n- Kick: 36\n- Snare: 38 (open hit), 37 (rimshot), 42 (sidestick)\n- Hi-Hat: 49 (closed tip), 53 (closed bell), 54 (open), 48 (pedal closed), 59 (pedal open)\n- Ride: 60 (tip/soft), 61 (bell), 62 (shaft/loud)\n- Toms: 71/72 (tom1), 69/70 (tom2), 67/68 (tom3), 65/66 (tom4) - second note is rimshot\n- Crashes: 77/78 (crash1 hit/choke), 79/80 (crash2), 81/82 (crash3)\n\nSTYLE ADAPTATION:\n- ROCK: Driving kick/snare on 1-3/2-4, steady 8th hi-hats, crash accents\n- POP: Four-on-floor or standard backbeat, simple patterns, groove-focused\n- FUNK: Syncopated ghost notes, open hi-hat accents, 16th-note feel\n- JAZZ: Ride-focused, brushwork feel, kick/snare comping, swing\n- METAL: Double kick patterns, fast hi-hats, powerful toms\n- ELECTRONIC: Programmed feel, layered kicks, precise timing\n- LATIN: Tumbao, cascara on ride bell, syncopated patterns\n\nDYNAMICS:\n- Ghost notes: velocity 30-50\n- Normal hits: velocity 70-100\n- Accents: velocity 110-127\n- Vary velocity for human feel\n- Hi-hat gradations between open/closed for expression"
+  }
+}
+

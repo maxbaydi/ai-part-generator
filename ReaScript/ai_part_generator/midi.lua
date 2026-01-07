@@ -2,6 +2,14 @@ local const = require("ai_part_generator.constants")
 
 local M = {}
 
+local function get_note_start_q(note)
+  return tonumber(note.start_q) or tonumber(note.time_q) or 0
+end
+
+local function get_note_dur_q(note)
+  return tonumber(note.dur_q) or const.DEFAULT_NOTE_DUR_Q
+end
+
 function M.get_active_track()
   local track = reaper.GetSelectedTrack(0, 0)
   if track then
@@ -124,8 +132,8 @@ local function insert_note(take, start_qn, note)
   if not note or type(note) ~= "table" then
     return false
   end
-  local note_start = tonumber(note.start_q) or tonumber(note.time_q) or 0
-  local note_dur = tonumber(note.dur_q) or const.DEFAULT_NOTE_DUR_Q
+  local note_start = get_note_start_q(note)
+  local note_dur = get_note_dur_q(note)
   local start_qn_abs = start_qn + note_start
   local end_qn_abs = start_qn_abs + note_dur
   local start_ppq = reaper.MIDI_GetPPQPosFromProjQN(take, start_qn_abs)
@@ -183,6 +191,115 @@ end
 
 function M.sort(take)
   reaper.MIDI_Sort(take)
+end
+
+local function build_note_groups(notes)
+  local entries = {}
+  for i, note in ipairs(notes) do
+    if type(note) == "table" then
+      table.insert(entries, { idx = i, start_q = get_note_start_q(note) })
+    end
+  end
+  if #entries == 0 then
+    return {}
+  end
+
+  table.sort(entries, function(a, b)
+    if a.start_q == b.start_q then
+      return a.idx < b.idx
+    end
+    return a.start_q < b.start_q
+  end)
+
+  local groups = {}
+  local current_start = entries[1].start_q
+  local current = { start_q = current_start, indices = {} }
+  table.insert(groups, current)
+
+  for _, entry in ipairs(entries) do
+    if entry.start_q ~= current_start then
+      current_start = entry.start_q
+      current = { start_q = current_start, indices = {} }
+      table.insert(groups, current)
+    end
+    table.insert(current.indices, entry.idx)
+  end
+
+  return groups
+end
+
+local function ensure_group_min_end(notes, indices, target_end)
+  for _, idx in ipairs(indices) do
+    local note = notes[idx]
+    local note_start = get_note_start_q(note)
+    local note_dur = get_note_dur_q(note)
+    local note_end = note_start + note_dur
+    if note_end < target_end then
+      note.dur_q = target_end - note_start
+    end
+  end
+end
+
+function M.apply_legato_overlap(notes, overlap_q)
+  if type(notes) ~= "table" then
+    return
+  end
+
+  local overlap = tonumber(overlap_q) or 0
+  if overlap <= 0 then
+    return
+  end
+
+  local groups = build_note_groups(notes)
+  if #groups < 2 then
+    return
+  end
+
+  for i = 1, #groups - 1 do
+    ensure_group_min_end(notes, groups[i].indices, groups[i + 1].start_q + overlap)
+  end
+end
+
+function M.apply_legato_overlap_by_articulation_changes(notes, overlap_q, changes, is_legato)
+  if type(notes) ~= "table" then
+    return
+  end
+
+  local overlap = tonumber(overlap_q) or 0
+  if overlap <= 0 then
+    return
+  end
+
+  if type(changes) ~= "table" or type(is_legato) ~= "function" then
+    return
+  end
+
+  local groups = build_note_groups(notes)
+  if #groups < 2 then
+    return
+  end
+
+  table.sort(changes, function(a, b)
+    return (tonumber(a.time_q) or 0) < (tonumber(b.time_q) or 0)
+  end)
+
+  local group_legato = {}
+  local current_articulation = nil
+  local j = 1
+
+  for i, group in ipairs(groups) do
+    while changes[j] and (tonumber(changes[j].time_q) or 0) <= group.start_q do
+      current_articulation = changes[j].articulation
+      j = j + 1
+    end
+    group_legato[i] = current_articulation and is_legato(current_articulation) or false
+  end
+
+  for i = 1, #groups - 1 do
+    if group_legato[i] and group_legato[i + 1] then
+      ensure_group_min_end(notes, groups[i].indices, groups[i + 1].start_q + overlap)
+    end
+  end
 end
 
 return M

@@ -3,6 +3,8 @@ local utils = require("ai_part_generator.utils")
 
 local M = {}
 
+local LEGATO_KEYWORD = "legato"
+
 local function list_profile_files(profiles_dir)
   local files = {}
   local idx = 0
@@ -125,6 +127,7 @@ local INSTRUMENT_ALIASES = {
   viola = { "vla", "violas" },
   cello = { "vlc", "vc", "cellos" },
   bass = { "cb", "contrabass", "double bass", "dbass", "basses" },
+  ezbass = { "ez bass", "toontrack bass", "electric bass", "bass guitar" },
   flute = { "fl", "flutes", "flauto" },
   oboe = { "ob", "oboes" },
   clarinet = { "cl", "clarinets", "clar" },
@@ -135,6 +138,8 @@ local INSTRUMENT_ALIASES = {
   trombone = { "tb", "trb", "tbn", "trombones", "pos" },
   tuba = { "tba", "tubas" },
   drums = { "drum", "perc", "percussion", "kit" },
+  ad2 = { "addictive drums", "addictive", "xln drums", "xln audio" },
+  agpf = { "ample guitar", "ample pf", "ample sound guitar", "electric guitar" },
 }
 
 local function find_instrument_match(track_name)
@@ -289,6 +294,112 @@ function M.get_articulation_info(profile, articulation_name)
   local art_config = profile.articulations or {}
   local map = art_config.map or {}
   return map[articulation_name]
+end
+
+local function contains_legato(s)
+  return tostring(s or ""):lower():find(LEGATO_KEYWORD, 1, true) ~= nil
+end
+
+function M.is_legato_articulation(profile, articulation_name)
+  if not profile then
+    return false
+  end
+
+  local name = tostring(articulation_name or "")
+  if name == "" then
+    return false
+  end
+
+  if contains_legato(name) then
+    return true
+  end
+
+  local info = M.get_articulation_info(profile, name)
+  if not info then
+    return false
+  end
+
+  return contains_legato(info.description)
+end
+
+function M.get_articulation_changes(profile, response)
+  if not profile or type(response) ~= "table" then
+    return {}
+  end
+
+  local art_config = profile.articulations or {}
+  local mode = tostring(art_config.mode or "none"):lower()
+  local map = art_config.map or {}
+
+  if mode == "cc" then
+    local cc_num = tonumber(art_config.cc_number)
+    if not cc_num then
+      return {}
+    end
+
+    local value_to_name = {}
+    for name, data in pairs(map) do
+      if type(data) == "table" then
+        local v = tonumber(data.cc_value) or tonumber(data.value) or tonumber(data.cc)
+        if v ~= nil then
+          value_to_name[v] = name
+        end
+      end
+    end
+
+    local changes = {}
+    for _, evt in ipairs(response.cc_events or {}) do
+      if type(evt) == "table" then
+        local cc = tonumber(evt.cc) or tonumber(evt.controller)
+        if cc == cc_num then
+          local val = tonumber(evt.value) or tonumber(evt.val)
+          local art_name = val and value_to_name[val] or nil
+          if art_name then
+            local t = tonumber(evt.time_q) or tonumber(evt.start_q) or 0
+            table.insert(changes, { time_q = t, articulation = art_name })
+          end
+        end
+      end
+    end
+
+    table.sort(changes, function(a, b)
+      return (a.time_q or 0) < (b.time_q or 0)
+    end)
+
+    return changes
+  end
+
+  if mode == "keyswitch" then
+    local pitch_to_name = {}
+    for name, data in pairs(map) do
+      if type(data) == "table" then
+        local pitch = tonumber(data.pitch)
+        if pitch ~= nil then
+          pitch_to_name[pitch] = name
+        end
+      end
+    end
+
+    local changes = {}
+    for _, ks in ipairs(response.keyswitches or {}) do
+      if type(ks) == "table" then
+        local pitch = tonumber(ks.pitch)
+        local art_name = pitch and pitch_to_name[pitch] or nil
+        if art_name then
+          local t = tonumber(ks.time_q) or tonumber(ks.start_q) or 0
+          table.insert(changes, { time_q = t, articulation = art_name })
+        end
+      end
+    end
+
+    table.sort(changes, function(a, b)
+      return (a.time_q or 0) < (b.time_q or 0)
+    end)
+
+    return changes
+  end
+
+  return {}
 end
 
 function M.get_selected_tracks_with_profiles(profiles, by_id)

@@ -40,6 +40,10 @@ KEYSWITCH_DUR_Q = 0.25
 SECONDS_PER_MINUTE = 60.0
 QUARTERS_PER_WHOLE = 4.0
 LOG_PREVIEW_CHARS = 500
+SUSTAIN_PEDAL_VALUE_OFF = 0
+SUSTAIN_PEDAL_VALUE_ON = 127
+SUSTAIN_PEDAL_ON_THRESHOLD = 64
+SUSTAIN_PEDAL_ON_DELAY_Q = 0.1
 
 DEFAULT_CC_INTERP = "cubic"
 DEFAULT_SMOOTHING_MODE = "fixed"
@@ -72,43 +76,66 @@ MUSIC THEORY RULES:
 OUTPUT FORMAT:
 {
   "notes": [{"start_q": 0, "dur_q": 2, "pitch": 72, "vel": 90, "chan": 1}, ...],
-  "curves": {"dynamics": {"interp": "cubic", "breakpoints": [{"time_q": X, "value": Y}, ...]}},
+  "curves": {
+    "expression": {"interp": "cubic", "breakpoints": [{"time_q": X, "value": Y}, ...]},
+    "dynamics": {"interp": "cubic", "breakpoints": [{"time_q": X, "value": Y}, ...]}
+  },
   "articulation": "legato"
 }
 
-TWO-LAYER DYNAMICS SYSTEM:
-There are TWO independent dynamics controls - use BOTH for expressive parts:
+THREE-LAYER DYNAMICS SYSTEM:
+There are THREE independent dynamics controls - use ALL for expressive musical parts:
 
-1. VELOCITY (vel: 1-127) - PER-NOTE dynamics, controls:
-   - Attack intensity of each individual note
+1. VELOCITY (vel: 1-127) - NOTE ATTACK dynamics:
+   - Attack intensity/hardness of each individual note
    - Critical for SHORT articulations (staccato, pizzicato, spiccato) where velocity IS the dynamics
-   - Use to create accents, ghost notes, phrase shaping within a passage
-   - Vary velocity to avoid mechanical feel: accented notes 100-127, normal 70-90, soft 40-60
+   - Use to create accents, ghost notes, note-level shaping
+   - Vary to avoid mechanical feel: accented 100-127, normal 70-90, soft 40-60
 
-2. CC1 CURVE (curves.dynamics) - PHRASE/GLOBAL dynamics, controls:
-   - Overall expression/volume envelope over time
-   - Critical for LONG articulations (sustain, legato, tremolo) where CC1 shapes the sound
-   - Use for crescendos, decrescendos, swells, phrase arcs
-   - Values 0-127, include 3-8 breakpoints
+2. CC11 EXPRESSION CURVE (curves.expression) - GLOBAL/SECTION dynamics:
+   - Controls the overall volume envelope of the ENTIRE PART/SECTION
+   - Defines the macro-level dynamic arc: how the whole passage develops dynamically
+   - Use for: overall crescendo/decrescendo of a section, dynamic level of the piece
+   - Example: A section starts mp and builds to ff over 8 bars → expression curve rises from 60 to 110
+   - Values 0-127, include 3-6 breakpoints across the full duration
+
+3. CC1 DYNAMICS CURVE (curves.dynamics) - LOCAL/NOTE dynamics:
+   - Controls micro-level dynamics for individual notes and SHORT phrases
+   - Shapes the volume within and between individual notes
+   - Use for: note swells, phrase breathing, fading notes, hairpin dynamics on single notes
+   - Example: A sustained note that swells and fades → dynamics curve rises then falls within that note
+   - Values 0-127, include 4-12 breakpoints for detailed shaping
+
+HOW THE TWO CC CURVES WORK TOGETHER:
+- EXPRESSION (CC11) = the "master volume" that sets the overall dynamic level
+- DYNAMICS (CC1) = the "expression pedal" that adds detail and movement within that level
+- Think of it as: Expression sets "how loud is this section" while Dynamics adds "how does each note breathe"
 
 DYNAMICS STRATEGIES:
-- Melodic lines: Vary velocity per note (phrase peaks louder), CC1 for overall arc
-- Chords/Pads: Similar velocity across chord, CC1 for slow swells
-- Rhythmic parts: Velocity for accents (beat 1 louder), CC1 relatively flat
-- Accented passage: High velocity on accents, lower between, CC1 supports
-- Smooth legato: Even velocity, CC1 does all expression work
+- Sustained notes: Expression sets overall level, Dynamics adds internal swell/fade (hairpin)
+- Melodic phrases: Expression shapes the phrase arc, Dynamics adds note-to-note breathing
+- Building section: Expression gradually rises, Dynamics adds local movement
+- Fading section: Expression gradually falls, Dynamics can still have local swells
+- Constant intensity: Flat Expression at target level, Dynamics adds subtle life
+- Terraced dynamics: Expression jumps between levels, Dynamics smooth within each level
 
-DO NOT always use crescendo-decrescendo. Match dynamics to the mood:
-- Constant intensity: flat CC1 (80-90), even velocities
-- Building tension: CC1 crescendo (40→100), velocities increase
-- Fading: CC1 decrescendo (100→40), velocities decrease
-- Terraced: sudden CC1 jumps, velocity groups at each level
-- Accented: spiky velocities (40-50 vs 100-120), CC1 supports
+EXAMPLE - 8-bar melodic phrase building from mp to f:
+- Expression: starts at 60, smoothly rises to 95 over 8 bars (the overall arc)
+- Dynamics: has small swells within each 2-bar phrase (70→85→70, 75→90→75, etc.)
+- Velocity: varies per note for accents and phrase peaks
+
+SUSTAIN PEDAL TECHNIQUE (CC64 / curves.sustain_pedal):
+- ALWAYS use interp: "hold" (no smoothing)
+- ONLY values 0 (off) or 127 (on) - no intermediate values
+- CRITICAL: Release pedal (0) BEFORE each chord change, then press again (127) on new chord!
+- Pattern for arpeggios: press(127) -> play arpeggio notes -> release(0) just before chord change -> press(127) on new chord
+- If pedal stays on through chord changes, notes from different chords will clash and create mud
+- Each chord/harmony should have its own pedal cycle: ON at start, OFF before next chord
 
 CRITICAL: 
 - Use ONLY pitches from the ALLOWED PITCHES list
 - Generate enough notes spread across the entire duration
-- MUST include 'curves' with 'dynamics' that matches the requested style
+- MUST include 'curves' with BOTH 'expression' AND 'dynamics'
 - VARY velocity values - do not use same velocity for all notes"""
 
 REPAIR_SYSTEM_PROMPT = (
@@ -120,7 +147,7 @@ FREE_MODE_SYSTEM_PROMPT = """You are an expert composer with COMPLETE CREATIVE F
 CRITICAL PRINCIPLE - MATCH COMPLEXITY TO USER REQUEST:
 Read the user's request carefully. Your output complexity should MATCH what they ask for:
 - If they ask for "simple chords" or "basic triads" → generate SIMPLE, STRAIGHTFORWARD chords
-- If they ask for "Hans Zimmer style pads" → use sustained whole-note chords with slow CC1 swells
+- If they ask for "Hans Zimmer style pads" → use sustained whole-note chords with slow expression swells
 - If they ask for "complex melody" or "virtuosic passage" → then be creative and elaborate
 - If they ask for "accompanying part" → support, don't dominate
 DO NOT over-complicate simple requests. Professional composers know when to be simple.
@@ -136,23 +163,35 @@ You CAN use multiple articulations, but ONLY when musically justified:
 - For RHYTHMIC parts: consider staccato/spiccato for punch
 - NEVER add articulation variety just for variety's sake
 
-TWO-LAYER DYNAMICS SYSTEM:
-1. VELOCITY (vel: 1-127) - PER-NOTE dynamics:
+THREE-LAYER DYNAMICS SYSTEM:
+1. VELOCITY (vel: 1-127) - NOTE ATTACK dynamics:
    - Attack intensity of each note
    - For SHORT articulations (staccato, pizzicato): velocity IS the dynamics
-   - Vary for accents, phrase shaping: strong beats 90-110, weak 60-80, accents 100-127, ghost notes 40-55
+   - Vary for accents: strong beats 90-110, weak 60-80, accents 100-127, ghost notes 40-55
    
-2. CC1 CURVE (curves.dynamics) - PHRASE dynamics:
-   - Overall expression envelope over time
-   - For LONG articulations (sustain, legato): CC1 shapes the sound
-   - Use for crescendos, swells, phrase arcs
+2. CC11 EXPRESSION CURVE (curves.expression) - GLOBAL dynamics:
+   - Overall volume level of the ENTIRE SECTION
+   - Sets the macro-level: "how loud is this part of the music"
+   - Use for: section-wide crescendo/decrescendo, overall dynamic level
+   - Example: Section builds from mp to ff → expression rises from 60 to 110 over duration
+   
+3. CC1 DYNAMICS CURVE (curves.dynamics) - LOCAL dynamics:
+   - Micro-level dynamics for individual notes and short phrases
+   - Adds life and breathing WITHIN each note
+   - Use for: note swells, fading notes, hairpin dynamics, phrase breathing
+   - Example: Sustained note with internal swell → dynamics rises and falls within that note
+
+HOW EXPRESSION AND DYNAMICS WORK TOGETHER:
+- EXPRESSION (CC11) = the "master volume" - overall section level
+- DYNAMICS (CC1) = the "expression pedal" - detail and movement within notes
 
 DYNAMICS STRATEGIES BY PART TYPE:
-- Sustained pads/chords: FLAT or slow-swell CC1, uniform velocity across chord
-- Melodic lines: Varied velocity (phrase peaks), CC1 for overall arc
-- Rhythmic parts: Velocity for accents, CC1 relatively flat
-- Building intensity: Both velocity and CC1 increase together
-- Intimate/soft: Low velocity (50-70), low CC1 (40-60)
+- Sustained pads/chords: Expression sets level, Dynamics adds subtle internal movement
+- Melodic lines: Expression shapes phrase arc, Dynamics adds note breathing
+- Building section: Expression rises gradually, Dynamics has local swells
+- Fading section: Expression falls, Dynamics can still have life
+- Constant intensity: Flat Expression, Dynamics adds subtle variation
+- Intimate/soft: Low Expression (40-60), low Dynamics with gentle movement
 
 OUTPUT FORMAT:
 {
@@ -162,7 +201,10 @@ OUTPUT FORMAT:
     {"start_q": 0, "dur_q": 4, "pitch": 67, "vel": 85, "chan": 1, "articulation": "sustain"},
     ...
   ],
-  "curves": {"dynamics": {"interp": "cubic", "breakpoints": [{"time_q": 0, "value": 70}, {"time_q": 8, "value": 85}, ...]}},
+  "curves": {
+    "expression": {"interp": "cubic", "breakpoints": [{"time_q": 0, "value": 65}, {"time_q": 8, "value": 90}]},
+    "dynamics": {"interp": "cubic", "breakpoints": [{"time_q": 0, "value": 70}, {"time_q": 4, "value": 85}, {"time_q": 8, "value": 75}]}
+  },
   "generation_type": "Chords",
   "generation_style": "Cinematic"
 }
@@ -173,10 +215,18 @@ IMPORTANT:
 - VARY velocity values appropriately - not all notes should have same velocity
 - Include 'generation_type' and 'generation_style' in response
 
+SUSTAIN PEDAL TECHNIQUE (CC64 / curves.sustain_pedal):
+- ALWAYS use interp: "hold" (no smoothing)
+- ONLY values 0 (off) or 127 (on) - no intermediate values
+- CRITICAL: Release pedal (0) BEFORE each chord change, then press again (127) on new chord!
+- Pattern for arpeggios: press(127) -> play arpeggio notes -> release(0) just before chord change -> press(127) on new chord
+- If pedal stays on through chord changes, notes from different chords will clash and create mud
+- Each chord/harmony should have its own pedal cycle: ON at start, OFF before next chord
+
 CRITICAL: 
 - Use ONLY pitches from the ALLOWED PITCHES list
 - Generate enough notes to fill the duration musically
-- MUST include 'curves' with 'dynamics'
+- MUST include 'curves' with BOTH 'expression' AND 'dynamics'
 - MATCH the complexity of your output to what the user actually requested"""
 
 NOTE_RE = re.compile(r"^([A-Ga-g])([#b]?)(-?\d+)$")
@@ -559,6 +609,100 @@ def eval_curve_at(
     return catmull_rom(p0["value"], p1["value"], p2["value"], p3["value"], u)
 
 
+def build_hold_cc_events(
+    points: List[Dict[str, float]],
+    cc_num: int,
+    length_q: float,
+    default_chan: int,
+) -> List[Dict[str, Any]]:
+    if not points:
+        return []
+
+    dedup: List[Dict[str, float]] = []
+    for p in points:
+        if dedup and dedup[-1]["time_q"] == p["time_q"]:
+            dedup[-1] = p
+        else:
+            dedup.append(p)
+
+    events: List[Dict[str, Any]] = []
+    last_val: Optional[int] = None
+
+    def add_event(time_q: float, value: float) -> None:
+        nonlocal last_val
+        t = clamp(float(time_q), 0.0, max(0.0, length_q))
+        v = int(round(clamp(float(value), float(MIDI_MIN), float(MIDI_MAX))))
+        if last_val is None or v != last_val:
+            events.append({"time_q": t, "cc": cc_num, "value": v, "chan": default_chan})
+            last_val = v
+
+    add_event(0.0, dedup[0]["value"])
+    for p in dedup:
+        add_event(p["time_q"], p["value"])
+
+    return events
+
+
+def build_sustain_pedal_cc_events(
+    points: List[Dict[str, float]],
+    cc_num: int,
+    length_q: float,
+    default_chan: int,
+) -> List[Dict[str, Any]]:
+    if not points:
+        return []
+
+    dedup: List[Dict[str, float]] = []
+    for p in points:
+        if dedup and dedup[-1]["time_q"] == p["time_q"]:
+            dedup[-1] = p
+        else:
+            dedup.append(p)
+
+    segments: List[Dict[str, float]] = []
+    for p in dedup:
+        if not segments or segments[-1]["value"] != p["value"]:
+            segments.append(p)
+
+    if not segments:
+        return []
+
+    events: List[Dict[str, Any]] = []
+    last_val: Optional[int] = None
+
+    def add_event(time_q: float, value_int: int) -> None:
+        nonlocal last_val
+        t = clamp(float(time_q), 0.0, max(0.0, length_q))
+        v = int(clamp(int(value_int), MIDI_MIN, MIDI_MAX))
+        if last_val is None or v != last_val:
+            events.append({"time_q": t, "cc": cc_num, "value": v, "chan": default_chan})
+            last_val = v
+
+    start_val = int(round(segments[0]["value"]))
+    if start_val >= SUSTAIN_PEDAL_ON_THRESHOLD and SUSTAIN_PEDAL_ON_DELAY_Q > 0:
+        add_event(0.0, SUSTAIN_PEDAL_VALUE_OFF)
+        next_time = segments[1]["time_q"] if len(segments) > 1 else (length_q + 1.0)
+        shifted = segments[0]["time_q"] + SUSTAIN_PEDAL_ON_DELAY_Q
+        add_event(shifted if shifted < next_time else segments[0]["time_q"], start_val)
+    else:
+        add_event(0.0, start_val)
+
+    prev_val = start_val
+    for i in range(1, len(segments)):
+        t = segments[i]["time_q"]
+        v = int(round(segments[i]["value"]))
+        is_rising = prev_val < SUSTAIN_PEDAL_ON_THRESHOLD and v >= SUSTAIN_PEDAL_ON_THRESHOLD
+        if is_rising and SUSTAIN_PEDAL_ON_DELAY_Q > 0:
+            next_time = segments[i + 1]["time_q"] if i + 1 < len(segments) else (length_q + 1.0)
+            shifted = t + SUSTAIN_PEDAL_ON_DELAY_Q
+            if shifted < next_time:
+                t = shifted
+        add_event(t, v)
+        prev_val = v
+
+    return events
+
+
 def build_cc_events(
     curves: Dict[str, Any],
     profile: Dict[str, Any],
@@ -598,6 +742,14 @@ def build_cc_events(
         if not points:
             continue
         points.sort(key=lambda p: p["time_q"])
+
+        if interp == "hold":
+            if semantic == "sustain_pedal":
+                events.extend(build_sustain_pedal_cc_events(points, cc_num, length_q, default_chan))
+            else:
+                events.extend(build_hold_cc_events(points, cc_num, length_q, default_chan))
+            continue
+
         time_q = 0.0
         last_val: Optional[int] = None
         while time_q <= length_q + 1e-6:
@@ -1607,55 +1759,55 @@ def build_prompt(
     articulation_hint = articulation_hints.get(articulation.lower(), "") if articulation else ""
 
     dynamics_hints = {
-        "heroic": "DYNAMICS: Strong and bold. Start mf (70-80), build to ff (100-120) at climax. Maintain high energy.",
-        "epic": "DYNAMICS: Grand sweeping crescendo. Start mp (50-60), massive build to fff (120-127) at peak, then gradual descent.",
-        "triumphant": "DYNAMICS: Victorious forte throughout. Start f (90), peak ff (110-120) at fanfare moments. Keep intensity high.",
-        "majestic": "DYNAMICS: Dignified and steady. Moderate f (80-95) with slow subtle swells. No sudden changes.",
-        "adventurous": "DYNAMICS: Dynamic variety. Mix mf (70) passages with sudden f (100) bursts. Energetic variation.",
-        "dramatic": "DYNAMICS: Extreme contrasts. Sudden jumps: pp (30) to ff (110) and back. Terraced, not gradual.",
-        "intense": "DYNAMICS: Relentless drive. Start mf (70), continuous crescendo to fff (120-127). No backing off.",
-        "suspense": "DYNAMICS: Quiet tension. Mostly pp-p (25-50) with occasional sudden sfz spikes (100+) then back to quiet.",
-        "thriller": "DYNAMICS: Nervous energy. Unpredictable jumps between p (40) and f (100). Irregular accents.",
-        "horror": "DYNAMICS: Eerie quiet with shocks. Very soft pp (20-35) with sudden terrifying sfz (110-127) accents.",
-        "dark": "DYNAMICS: Heavy and oppressive. Steady mf-f (70-90), slow downward trend. No bright moments.",
-        "ominous": "DYNAMICS: Growing threat. Start ppp (15-25), inexorable crescendo. Never fully loud, always building.",
-        "romantic": "DYNAMICS: Expressive swells. Wave-like motion mp→f→mp (50-100-50). Breathe with phrases.",
-        "melancholic": "DYNAMICS: Soft and fading. Mostly p-mp (35-60). Gentle decrescendos at phrase ends.",
-        "tender": "DYNAMICS: Intimate and soft. Stay pp-p (25-50). Minimal variation, delicate throughout.",
-        "nostalgic": "DYNAMICS: Bittersweet waves. mp (55) with gentle swells to mf (75), always returning softer.",
-        "passionate": "DYNAMICS: Intense expression. Wide swings mp→ff→mp (50-110-50). Follow emotional contour.",
-        "longing": "DYNAMICS: Yearning crescendos. Start p (40), reach toward f (90-100), then fade back unfulfilled.",
-        "hopeful": "DYNAMICS: Gradual brightening. Start mp (55), steady crescendo to f (95-105). Uplifting arc.",
-        "energetic": "DYNAMICS: High and driving. Constant f-ff (90-110). Punchy accents on strong beats.",
-        "playful": "DYNAMICS: Light and bouncy. mf (70-80) with playful accent variety. Never too heavy.",
-        "action": "DYNAMICS: Driving intensity. f (90-100) throughout with sfz (110+) on action beats.",
-        "aggressive": "DYNAMICS: Forceful attack. ff (100-115) with marcato accents (120+). Powerful and relentless.",
-        "fierce": "DYNAMICS: Wild and untamed. ff-fff (110-127) with explosive sfz peaks. Maximum intensity.",
-        "peaceful": "DYNAMICS: Calm and constant. pp-p (30-50). Barely any variation. Serene stillness.",
-        "dreamy": "DYNAMICS: Floating softness. p-mp (35-60). Slow gentle waves like breathing.",
-        "ethereal": "DYNAMICS: Distant and soft. ppp-pp (15-35). Barely there, celestial whispers.",
-        "mysterious": "DYNAMICS: Unpredictable quiet. p (40-55) with occasional unexpected swells or drops.",
-        "meditative": "DYNAMICS: Still and constant. pp (30-40). Minimal movement. Zen-like stability.",
-        "ambient": "DYNAMICS: Atmospheric and static. Very slow, almost imperceptible changes. pp-mp (30-60).",
-        "celtic": "DYNAMICS: Dance-like energy. mf (70-85) with accent patterns following the rhythm.",
-        "middle eastern": "DYNAMICS: Ornamental expression. mp-mf (55-80) with melodic phrase swells.",
-        "asian": "DYNAMICS: Refined and sparse. p-mf (40-75). Thoughtful pauses at phrase endings.",
-        "latin": "DYNAMICS: Rhythmic warmth. mf-f (75-95). Accent syncopation with dynamic punches.",
-        "nordic": "DYNAMICS: Vast and cold. mp-mf (55-80). Sparse, austere, wide open spaces.",
-        "slavic": "DYNAMICS: Melancholic power. mp→f→mp (50-95-50). Emotional folk intensity.",
-        "baroque": "DYNAMICS: Terraced contrasts. Sudden p→f jumps (45→90). No gradual transitions.",
-        "classical": "DYNAMICS: Balanced phrasing. mp-mf (55-80). Gradual crescendo/decrescendo per phrase.",
-        "impressionist": "DYNAMICS: Coloristic washes. p-mf (40-75). Blurred, overlapping dynamic shapes.",
-        "minimalist": "DYNAMICS: Subtle evolution. Nearly constant mp (60-70). Hypnotic sameness with micro-shifts.",
-        "victorious": "DYNAMICS: Triumphant forte. f-ff (95-115) with fanfare peaks (120+). Celebratory.",
-        "tragic": "DYNAMICS: Heavy descent. Start mf (70), slow decrescendo to pp (25-35). Lamenting fade.",
-        "whimsical": "DYNAMICS: Quirky variety. Random mf (70-85) with unexpected p (45) or f (100) surprises.",
-        "serene": "DYNAMICS: Undisturbed calm. pp-p (30-50). Flat, peaceful, no disturbance.",
-        "foreboding": "DYNAMICS: Creeping dread. Start ppp (15), inexorable slow crescendo. Never resolve.",
-        "magical": "DYNAMICS: Sparkling accents. p (45) base with bright mf (80-90) sparkle moments.",
-        "solemn": "DYNAMICS: Reverent steadiness. mp-mf (55-80). Dignified, no sudden changes.",
+        "heroic": "EXPRESSION: Strong crescendo 70→110. DYNAMICS: Bold swells within phrases, accent peaks.",
+        "epic": "EXPRESSION: Grand build 50→120 to peak. DYNAMICS: Sweeping phrase arcs, dramatic swells.",
+        "triumphant": "EXPRESSION: High plateau 90-115. DYNAMICS: Fanfare-like accent swells on peaks.",
+        "majestic": "EXPRESSION: Steady 80-95. DYNAMICS: Slow dignified swells, no sudden changes.",
+        "adventurous": "EXPRESSION: Varied 70-100. DYNAMICS: Energetic note swells, sudden bursts.",
+        "dramatic": "EXPRESSION: Extreme contrasts 30↔110. DYNAMICS: Intense internal swells per phrase.",
+        "intense": "EXPRESSION: Relentless rise 70→120. DYNAMICS: Driving swells, no backing off.",
+        "suspense": "EXPRESSION: Quiet 25-50. DYNAMICS: Sudden sfz spikes 100+, return to quiet.",
+        "thriller": "EXPRESSION: Unpredictable 40-100. DYNAMICS: Nervous irregular accent swells.",
+        "horror": "EXPRESSION: Eerie quiet 20-35. DYNAMICS: Terrifying sfz spikes 110+, fast decay.",
+        "dark": "EXPRESSION: Heavy 70-90, descending. DYNAMICS: Oppressive, slow internal swells.",
+        "ominous": "EXPRESSION: Growing threat 15→80. DYNAMICS: Creeping swells, never resolve.",
+        "romantic": "EXPRESSION: Wave-like 50-100-50. DYNAMICS: Expressive phrase breathing.",
+        "melancholic": "EXPRESSION: Soft 35-60, fading. DYNAMICS: Gentle decrescendos within notes.",
+        "tender": "EXPRESSION: Intimate 25-50. DYNAMICS: Delicate, minimal internal movement.",
+        "nostalgic": "EXPRESSION: Bittersweet 55-75. DYNAMICS: Gentle swells always returning softer.",
+        "passionate": "EXPRESSION: Wide swings 50-110. DYNAMICS: Intense phrase swells, follow emotion.",
+        "longing": "EXPRESSION: Yearning rise 40→90→60. DYNAMICS: Reaching swells that fade unfulfilled.",
+        "hopeful": "EXPRESSION: Brightening 55→105. DYNAMICS: Uplifting phrase arcs.",
+        "energetic": "EXPRESSION: High constant 90-110. DYNAMICS: Punchy accent swells on beats.",
+        "playful": "EXPRESSION: Light 70-85. DYNAMICS: Bouncy, playful note swells.",
+        "action": "EXPRESSION: Driving 90-100. DYNAMICS: Sfz swells 110+ on action beats.",
+        "aggressive": "EXPRESSION: Forceful 100-115. DYNAMICS: Marcato attack swells 120+.",
+        "fierce": "EXPRESSION: Maximum 110-127. DYNAMICS: Wild explosive sfz swells.",
+        "peaceful": "EXPRESSION: Calm constant 30-50. DYNAMICS: Barely any variation, serene.",
+        "dreamy": "EXPRESSION: Floating 35-60. DYNAMICS: Slow breathing swells like waves.",
+        "ethereal": "EXPRESSION: Distant 15-35. DYNAMICS: Celestial whispers, subtle movement.",
+        "mysterious": "EXPRESSION: Quiet 40-55. DYNAMICS: Unexpected swells and drops.",
+        "meditative": "EXPRESSION: Still 30-40. DYNAMICS: Minimal movement, zen-like.",
+        "ambient": "EXPRESSION: Static 30-60. DYNAMICS: Imperceptible slow changes.",
+        "celtic": "EXPRESSION: Dance-like 70-85. DYNAMICS: Rhythmic accent swells.",
+        "middle eastern": "EXPRESSION: Ornamental 55-80. DYNAMICS: Melodic phrase swells.",
+        "asian": "EXPRESSION: Refined 40-75. DYNAMICS: Thoughtful phrase-end fades.",
+        "latin": "EXPRESSION: Warm 75-95. DYNAMICS: Syncopated accent punches.",
+        "nordic": "EXPRESSION: Vast 55-80. DYNAMICS: Sparse, austere swells.",
+        "slavic": "EXPRESSION: Emotional 50-95. DYNAMICS: Folk-like intense phrase arcs.",
+        "baroque": "EXPRESSION: Terraced jumps 45↔90. DYNAMICS: Ornamental swells within levels.",
+        "classical": "EXPRESSION: Balanced 55-80. DYNAMICS: Gradual phrase crescendo/decrescendo.",
+        "impressionist": "EXPRESSION: Coloristic 40-75. DYNAMICS: Blurred overlapping swells.",
+        "minimalist": "EXPRESSION: Constant 60-70. DYNAMICS: Hypnotic micro-shifts.",
+        "victorious": "EXPRESSION: Triumphant 95-115. DYNAMICS: Fanfare peak swells 120+.",
+        "tragic": "EXPRESSION: Descending 70→25. DYNAMICS: Lamenting phrase fades.",
+        "whimsical": "EXPRESSION: Quirky 70-85. DYNAMICS: Unexpected surprise swells.",
+        "serene": "EXPRESSION: Undisturbed 30-50. DYNAMICS: Flat, peaceful, minimal.",
+        "foreboding": "EXPRESSION: Creeping rise 15→70. DYNAMICS: Dread-building swells.",
+        "magical": "EXPRESSION: Base 45, sparkles 80-90. DYNAMICS: Bright accent swells.",
+        "solemn": "EXPRESSION: Reverent 55-80. DYNAMICS: Dignified steady swells.",
     }
-    dynamics_hint = dynamics_hints.get(style_lower, "DYNAMICS: Match the musical style appropriately.")
+    dynamics_hint = dynamics_hints.get(style_lower, "EXPRESSION: Match the overall section arc. DYNAMICS: Add local note/phrase breathing.")
 
     style_hint = f"{type_hint} {mood_hint}"
     if articulation_hint:
@@ -1761,8 +1913,28 @@ This is the ending. The generated material should:
 
     if request.free_mode:
         articulation_list_str = build_articulation_list_for_prompt(profile)
+        
+        semantic_to_cc = profile.get("controllers", {}).get("semantic_to_cc", {})
+        custom_curves = [k for k in semantic_to_cc.keys() if k not in ("dynamics", "expression")]
+        
+        profile_user_formatted = safe_format(profile_user, values) if profile_user else ""
+        
         user_prompt_parts = [
             f"## FREE MODE COMPOSITION for {profile.get('name', 'instrument')}",
+        ]
+        
+        if profile_user_formatted or custom_curves:
+            user_prompt_parts.extend([
+                f"",
+                f"### !!! CRITICAL INSTRUMENT RULES - READ FIRST !!!",
+            ])
+            if profile_user_formatted:
+                user_prompt_parts.append(profile_user_formatted)
+            if custom_curves:
+                curves_info = ", ".join([f"curves.{k} (CC{semantic_to_cc[k]})" for k in custom_curves])
+                user_prompt_parts.append(f"USE THESE CURVES: {curves_info}")
+        
+        user_prompt_parts.extend([
             f"",
             f"YOU DECIDE: Choose the best generation type, style, and articulations for this context.",
             f"IMPORTANT: Match your output complexity to what the user requests. Simple request = simple output.",
@@ -1775,9 +1947,13 @@ This is the ending. The generated material should:
             f"",
             f"### AVAILABLE ARTICULATIONS:",
             articulation_list_str,
-            f"",
-            f"Note: For LONG articulations, use CC1 curve for dynamics. For SHORT articulations, use velocity.",
-        ]
+        ])
+        
+        if not custom_curves:
+            user_prompt_parts.extend([
+                f"",
+                f"Note: Use Expression (CC11) for overall section dynamics, Dynamics (CC1) for note-level shaping. For SHORT articulations, velocity is primary.",
+            ])
     else:
         user_prompt_parts = [
             f"## COMPOSE: {generation_style.upper()} {generation_type.upper()} for {profile.get('name', 'instrument')}",
@@ -1855,14 +2031,13 @@ This is the ending. The generated material should:
             f"- Choose STYLE that fits (Heroic, Romantic, Dark, Cinematic, etc.)",
             f"- Articulations: use ONE for simple parts (pads, chords), MULTIPLE only for expressive melodic parts",
             f"",
-            f"### TWO-LAYER DYNAMICS",
-            f"1. VELOCITY (vel): Individual note dynamics. Vary for accents and phrase shaping.",
-            f"   - For SHORT articulations (staccato, pizzicato): velocity IS the main dynamics control",
-            f"   - Accent notes: 100-127, normal: 70-90, soft: 40-60",
-            f"2. CC1 CURVE (curves.dynamics): Overall phrase/expression envelope.",
-            f"   - For LONG articulations (sustain, legato): CC1 shapes the dynamics over time",
-            f"   - For simple pads: use flat or slow-swell curve",
-            f"   - For melodic lines: create phrase-shaped arcs",
+            f"### THREE-LAYER DYNAMICS",
+            f"1. VELOCITY (vel): Note attack intensity. Accent: 100-127, normal: 70-90, soft: 40-60",
+            f"2. CC11 EXPRESSION (curves.expression): GLOBAL section dynamics - overall arc of the passage",
+            f"   - Sets the macro-level: how loud is this section overall",
+            f"3. CC1 DYNAMICS (curves.dynamics): LOCAL note/phrase dynamics - internal movement",
+            f"   - For sustained notes: adds swells and fades within each note",
+            f"   - For phrases: adds breathing and local detail",
         ])
     else:
         short_articulations = profile.get("articulations", {}).get("short_articulations", [])
@@ -1879,9 +2054,11 @@ This is the ending. The generated material should:
             f"- Channel: {midi_channel}",
             f"- Articulation: {articulation}",
             f"",
-            f"### TWO-LAYER DYNAMICS",
-            f"1. VELOCITY (vel): {velocity_hint}",
-            f"2. CC1 CURVE: {dynamics_hint}",
+            f"### THREE-LAYER DYNAMICS",
+            f"1. VELOCITY: {velocity_hint}",
+            f"2. EXPRESSION + DYNAMICS: {dynamics_hint}",
+            f"   - Expression (CC11): GLOBAL arc of the section",
+            f"   - Dynamics (CC1): LOCAL swells/fades within notes and phrases",
         ])
 
     if request.user_prompt and request.user_prompt.strip():
@@ -1891,9 +2068,29 @@ This is the ending. The generated material should:
         user_prompt_parts.append(f"")
         user_prompt_parts.append(f"INTERPRET USER REQUEST:")
         user_prompt_parts.append(f"- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output")
-        user_prompt_parts.append(f"- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to CC1 curve AND velocity")
+        user_prompt_parts.append(f"- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail")
         user_prompt_parts.append(f"- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach")
         user_prompt_parts.append(f"- If user asks for chords/pads → use sustained notes, minimal articulation changes")
+
+    if not request.free_mode:
+        profile_user_formatted_end = safe_format(profile_user, values) if profile_user else ""
+        if profile_user_formatted_end:
+            user_prompt_parts.extend([
+                f"",
+                f"### INSTRUMENT-SPECIFIC RULES:",
+                profile_user_formatted_end,
+            ])
+
+        semantic_to_cc_end = profile.get("controllers", {}).get("semantic_to_cc", {})
+        if semantic_to_cc_end:
+            custom_curves_end = [k for k in semantic_to_cc_end.keys() if k not in ("dynamics", "expression")]
+            if custom_curves_end:
+                curves_info_end = ", ".join([f"curves.{k} (CC{semantic_to_cc_end[k]})" for k in custom_curves_end])
+                user_prompt_parts.extend([
+                    f"",
+                    f"### INSTRUMENT CURVES (use these curve names):",
+                    f"{curves_info_end}",
+                ])
 
     user_prompt_parts.extend([
         f"",
