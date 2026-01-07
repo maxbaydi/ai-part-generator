@@ -106,6 +106,52 @@ function M.save_track_settings(track, state)
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_KEY, state.key or "", true)
 end
 
+local function normalize_name(s)
+  return tostring(s or ""):lower():gsub("[%-%_%s]+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function extract_keywords(s)
+  local keywords = {}
+  for word in normalize_name(s):gmatch("%S+") do
+    if #word > 1 then
+      keywords[word] = true
+    end
+  end
+  return keywords
+end
+
+local INSTRUMENT_ALIASES = {
+  violin = { "vln", "vl1", "vl2", "violin1", "violin2", "violins" },
+  viola = { "vla", "violas" },
+  cello = { "vlc", "vc", "cellos" },
+  bass = { "cb", "contrabass", "double bass", "dbass", "basses" },
+  flute = { "fl", "flutes", "flauto" },
+  oboe = { "ob", "oboes" },
+  clarinet = { "cl", "clarinets", "clar" },
+  bassoon = { "bsn", "fg", "fagotto", "bassoons" },
+  piccolo = { "picc", "pc" },
+  horn = { "hn", "fr hn", "french horn", "horns", "cor" },
+  trumpet = { "tp", "trp", "tpt", "trumpets", "trompette" },
+  trombone = { "tb", "trb", "tbn", "trombones", "pos" },
+  tuba = { "tba", "tubas" },
+  drums = { "drum", "perc", "percussion", "kit" },
+}
+
+local function find_instrument_match(track_name)
+  local name_lower = normalize_name(track_name)
+  for instrument, aliases in pairs(INSTRUMENT_ALIASES) do
+    if name_lower:find(instrument, 1, true) then
+      return instrument
+    end
+    for _, alias in ipairs(aliases) do
+      if name_lower:find(alias, 1, true) then
+        return instrument
+      end
+    end
+  end
+  return nil
+end
+
 local function find_profile_by_family(profiles, family)
   for _, profile in ipairs(profiles) do
     if tostring(profile.family or ""):lower() == family then
@@ -115,9 +161,81 @@ local function find_profile_by_family(profiles, family)
   return nil
 end
 
+local function calculate_match_score(profile, track_name)
+  local track_lower = normalize_name(track_name)
+  local profile_name_lower = normalize_name(profile.name or "")
+  local profile_id_lower = normalize_name(profile.id or "")
+  local score = 0
+
+  if profile_name_lower:find(track_lower, 1, true) or track_lower:find(profile_name_lower, 1, true) then
+    score = score + 100
+  end
+
+  local instrument = find_instrument_match(track_name)
+  if instrument then
+    if profile_name_lower:find(instrument, 1, true) or profile_id_lower:find(instrument, 1, true) then
+      score = score + 80
+    end
+    if normalize_name(profile.description or ""):find(instrument, 1, true) then
+      score = score + 20
+    end
+  end
+
+  local track_keywords = extract_keywords(track_name)
+  local profile_keywords = extract_keywords(profile.name or "")
+  for word in pairs(track_keywords) do
+    if profile_keywords[word] then
+      score = score + 30
+    end
+  end
+
+  return score
+end
+
+function M.find_profile_for_track(track, profiles, by_id)
+  if not track then
+    return nil, nil
+  end
+
+  local stored = M.get_track_profile_id(track)
+  if stored and by_id[stored] then
+    return stored, by_id[stored]
+  end
+
+  local track_name = utils.get_track_name(track)
+  if not track_name or track_name == "" then
+    return nil, nil
+  end
+
+  local best_profile = nil
+  local best_score = 0
+
+  for _, profile in ipairs(profiles) do
+    local score = calculate_match_score(profile, track_name)
+    if score > best_score then
+      best_score = score
+      best_profile = profile
+    end
+  end
+
+  if best_profile and best_score >= 30 then
+    return best_profile.id, best_profile
+  end
+
+  return nil, nil
+end
+
 local function heuristic_profile_id(track_name, profiles)
   local name = tostring(track_name or ""):lower()
-  if name:find("bass") then
+
+  for _, profile in ipairs(profiles) do
+    local score = calculate_match_score(profile, track_name)
+    if score >= 50 then
+      return profile.id
+    end
+  end
+
+  if name:find("bass") and not name:find("trombone") then
     return find_profile_by_family(profiles, "bass")
   end
   if name:find("string") or name:find("violin") or name:find("cello") or name:find("viola") then
@@ -171,6 +289,32 @@ function M.get_articulation_info(profile, articulation_name)
   local art_config = profile.articulations or {}
   local map = art_config.map or {}
   return map[articulation_name]
+end
+
+function M.get_selected_tracks_with_profiles(profiles, by_id)
+  local tracks = {}
+  local count = reaper.CountSelectedTracks(0)
+  
+  if count == 0 then
+    return tracks
+  end
+
+  for i = 0, count - 1 do
+    local track = reaper.GetSelectedTrack(0, i)
+    if track then
+      local profile_id, profile = M.find_profile_for_track(track, profiles, by_id)
+      local track_name = utils.get_track_name(track)
+      table.insert(tracks, {
+        track = track,
+        name = track_name,
+        profile_id = profile_id,
+        profile = profile,
+        index = i + 1,
+      })
+    end
+  end
+
+  return tracks
 end
 
 return M

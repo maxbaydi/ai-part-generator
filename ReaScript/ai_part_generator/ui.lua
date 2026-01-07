@@ -8,7 +8,7 @@ local FALLBACK_SEPARATOR = "|"
 
 local UI = {
   WINDOW_WIDTH = 500,
-  WINDOW_HEIGHT = 570,
+  WINDOW_HEIGHT = 680,
   SECTION_SPACING = 12,
   ITEM_SPACING = 6,
   BUTTON_HEIGHT = 32,
@@ -20,6 +20,12 @@ local UI = {
   GENERATE_BTN_COLOR = 0x2D7D46FF,
   GENERATE_BTN_HOVER = 0x3A9D5AFF,
   GENERATE_BTN_ACTIVE = 0x248F3EFF,
+  MULTI_BTN_COLOR = 0x2D5D7DFF,
+  MULTI_BTN_HOVER = 0x3A7D9DFF,
+  MULTI_BTN_ACTIVE = 0x244D6DFF,
+  SEQ_BTN_COLOR = 0x7D4D2DFF,
+  SEQ_BTN_HOVER = 0x9D6D3AFF,
+  SEQ_BTN_ACTIVE = 0x6D3D24FF,
 }
 
 local function escape_separator(s)
@@ -328,25 +334,123 @@ local function draw_api_section(ctx, state)
   end
 end
 
-local function draw_generate_button(ctx, on_generate, state)
+local function draw_multi_track_section(ctx, state, profile_list, profiles_by_id)
+  draw_section_header(ctx, "🎼 Multi-Track Generation")
+  
+  local tracks_info = profiles.get_selected_tracks_with_profiles(profile_list, profiles_by_id)
+  local selected_count = #tracks_info
+  
+  if selected_count == 0 then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x808080FF)
+    reaper.ImGui_TextWrapped(ctx, "No tracks selected. Select 2+ tracks to generate parts for multiple instruments.")
+    reaper.ImGui_PopStyleColor(ctx)
+    return tracks_info
+  end
+
+  local matched_count = 0
+  local unmatched = {}
+  
+  for _, track_data in ipairs(tracks_info) do
+    if track_data.profile then
+      matched_count = matched_count + 1
+    else
+      table.insert(unmatched, track_data.name)
+    end
+  end
+
+  reaper.ImGui_Text(ctx, string.format("Selected tracks: %d", selected_count))
+  
+  if matched_count > 0 then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x80FF80FF)
+    reaper.ImGui_Text(ctx, string.format("✓ Profiles matched: %d", matched_count))
+    reaper.ImGui_PopStyleColor(ctx)
+  end
+  
+  if #unmatched > 0 then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0xFFAA00FF)
+    reaper.ImGui_Text(ctx, string.format("⚠ No profile: %d", #unmatched))
+    reaper.ImGui_PopStyleColor(ctx)
+  end
+
+  if reaper.ImGui_TreeNode(ctx, "Track Details") then
+    for _, track_data in ipairs(tracks_info) do
+      local status_icon = track_data.profile and "✓" or "⚠"
+      local profile_name = track_data.profile and track_data.profile.name or "(no match)"
+      local color = track_data.profile and 0xB0FFB0FF or 0xFFAA00FF
+      
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), color)
+      reaper.ImGui_Text(ctx, string.format("%s %s → %s", status_icon, track_data.name, profile_name))
+      reaper.ImGui_PopStyleColor(ctx)
+    end
+    reaper.ImGui_TreePop(ctx)
+  end
+
+  return tracks_info
+end
+
+local function draw_generate_button(ctx, callbacks, state, tracks_info)
   reaper.ImGui_Spacing(ctx)
   reaper.ImGui_Spacing(ctx)
   reaper.ImGui_Separator(ctx)
   reaper.ImGui_Spacing(ctx)
 
+  local avail_width = reaper.ImGui_GetContentRegionAvail(ctx)
+
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.GENERATE_BTN_COLOR)
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.GENERATE_BTN_HOVER)
   reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.GENERATE_BTN_ACTIVE)
 
-  local avail_width = reaper.ImGui_GetContentRegionAvail(ctx)
-  if reaper.ImGui_Button(ctx, "🎹  Generate", avail_width, UI.BUTTON_HEIGHT) then
-    on_generate(state)
+  if reaper.ImGui_Button(ctx, "🎹  Generate (Single Track)", avail_width, UI.BUTTON_HEIGHT) then
+    callbacks.on_generate(state)
   end
 
   reaper.ImGui_PopStyleColor(ctx, 3)
+
+  local matched_count = 0
+  if tracks_info then
+    for _, t in ipairs(tracks_info) do
+      if t.profile then
+        matched_count = matched_count + 1
+      end
+    end
+  end
+
+  if callbacks.on_sequential_generate and matched_count >= 2 then
+    reaper.ImGui_Spacing(ctx)
+    
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.SEQ_BTN_COLOR)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.SEQ_BTN_HOVER)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.SEQ_BTN_ACTIVE)
+
+    local btn_label = string.format("🎼  Compose (%d Tracks - Sequential)", matched_count)
+    if reaper.ImGui_Button(ctx, btn_label, avail_width, UI.BUTTON_HEIGHT) then
+      callbacks.on_sequential_generate(state)
+    end
+
+    reaper.ImGui_PopStyleColor(ctx, 3)
+    
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x80B0FFFF)
+    reaper.ImGui_TextWrapped(ctx, "Sequential: generates one track at a time, each aware of previous tracks. Best for cohesive compositions.")
+    reaper.ImGui_PopStyleColor(ctx)
+  end
+
+  if callbacks.on_multi_generate and matched_count >= 2 then
+    reaper.ImGui_Spacing(ctx)
+    
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.MULTI_BTN_COLOR)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.MULTI_BTN_HOVER)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.MULTI_BTN_ACTIVE)
+
+    local btn_label = string.format("⚡  Generate All (%d Tracks - Parallel)", matched_count)
+    if reaper.ImGui_Button(ctx, btn_label, avail_width, UI.BUTTON_HEIGHT) then
+      callbacks.on_multi_generate(state)
+    end
+
+    reaper.ImGui_PopStyleColor(ctx, 3)
+  end
 end
 
-function M.run_imgui(state, profile_list, profiles_by_id, on_generate)
+function M.run_imgui(state, profile_list, profiles_by_id, callbacks)
   local ctx = reaper.ImGui_CreateContext(const.SCRIPT_NAME)
 
   reaper.ImGui_SetConfigVar(ctx, reaper.ImGui_ConfigVar_WindowsMoveFromTitleBarOnly(), 1)
@@ -366,8 +470,9 @@ function M.run_imgui(state, profile_list, profiles_by_id, on_generate)
       draw_instrument_section(ctx, state, profile_list, profiles_by_id)
       draw_generation_section(ctx, state)
       draw_context_section(ctx, state)
+      local tracks_info = draw_multi_track_section(ctx, state, profile_list, profiles_by_id)
       draw_api_section(ctx, state)
-      draw_generate_button(ctx, on_generate, state)
+      draw_generate_button(ctx, callbacks, state, tracks_info)
     end
 
     reaper.ImGui_End(ctx)

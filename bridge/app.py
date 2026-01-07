@@ -243,11 +243,43 @@ class ModelInfo(BaseModel):
     api_key: Optional[str] = None
 
 
+class EnsembleInstrument(BaseModel):
+    index: int = 0
+    track_name: str = ""
+    profile_id: str = ""
+    profile_name: str = ""
+    family: str = "unknown"
+    role: str = "unknown"
+    range: Optional[Dict[str, Any]] = None
+    description: str = ""
+
+
+class GeneratedPartInfo(BaseModel):
+    track_name: str = ""
+    profile_name: str = ""
+    role: str = "unknown"
+    notes: List[Dict[str, Any]] = Field(default_factory=list)
+    cc_events: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class EnsembleInfo(BaseModel):
+    total_instruments: int = 1
+    instruments: List[EnsembleInstrument] = Field(default_factory=list)
+    generation_style: str = "Heroic"
+    shared_prompt: str = ""
+    current_instrument_index: int = 1
+    current_instrument: Optional[Dict[str, Any]] = None
+    generation_order: int = 1
+    is_sequential: bool = False
+    previously_generated: List[Dict[str, Any]] = Field(default_factory=list)
+
+
 class GenerateRequest(BaseModel):
     time: TimeWindow
     music: MusicInfo
     target: TargetInfo
     context: Optional[ContextInfo] = None
+    ensemble: Optional[EnsembleInfo] = None
     generation_type: str = "Melody"
     generation_style: str = "Heroic"
     free_mode: bool = False
@@ -1136,6 +1168,178 @@ def detect_continuation_intent(user_prompt: str) -> Optional[str]:
     return None
 
 
+def parse_composition_structure(prompt: str, total_bars: int, time_sig: str = "4/4") -> List[Dict[str, Any]]:
+    if not prompt:
+        return []
+    
+    prompt_lower = prompt.lower()
+    sections = []
+    
+    import re
+    
+    section_patterns = [
+        (r'вступлени[еяю]\s*(?:в\s*)?(\d+)\s*такт', 'intro'),
+        (r'intro\s*(?:of\s*)?(\d+)\s*bar', 'intro'),
+        (r'основн\w*\s*тем\w*\s*(?:в\s*)?(\d+)\s*такт', 'main_theme'),
+        (r'main\s*theme\s*(?:of\s*)?(\d+)\s*bar', 'main_theme'),
+        (r'тем[аыу]\s*(?:в\s*)?(\d+)\s*такт', 'theme'),
+        (r'theme\s*(?:of\s*)?(\d+)\s*bar', 'theme'),
+        (r'заверш\w*\s*(?:в\s*)?(\d+)\s*такт', 'outro'),
+        (r'outro\s*(?:of\s*)?(\d+)\s*bar', 'outro'),
+        (r'(?:спокойн\w*\s*)?завершени[еяю]\s*(?:в\s*)?(\d+)\s*такт', 'outro'),
+        (r'разви[тв]\w*\s*(?:в\s*)?(\d+)\s*такт', 'development'),
+        (r'development\s*(?:of\s*)?(\d+)\s*bar', 'development'),
+        (r'куплет\s*(?:в\s*)?(\d+)\s*такт', 'verse'),
+        (r'verse\s*(?:of\s*)?(\d+)\s*bar', 'verse'),
+        (r'припев\s*(?:в\s*)?(\d+)\s*такт', 'chorus'),
+        (r'chorus\s*(?:of\s*)?(\d+)\s*bar', 'chorus'),
+        (r'бридж\s*(?:в\s*)?(\d+)\s*такт', 'bridge'),
+        (r'bridge\s*(?:of\s*)?(\d+)\s*bar', 'bridge'),
+    ]
+    
+    found_sections = []
+    for pattern, section_type in section_patterns:
+        matches = re.finditer(pattern, prompt_lower)
+        for match in matches:
+            bars = int(match.group(1))
+            position = match.start()
+            found_sections.append({
+                'type': section_type,
+                'bars': bars,
+                'position': position,
+            })
+    
+    found_sections.sort(key=lambda x: x['position'])
+    
+    current_bar = 0
+    for section in found_sections:
+        section['start_bar'] = current_bar
+        section['end_bar'] = current_bar + section['bars']
+        current_bar = section['end_bar']
+        del section['position']
+    
+    return found_sections
+
+
+def format_notes_for_context(notes: List[Dict[str, Any]], max_notes: int = 50) -> str:
+    if not notes:
+        return ""
+    
+    limited = notes[:max_notes]
+    note_strs = []
+    for n in limited:
+        start = n.get('start_q', 0)
+        dur = n.get('dur_q', 1)
+        pitch = n.get('pitch', 60)
+        note_strs.append(f"({start:.1f}, {pitch}, {dur:.2f})")
+    
+    return ", ".join(note_strs)
+
+
+def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_name: str) -> str:
+    if not ensemble or ensemble.total_instruments <= 1:
+        return ""
+
+    parts: List[str] = []
+    
+    if ensemble.is_sequential:
+        parts.append("### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION")
+        parts.append(f"You are generating part {ensemble.generation_order} of {ensemble.total_instruments} for a unified composition.")
+        parts.append("Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.")
+        parts.append("")
+    else:
+        parts.append("### ENSEMBLE GENERATION - CRITICAL FOR COHESIVE COMPOSITION")
+        parts.append(f"You are generating ONE PART of a {ensemble.total_instruments}-instrument ensemble.")
+        parts.append("All parts are being generated SIMULTANEOUSLY and must work together as a unified composition.")
+        parts.append("")
+    
+    parts.append("ENSEMBLE INSTRUMENTS (in generation order):")
+
+    role_hints = {
+        "melody": "MELODY: Carry the main theme. Clear, memorable lines. Be the focus.",
+        "lead": "LEAD: Carry the main theme. Clear, memorable lines. Be the focus.",
+        "bass": "BASS: Harmonic foundation. Play roots and fifths. Define the harmony.",
+        "harmony": "HARMONY: Support the melody. Play chord tones. Fill the harmonic space.",
+        "accompaniment": "ACCOMPANIMENT: Support the melody. Rhythmic patterns, arpeggios, sustained chords.",
+        "rhythm": "RHYTHM: Define the pulse. Steady patterns. Don't overshadow melody.",
+        "pad": "PAD: Sustained background. Long notes. Smooth dynamics.",
+        "fill": "FILL: Ornamental passages. Fill gaps between phrases.",
+        "strings": "STRINGS: Harmony and melody. Sustained chords or lyrical lines.",
+        "woodwinds": "WOODWINDS: Color and melody. Lyrical countermelodies.",
+        "brass": "BRASS: Power and drama. Heroic melodies or fanfares.",
+        "drums": "PERCUSSION: Rhythm foundation. Define the groove.",
+    }
+
+    for inst in ensemble.instruments:
+        is_current = inst.profile_name == current_profile_name
+        marker = " ← YOU ARE GENERATING THIS" if is_current else ""
+        already_done = inst.index < ensemble.generation_order
+        done_marker = " [ALREADY GENERATED]" if already_done and ensemble.is_sequential else ""
+        family = inst.family.lower() if inst.family else "unknown"
+        role = inst.role if inst.role else "unknown"
+        parts.append(f"  {inst.index}. {inst.profile_name} ({family}, role: {role}){marker}{done_marker}")
+
+    parts.append("")
+    
+    if ensemble.is_sequential and ensemble.previously_generated:
+        parts.append("### PREVIOUSLY GENERATED PARTS - YOU MUST COMPLEMENT THESE")
+        parts.append("The following parts have already been composed. Study them carefully!")
+        parts.append("")
+        
+        for prev_part in ensemble.previously_generated:
+            part_name = prev_part.get('profile_name', prev_part.get('track_name', 'Unknown'))
+            part_role = prev_part.get('role', 'unknown')
+            prev_notes = prev_part.get('notes', [])
+            
+            parts.append(f"**{part_name}** (role: {part_role}):")
+            
+            if prev_notes:
+                note_summary = format_notes_for_context(prev_notes, 30)
+                parts.append(f"  Notes (start_q, pitch, dur_q): {note_summary}")
+                
+                pitches = [n.get('pitch', 60) for n in prev_notes]
+                if pitches:
+                    parts.append(f"  Pitch range: {min(pitches)}-{max(pitches)}")
+                
+                note_count = len(prev_notes)
+                parts.append(f"  Total notes: {note_count}")
+            parts.append("")
+        
+        parts.append("CRITICAL RULES FOR COMPLEMENTING EXISTING PARTS:")
+        parts.append("1. DO NOT DUPLICATE melodies or rhythms from parts above")
+        parts.append("2. Use DIFFERENT register (higher or lower than existing parts)")
+        parts.append("3. Create COUNTERPOINT - when melody moves, you can hold; when melody holds, you can move")
+        parts.append("4. Match the HARMONIC RHYTHM - change chords when the bass/harmony changes")
+        parts.append("5. Support the PHRASE STRUCTURE - breathe when the melody breathes")
+        parts.append("")
+    
+    parts.append("ENSEMBLE COORDINATION RULES:")
+    parts.append("1. AVOID UNISON: Don't duplicate exact same notes as other instruments")
+    parts.append("2. REGISTER SEPARATION: Stay in your instrument's typical register")
+    parts.append("3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble")
+    parts.append("4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody")
+    parts.append("5. CALL & RESPONSE: Create phrases that leave space for other instruments")
+    parts.append("")
+
+    current_inst = ensemble.current_instrument
+    if current_inst:
+        role = current_inst.get("role", "unknown").lower()
+        family = current_inst.get("family", "unknown").lower()
+        hint = role_hints.get(role) or role_hints.get(family, "")
+        if hint:
+            parts.append(f"YOUR ROLE ({current_inst.get('profile_name', 'instrument')}): {hint}")
+            parts.append("")
+
+    if ensemble.total_instruments >= 3:
+        parts.append("ORCHESTRATION LAYERS:")
+        parts.append("  - MELODY layer: Main theme carrier")
+        parts.append("  - HARMONY layer: Chords/sustained notes")  
+        parts.append("  - BASS layer: Foundation and roots")
+        parts.append("")
+
+    return "\n".join(parts)
+
+
 def build_context_summary(
     context: Optional[ContextInfo],
     time_sig: str = "4/4",
@@ -1592,6 +1796,50 @@ This is the ending. The generated material should:
     if context_summary:
         user_prompt_parts.append(f"")
         user_prompt_parts.append(context_summary)
+
+    ensemble_context = build_ensemble_context(request.ensemble, profile.get("name", ""))
+    if ensemble_context:
+        user_prompt_parts.append(f"")
+        user_prompt_parts.append(ensemble_context)
+
+    composition_structure = parse_composition_structure(request.user_prompt, bars, request.music.time_sig)
+    if composition_structure:
+        user_prompt_parts.append(f"")
+        user_prompt_parts.append("### COMPOSITION STRUCTURE - FOLLOW THIS FORM")
+        user_prompt_parts.append("The user has specified a specific structure. Generate according to these sections:")
+        user_prompt_parts.append("")
+        
+        quarters_per_bar = get_quarters_per_bar(request.music.time_sig)
+        for section in composition_structure:
+            section_type = section['type'].replace('_', ' ').title()
+            start_bar = section['start_bar']
+            end_bar = section['end_bar']
+            num_bars = section['bars']
+            start_q = start_bar * quarters_per_bar
+            end_q = end_bar * quarters_per_bar
+            
+            section_hints = {
+                'intro': "Build anticipation, establish the mood, simpler texture",
+                'main_theme': "Present the main melodic idea clearly and memorably",
+                'theme': "Present the melodic idea clearly",
+                'outro': "Wind down, resolve tension, bring to peaceful conclusion",
+                'development': "Develop themes, add complexity, build tension",
+                'verse': "Lyrical, storytelling section",
+                'chorus': "Emotional peak, memorable hook",
+                'bridge': "Contrast section, transition between parts",
+            }
+            hint = section_hints.get(section['type'], "")
+            
+            user_prompt_parts.append(f"  **{section_type}**: Bars {start_bar + 1}-{end_bar} ({num_bars} bars, quarters {start_q:.0f}-{end_q:.0f})")
+            if hint:
+                user_prompt_parts.append(f"    → {hint}")
+        
+        user_prompt_parts.append("")
+        user_prompt_parts.append("STRUCTURE RULES:")
+        user_prompt_parts.append("- Each section should have distinct character matching its type")
+        user_prompt_parts.append("- Create smooth transitions between sections")
+        user_prompt_parts.append("- The outro should feel like a natural resolution")
+        user_prompt_parts.append("")
 
     if request.free_mode:
         user_prompt_parts.extend([
