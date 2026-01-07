@@ -1,5 +1,4 @@
 local const = require("ai_part_generator.constants")
-local bridge = require("ai_part_generator.bridge")
 local context = require("ai_part_generator.context")
 local http = require("ai_part_generator.http")
 local key_detect = require("ai_part_generator.key_detect")
@@ -12,7 +11,6 @@ local M = {}
 
 local pending = nil
 local apply_state = nil
-local bridge_starting = false
 
 local function get_time_selection()
   local start_sec, end_sec = reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
@@ -451,7 +449,7 @@ local function run_generation(state, profiles_by_id)
     utils.show_error("No time selection set.")
     return
   end
-  if pending or apply_state or bridge_starting then
+  if pending or apply_state then
     utils.show_error("Generation already in progress.")
     return
   end
@@ -473,15 +471,7 @@ local function run_generation(state, profiles_by_id)
     model_name = state.model_name,
   }
 
-  bridge_starting = true
-  bridge.ensure_running_async(function(ok, err)
-    bridge_starting = false
-    if not ok then
-      utils.show_error(err or "Bridge server not available.")
-      return
-    end
-    run_generation_after_bridge(state_snapshot, profiles_by_id, start_sec, end_sec)
-  end)
+  run_generation_after_bridge(state_snapshot, profiles_by_id, start_sec, end_sec)
 end
 
 function M.main()

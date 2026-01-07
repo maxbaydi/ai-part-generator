@@ -20,19 +20,15 @@
     "default": "sustain",
     "short_articulations": ["staccatissimo", "staccato", "sforzando", "marcato"],
     "map": {
-      "sustain": { "cc_value": 0, "description": "Sustain", "dynamics": "cc1" },
-      "sustain_nv": { "cc_value": 1, "description": "Sustain (No Vibrato)", "dynamics": "cc1" },
-      "legato": { "cc_value": 2, "description": "Legato", "dynamics": "cc1" },
-      "legato_nv": { "cc_value": 3, "description": "Legato (No Vibrato)", "dynamics": "cc1" },
-      "repetitions": { "cc_value": 4, "description": "Repetitions", "dynamics": "velocity" },
-      "staccatissimo": { "cc_value": 5, "description": "Staccatissimo", "dynamics": "velocity" },
-      "staccato": { "cc_value": 6, "description": "Staccato", "dynamics": "velocity" },
-      "sforzando": { "cc_value": 7, "description": "Sforzando", "dynamics": "velocity" },
-      "trills_half": { "cc_value": 8, "description": "Trill (Half)", "dynamics": "cc1" },
-      "trills_whole": { "cc_value": 9, "description": "Trill (Whole)", "dynamics": "cc1" },
-      "marcato": { "cc_value": 10, "description": "Marcato", "dynamics": "velocity" },
-      "runs": { "cc_value": 11, "description": "Runs", "dynamics": "cc1" },
-      "measured_reps": { "cc_value": 12, "description": "Measured Reps", "dynamics": "velocity" }
+      "sustain": { "cc_value": 0, "description": "Sustain (Low Latency Legato)", "dynamics": "cc1" },
+      "sustain_expressive": { "cc_value": 6, "description": "Sustain (Expressive Legato)", "dynamics": "cc1" },
+      "repetitions": { "cc_value": 11, "description": "Repetitions", "dynamics": "velocity" },
+      "staccatissimo": { "cc_value": 16, "description": "Staccatissimo", "dynamics": "velocity" },
+      "staccato": { "cc_value": 21, "description": "Staccato", "dynamics": "velocity" },
+      "sforzando": { "cc_value": 26, "description": "Sforzando", "dynamics": "velocity" },
+      "trills": { "cc_value": 46, "description": "Trills", "dynamics": "cc1" },
+      "measured_reps": { "cc_value": 61, "description": "Measured Repetitions", "dynamics": "velocity" },
+      "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" }
     }
   },
   "controllers": {

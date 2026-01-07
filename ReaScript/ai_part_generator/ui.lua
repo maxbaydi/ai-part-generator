@@ -368,9 +368,9 @@ function M.run_imgui(state, profile_list, profiles_by_id, on_generate)
       draw_context_section(ctx, state)
       draw_api_section(ctx, state)
       draw_generate_button(ctx, on_generate, state)
-
-      reaper.ImGui_End(ctx)
     end
+
+    reaper.ImGui_End(ctx)
 
     reaper.ImGui_PopStyleVar(ctx, 4)
 
