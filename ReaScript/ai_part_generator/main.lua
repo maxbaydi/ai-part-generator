@@ -11,11 +11,7 @@ local M = {}
 
 local pending = nil
 local apply_state = nil
-
-local multi_pending = nil
-local multi_apply_queue = {}
-
-local sequential_state = nil
+local compose_state = nil
 
 local ROLE_PRIORITY = {
   melody = 1,
@@ -563,99 +559,25 @@ local function run_generation(state, profiles_by_id)
   run_generation_after_bridge(state_snapshot, profiles_by_id, start_sec, end_sec)
 end
 
-local function process_multi_apply_queue()
-  if #multi_apply_queue == 0 then
+local function apply_compose_result_and_continue()
+  if not compose_state then
     return
   end
   
   if apply_state then
-    reaper.defer(process_multi_apply_queue)
+    reaper.defer(apply_compose_result_and_continue)
     return
   end
   
-  local next_item = table.remove(multi_apply_queue, 1)
-  utils.log(string.format("Multi-track: applying results for track '%s'", next_item.track_name))
-  begin_apply(next_item.response, next_item.profile_id, next_item.target_track, next_item.start_sec, next_item.end_sec)
-  
-  if #multi_apply_queue > 0 then
-    reaper.defer(process_multi_apply_queue)
-  end
-end
-
-local function poll_multi_generation()
-  if not multi_pending or #multi_pending.requests == 0 then
-    multi_pending = nil
-    return
-  end
-
-  local all_done = true
-  local completed_count = 0
-  local total_count = #multi_pending.requests
-
-  for i, req in ipairs(multi_pending.requests) do
-    if not req.done then
-      local done, data, err = http.poll_response(req.handle)
-      if done then
-        req.done = true
-        http.cleanup(req.handle)
-        
-        if err then
-          utils.log(string.format("Multi-track ERROR for '%s': %s", req.track_name, tostring(err)))
-        elseif data then
-          utils.log(string.format("Multi-track: response for '%s' - notes=%d, cc=%d",
-            req.track_name,
-            data.notes and #data.notes or 0,
-            data.cc_events and #data.cc_events or 0))
-          
-          table.insert(multi_apply_queue, {
-            response = data,
-            profile_id = req.profile_id,
-            target_track = req.target_track,
-            track_name = req.track_name,
-            start_sec = multi_pending.start_sec,
-            end_sec = multi_pending.end_sec,
-          })
-        end
-      else
-        all_done = false
-      end
-    else
-      completed_count = completed_count + 1
-    end
-  end
-
-  if all_done then
-    utils.log(string.format("Multi-track: all %d requests completed", total_count))
-    multi_pending = nil
-    
-    if #multi_apply_queue > 0 and not apply_state then
-      reaper.defer(process_multi_apply_queue)
-    end
-    return
-  end
-
-  reaper.defer(poll_multi_generation)
-end
-
-local function apply_sequential_result_and_continue()
-  if not sequential_state then
-    return
-  end
-  
-  if apply_state then
-    reaper.defer(apply_sequential_result_and_continue)
-    return
-  end
-  
-  local current = sequential_state.pending_apply
+  local current = compose_state.pending_apply
   if current then
-    utils.log(string.format("Sequential: applying results for '%s' (%d/%d)",
-      current.track_name, sequential_state.current_index, sequential_state.total_tracks))
+    utils.log(string.format("Compose: applying results for '%s' (%d/%d)",
+      current.track_name, compose_state.current_index, compose_state.total_tracks))
     
     begin_apply(current.response, current.profile_id, current.target_track,
-      sequential_state.start_sec, sequential_state.end_sec)
+      compose_state.start_sec, compose_state.end_sec)
     
-    table.insert(sequential_state.generated_parts, {
+    table.insert(compose_state.generated_parts, {
       track_name = current.track_name,
       profile_name = current.profile_name,
       role = current.role,
@@ -663,55 +585,55 @@ local function apply_sequential_result_and_continue()
       cc_events = current.response.cc_events or {},
     })
     
-    sequential_state.pending_apply = nil
-    reaper.defer(apply_sequential_result_and_continue)
+    compose_state.pending_apply = nil
+    reaper.defer(apply_compose_result_and_continue)
     return
   end
   
-  sequential_state.current_index = sequential_state.current_index + 1
-  if sequential_state.current_index > sequential_state.total_tracks then
-    utils.log("Sequential generation: ALL COMPLETE!")
-    sequential_state = nil
+  compose_state.current_index = compose_state.current_index + 1
+  if compose_state.current_index > compose_state.total_tracks then
+    utils.log("Compose: ALL COMPLETE!")
+    compose_state = nil
     return
   end
   
-  reaper.defer(start_next_sequential_generation)
+  reaper.defer(start_next_compose_generation)
 end
 
-local function poll_sequential_generation()
-  if not sequential_state or not sequential_state.current_handle then
+local function poll_compose_generation()
+  if not compose_state or not compose_state.current_handle then
     return
   end
   
-  local done, data, err = http.poll_response(sequential_state.current_handle)
+  local done, data, err = http.poll_response(compose_state.current_handle)
   if not done then
-    reaper.defer(poll_sequential_generation)
+    reaper.defer(poll_compose_generation)
     return
   end
   
-  http.cleanup(sequential_state.current_handle)
-  sequential_state.current_handle = nil
+  http.cleanup(compose_state.current_handle)
+  compose_state.current_handle = nil
   
-  local current_track = sequential_state.tracks[sequential_state.current_index]
+  local current_track = compose_state.tracks[compose_state.current_index]
   
   if err then
-    utils.log(string.format("Sequential ERROR for '%s': %s", current_track.name, tostring(err)))
-    sequential_state.current_index = sequential_state.current_index + 1
-    if sequential_state.current_index <= sequential_state.total_tracks then
-      reaper.defer(start_next_sequential_generation)
+    utils.log(string.format("Compose ERROR for '%s': %s", current_track.name, tostring(err)))
+    compose_state.current_index = compose_state.current_index + 1
+    if compose_state.current_index <= compose_state.total_tracks then
+      reaper.defer(start_next_compose_generation)
     else
-      sequential_state = nil
+      compose_state = nil
     end
     return
   end
   
   if data then
-    utils.log(string.format("Sequential: response for '%s' - notes=%d, cc=%d",
+    utils.log(string.format("Compose: response for '%s' - notes=%d, cc=%d",
       current_track.name,
       data.notes and #data.notes or 0,
       data.cc_events and #data.cc_events or 0))
     
-    sequential_state.pending_apply = {
+    compose_state.pending_apply = {
       response = data,
       profile_id = current_track.profile.id,
       profile_name = current_track.profile.name,
@@ -720,87 +642,87 @@ local function poll_sequential_generation()
       role = current_track.role,
     }
     
-    reaper.defer(apply_sequential_result_and_continue)
+    reaper.defer(apply_compose_result_and_continue)
   end
 end
 
-function start_next_sequential_generation()
-  if not sequential_state then
+function start_next_compose_generation()
+  if not compose_state then
     return
   end
   
-  if sequential_state.current_index > sequential_state.total_tracks then
-    utils.log("Sequential generation complete!")
-    sequential_state = nil
+  if compose_state.current_index > compose_state.total_tracks then
+    utils.log("Compose: generation complete!")
+    compose_state = nil
     return
   end
   
-  local current_track = sequential_state.tracks[sequential_state.current_index]
+  local current_track = compose_state.tracks[compose_state.current_index]
   local profile = current_track.profile
   
-  utils.log(string.format("Sequential: starting generation %d/%d for '%s' (role: %s)",
-    sequential_state.current_index, sequential_state.total_tracks,
+  utils.log(string.format("Compose: generating %d/%d '%s' (role: %s)",
+    compose_state.current_index, compose_state.total_tracks,
     current_track.name, current_track.role or "unknown"))
   
   local articulation_name = profiles.get_default_articulation(profile)
-  local ctx = context.build_context(sequential_state.use_selected_tracks, current_track.track,
-    sequential_state.start_sec, sequential_state.end_sec)
+  local ctx = context.build_context(compose_state.use_selected_tracks, current_track.track,
+    compose_state.start_sec, compose_state.end_sec)
   
   local ensemble_info = {
-    total_instruments = sequential_state.total_tracks,
-    instruments = sequential_state.ensemble_instruments,
-    generation_style = sequential_state.generation_style,
-    shared_prompt = sequential_state.prompt,
-    current_instrument_index = sequential_state.current_index,
+    total_instruments = compose_state.total_tracks,
+    instruments = compose_state.ensemble_instruments,
+    generation_style = compose_state.generation_style,
+    shared_prompt = compose_state.prompt,
+    current_instrument_index = compose_state.current_index,
     current_instrument = {
       track_name = current_track.name,
       profile_name = profile.name,
       family = profile.family or "unknown",
       role = current_track.role,
     },
-    generation_order = sequential_state.current_index,
+    generation_order = compose_state.current_index,
     is_sequential = true,
-    previously_generated = sequential_state.generated_parts,
+    previously_generated = compose_state.generated_parts,
   }
   
   local request = build_request(
-    sequential_state.start_sec,
-    sequential_state.end_sec,
-    sequential_state.bpm,
-    sequential_state.num,
-    sequential_state.denom,
-    sequential_state.key,
+    compose_state.start_sec,
+    compose_state.end_sec,
+    compose_state.bpm,
+    compose_state.num,
+    compose_state.denom,
+    compose_state.key,
     profile.id,
     articulation_name,
-    sequential_state.generation_type,
-    sequential_state.generation_style,
-    sequential_state.prompt,
+    compose_state.generation_type,
+    compose_state.generation_style,
+    compose_state.prompt,
     ctx,
-    sequential_state.api_settings,
+    compose_state.api_settings,
     true,
     ensemble_info
   )
   
   local handle, err = http.begin_request(const.DEFAULT_BRIDGE_URL, request)
   if not handle then
-    utils.log(string.format("Sequential: failed to start request for '%s': %s", current_track.name, tostring(err)))
-    sequential_state.current_index = sequential_state.current_index + 1
-    reaper.defer(start_next_sequential_generation)
+    utils.log(string.format("Compose: failed to start request for '%s': %s", current_track.name, tostring(err)))
+    compose_state.current_index = compose_state.current_index + 1
+    reaper.defer(start_next_compose_generation)
     return
   end
   
-  sequential_state.current_handle = handle
-  reaper.defer(poll_sequential_generation)
+  compose_state.current_handle = handle
+  reaper.defer(poll_compose_generation)
 end
 
-local function run_sequential_multi_track_generation(state, profile_list, profiles_by_id)
+local function run_compose(state, profile_list, profiles_by_id)
   local start_sec, end_sec = get_time_selection()
   if start_sec == end_sec then
     utils.show_error("No time selection set.")
     return
   end
 
-  if pending or apply_state or multi_pending or sequential_state then
+  if pending or apply_state or compose_state then
     utils.show_error("Generation already in progress.")
     return
   end
@@ -813,20 +735,27 @@ local function run_sequential_multi_track_generation(state, profile_list, profil
   end
 
   local valid_tracks = {}
+  local skipped = {}
   for _, track_data in ipairs(tracks_with_profiles) do
     if track_data.profile_id and track_data.profile then
       table.insert(valid_tracks, track_data)
+    else
+      table.insert(skipped, track_data.name)
     end
   end
 
   if #valid_tracks == 0 then
-    utils.show_error("Could not determine profiles for selected tracks.")
+    local msg = "Could not determine profiles for selected tracks."
+    if #skipped > 0 then
+      msg = msg .. "\nUnmatched: " .. table.concat(skipped, ", ")
+    end
+    utils.show_error(msg)
     return
   end
 
   local sorted_tracks = sort_tracks_by_generation_order(valid_tracks, state.prompt)
   
-  utils.log(string.format("Sequential generation: %d tracks (sorted by role)", #sorted_tracks))
+  utils.log(string.format("Compose: %d tracks (sorted by role)", #sorted_tracks))
   for i, td in ipairs(sorted_tracks) do
     utils.log(string.format("  %d. '%s' -> '%s' (role: %s)", i, td.name, td.profile.name, td.role or "unknown"))
   end
@@ -862,7 +791,7 @@ local function run_sequential_multi_track_generation(state, profile_list, profil
     })
   end
 
-  sequential_state = {
+  compose_state = {
     tracks = sorted_tracks,
     total_tracks = #sorted_tracks,
     current_index = 1,
@@ -888,167 +817,7 @@ local function run_sequential_multi_track_generation(state, profile_list, profil
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_BASE_URL, state.api_base_url or "", true)
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_MODEL_NAME, state.model_name or "", true)
 
-  start_next_sequential_generation()
-end
-
-local function run_multi_track_generation(state, profile_list, profiles_by_id)
-  local start_sec, end_sec = get_time_selection()
-  if start_sec == end_sec then
-    utils.show_error("No time selection set.")
-    return
-  end
-
-  if pending or apply_state or multi_pending then
-    utils.show_error("Generation already in progress.")
-    return
-  end
-
-  local tracks_with_profiles = profiles.get_selected_tracks_with_profiles(profile_list, profiles_by_id)
-  
-  if #tracks_with_profiles == 0 then
-    utils.show_error("No tracks selected.")
-    return
-  end
-
-  local valid_tracks = {}
-  local skipped_tracks = {}
-  
-  for _, track_data in ipairs(tracks_with_profiles) do
-    if track_data.profile_id and track_data.profile then
-      table.insert(valid_tracks, track_data)
-    else
-      table.insert(skipped_tracks, track_data.name)
-    end
-  end
-
-  if #valid_tracks == 0 then
-    utils.show_error("Could not determine profiles for selected tracks:\n" .. table.concat(skipped_tracks, "\n"))
-    return
-  end
-
-  if #skipped_tracks > 0 then
-    utils.log("Multi-track: skipping tracks without matching profiles: " .. table.concat(skipped_tracks, ", "))
-  end
-
-  utils.log(string.format("Multi-track generation: %d tracks", #valid_tracks))
-  for _, td in ipairs(valid_tracks) do
-    utils.log(string.format("  - '%s' -> profile '%s'", td.name, td.profile.name))
-  end
-
-  local bpm, num, denom = get_bpm_and_timesig(start_sec)
-  
-  local key = state.key or const.DEFAULT_KEY
-  if state.key_mode == "Auto" then
-    local key_tracks = get_key_tracks()
-    key = key_detect.detect_key(key_tracks, start_sec, end_sec) or const.DEFAULT_KEY
-  elseif state.key_mode == "Unknown" then
-    key = const.DEFAULT_KEY
-  end
-
-  local api_settings = {
-    api_provider = state.api_provider,
-    api_key = state.api_key,
-    api_base_url = state.api_base_url,
-    model_name = state.model_name,
-  }
-
-  reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_PROVIDER, state.api_provider or const.API_PROVIDER_LOCAL, true)
-  reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_KEY, state.api_key or "", true)
-  reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_BASE_URL, state.api_base_url or "", true)
-  reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_MODEL_NAME, state.model_name or "", true)
-
-  local ensemble_instruments = {}
-  for i, track_data in ipairs(valid_tracks) do
-    table.insert(ensemble_instruments, {
-      index = i,
-      track_name = track_data.name,
-      profile_id = track_data.profile.id,
-      profile_name = track_data.profile.name,
-      family = track_data.profile.family or "unknown",
-      range = track_data.profile.range or {},
-      description = track_data.profile.description or "",
-    })
-  end
-
-  local base_ensemble_info = {
-    total_instruments = #valid_tracks,
-    instruments = ensemble_instruments,
-    generation_style = state.generation_style or const.DEFAULT_GENERATION_STYLE,
-    shared_prompt = state.prompt or "",
-  }
-
-  utils.log(string.format("Multi-track: ensemble with %d instruments", #ensemble_instruments))
-
-  local requests = {}
-
-  for i, track_data in ipairs(valid_tracks) do
-    local target_track = track_data.track
-    local profile = track_data.profile
-    
-    local articulation_name = profiles.get_default_articulation(profile)
-    local ctx = context.build_context(state.use_selected_tracks, target_track, start_sec, end_sec)
-
-    local ensemble_info = {
-      total_instruments = base_ensemble_info.total_instruments,
-      instruments = base_ensemble_info.instruments,
-      generation_style = base_ensemble_info.generation_style,
-      shared_prompt = base_ensemble_info.shared_prompt,
-      current_instrument_index = i,
-      current_instrument = {
-        track_name = track_data.name,
-        profile_name = profile.name,
-        family = profile.family or "unknown",
-      },
-    }
-
-    local request = build_request(
-      start_sec,
-      end_sec,
-      bpm,
-      num,
-      denom,
-      key,
-      profile.id,
-      articulation_name,
-      state.generation_type or const.DEFAULT_GENERATION_TYPE,
-      state.generation_style or const.DEFAULT_GENERATION_STYLE,
-      state.prompt or "",
-      ctx,
-      api_settings,
-      true,
-      ensemble_info
-    )
-
-    local handle, err = http.begin_request(const.DEFAULT_BRIDGE_URL, request)
-    if handle then
-      table.insert(requests, {
-        handle = handle,
-        profile_id = profile.id,
-        target_track = target_track,
-        track_name = track_data.name,
-        done = false,
-      })
-      utils.log(string.format("Multi-track: request started for '%s' (instrument %d/%d)", 
-        track_data.name, i, #valid_tracks))
-    else
-      utils.log(string.format("Multi-track: failed to start request for '%s': %s", track_data.name, tostring(err)))
-    end
-  end
-
-  if #requests == 0 then
-    utils.show_error("Failed to start any generation requests.")
-    return
-  end
-
-  utils.log(string.format("Multi-track: %d requests started", #requests))
-
-  multi_pending = {
-    requests = requests,
-    start_sec = start_sec,
-    end_sec = end_sec,
-  }
-
-  reaper.defer(poll_multi_generation)
+  start_next_compose_generation()
 end
 
 function M.main()
@@ -1109,18 +878,13 @@ function M.main()
     run_generation(current_state, profiles_by_id)
   end
 
-  local on_multi_generate = function(current_state)
-    run_multi_track_generation(current_state, profile_list, profiles_by_id)
-  end
-
-  local on_sequential_generate = function(current_state)
-    run_sequential_multi_track_generation(current_state, profile_list, profiles_by_id)
+  local on_compose = function(current_state)
+    run_compose(current_state, profile_list, profiles_by_id)
   end
 
   local callbacks = {
     on_generate = on_generate,
-    on_multi_generate = on_multi_generate,
-    on_sequential_generate = on_sequential_generate,
+    on_compose = on_compose,
   }
 
   if reaper.ImGui_CreateContext ~= nil then
@@ -1132,18 +896,18 @@ function M.main()
 end
 
 function M.is_generation_in_progress()
-  return pending ~= nil or apply_state ~= nil or multi_pending ~= nil or sequential_state ~= nil
+  return pending ~= nil or apply_state ~= nil or compose_state ~= nil
 end
 
-function M.get_sequential_progress()
-  if not sequential_state then
+function M.get_compose_progress()
+  if not compose_state then
     return nil
   end
   return {
-    current = sequential_state.current_index,
-    total = sequential_state.total_tracks,
-    current_track = sequential_state.tracks[sequential_state.current_index] and 
-                    sequential_state.tracks[sequential_state.current_index].name or "",
+    current = compose_state.current_index,
+    total = compose_state.total_tracks,
+    current_track = compose_state.tracks[compose_state.current_index] and 
+                    compose_state.tracks[compose_state.current_index].name or "",
   }
 end
 

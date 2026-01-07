@@ -8,7 +8,7 @@ local FALLBACK_SEPARATOR = "|"
 
 local UI = {
   WINDOW_WIDTH = 500,
-  WINDOW_HEIGHT = 680,
+  WINDOW_HEIGHT = 650,
   SECTION_SPACING = 12,
   ITEM_SPACING = 6,
   BUTTON_HEIGHT = 32,
@@ -20,12 +20,9 @@ local UI = {
   GENERATE_BTN_COLOR = 0x2D7D46FF,
   GENERATE_BTN_HOVER = 0x3A9D5AFF,
   GENERATE_BTN_ACTIVE = 0x248F3EFF,
-  MULTI_BTN_COLOR = 0x2D5D7DFF,
-  MULTI_BTN_HOVER = 0x3A7D9DFF,
-  MULTI_BTN_ACTIVE = 0x244D6DFF,
-  SEQ_BTN_COLOR = 0x7D4D2DFF,
-  SEQ_BTN_HOVER = 0x9D6D3AFF,
-  SEQ_BTN_ACTIVE = 0x6D3D24FF,
+  COMPOSE_BTN_COLOR = 0x7D4D2DFF,
+  COMPOSE_BTN_HOVER = 0x9D6D3AFF,
+  COMPOSE_BTN_ACTIVE = 0x6D3D24FF,
 }
 
 local function escape_separator(s)
@@ -396,16 +393,6 @@ local function draw_generate_button(ctx, callbacks, state, tracks_info)
 
   local avail_width = reaper.ImGui_GetContentRegionAvail(ctx)
 
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.GENERATE_BTN_COLOR)
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.GENERATE_BTN_HOVER)
-  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.GENERATE_BTN_ACTIVE)
-
-  if reaper.ImGui_Button(ctx, "🎹  Generate (Single Track)", avail_width, UI.BUTTON_HEIGHT) then
-    callbacks.on_generate(state)
-  end
-
-  reaper.ImGui_PopStyleColor(ctx, 3)
-
   local matched_count = 0
   if tracks_info then
     for _, t in ipairs(tracks_info) do
@@ -415,39 +402,34 @@ local function draw_generate_button(ctx, callbacks, state, tracks_info)
     end
   end
 
-  if callbacks.on_sequential_generate and matched_count >= 2 then
-    reaper.ImGui_Spacing(ctx)
-    
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.SEQ_BTN_COLOR)
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.SEQ_BTN_HOVER)
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.SEQ_BTN_ACTIVE)
+  if callbacks.on_compose and matched_count >= 2 then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.COMPOSE_BTN_COLOR)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.COMPOSE_BTN_HOVER)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.COMPOSE_BTN_ACTIVE)
 
-    local btn_label = string.format("🎼  Compose (%d Tracks - Sequential)", matched_count)
+    local btn_label = string.format("🎼  Compose (%d Tracks)", matched_count)
     if reaper.ImGui_Button(ctx, btn_label, avail_width, UI.BUTTON_HEIGHT) then
-      callbacks.on_sequential_generate(state)
+      callbacks.on_compose(state)
     end
 
     reaper.ImGui_PopStyleColor(ctx, 3)
     
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x80B0FFFF)
-    reaper.ImGui_TextWrapped(ctx, "Sequential: generates one track at a time, each aware of previous tracks. Best for cohesive compositions.")
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x90A0B0FF)
+    reaper.ImGui_TextWrapped(ctx, "Generates tracks sequentially, each part aware of previous ones for cohesive orchestration.")
     reaper.ImGui_PopStyleColor(ctx)
-  end
-
-  if callbacks.on_multi_generate and matched_count >= 2 then
-    reaper.ImGui_Spacing(ctx)
     
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.MULTI_BTN_COLOR)
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.MULTI_BTN_HOVER)
-    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.MULTI_BTN_ACTIVE)
-
-    local btn_label = string.format("⚡  Generate All (%d Tracks - Parallel)", matched_count)
-    if reaper.ImGui_Button(ctx, btn_label, avail_width, UI.BUTTON_HEIGHT) then
-      callbacks.on_multi_generate(state)
-    end
-
-    reaper.ImGui_PopStyleColor(ctx, 3)
+    reaper.ImGui_Spacing(ctx)
   end
+
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.GENERATE_BTN_COLOR)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.GENERATE_BTN_HOVER)
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.GENERATE_BTN_ACTIVE)
+
+  if reaper.ImGui_Button(ctx, "🎹  Generate (Single Track)", avail_width, UI.BUTTON_HEIGHT) then
+    callbacks.on_generate(state)
+  end
+
+  reaper.ImGui_PopStyleColor(ctx, 3)
 end
 
 function M.run_imgui(state, profile_list, profiles_by_id, callbacks)
