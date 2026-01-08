@@ -41,23 +41,18 @@ PROGRESSION_KEYWORDS = [
 ]
 
 SECTION_PATTERNS = [
-    (r"вступлени[еяю]\s*(?:в\s*)?(\d+)\s*такт", "intro"),
-    (r"intro\s*(?:of\s*)?(\d+)\s*bar", "intro"),
-    (r"основн\w*\s*тем\w*\s*(?:в\s*)?(\d+)\s*такт", "main_theme"),
-    (r"main\s*theme\s*(?:of\s*)?(\d+)\s*bar", "main_theme"),
-    (r"тем[аыу]\s*(?:в\s*)?(\d+)\s*такт", "theme"),
-    (r"theme\s*(?:of\s*)?(\d+)\s*bar", "theme"),
-    (r"заверш\w*\s*(?:в\s*)?(\d+)\s*такт", "outro"),
-    (r"outro\s*(?:of\s*)?(\d+)\s*bar", "outro"),
-    (r"(?:спокойн\w*\s*)?завершени[еяю]\s*(?:в\s*)?(\d+)\s*такт", "outro"),
-    (r"разви[тв]\w*\s*(?:в\s*)?(\d+)\s*такт", "development"),
-    (r"development\s*(?:of\s*)?(\d+)\s*bar", "development"),
-    (r"куплет\s*(?:в\s*)?(\d+)\s*такт", "verse"),
-    (r"verse\s*(?:of\s*)?(\d+)\s*bar", "verse"),
-    (r"припев\s*(?:в\s*)?(\d+)\s*такт", "chorus"),
-    (r"chorus\s*(?:of\s*)?(\d+)\s*bar", "chorus"),
-    (r"бридж\s*(?:в\s*)?(\d+)\s*такт", "bridge"),
-    (r"bridge\s*(?:of\s*)?(\d+)\s*bar", "bridge"),
+    (r"intro\s*(?:of\s*)?(\d+)\s*bars?", "intro"),
+    (r"main\s*theme\s*(?:of\s*)?(\d+)\s*bars?", "main_theme"),
+    (r"main\s*part\s*(?:of\s*)?(\d+)\s*bars?", "main_part"),
+    (r"main\s*section\s*(?:of\s*)?(\d+)\s*bars?", "main_part"),
+    (r"theme\s*(?:of\s*)?(\d+)\s*bars?", "theme"),
+    (r"outro\s*(?:of\s*)?(\d+)\s*bars?", "outro"),
+    (r"development\s*(?:of\s*)?(\d+)\s*bars?", "development"),
+    (r"verse\s*(?:of\s*)?(\d+)\s*bars?", "verse"),
+    (r"chorus\s*(?:of\s*)?(\d+)\s*bars?", "chorus"),
+    (r"bridge\s*(?:of\s*)?(\d+)\s*bars?", "bridge"),
+    (r"climax\s*(?:part|section)?\s*(?:of\s*)?(\d+)\s*bars?", "climax"),
+    (r"climactic\s*(?:part|section)?\s*(?:of\s*)?(\d+)\s*bars?", "climax"),
 ]
 
 ROLE_HINTS = {

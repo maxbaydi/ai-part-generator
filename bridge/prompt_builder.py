@@ -109,12 +109,14 @@ This is the ending. The generated material should:
 STRUCTURE_SECTION_HINTS = {
     "intro": "Build anticipation, establish the mood, simpler texture",
     "main_theme": "Present the main melodic idea clearly and memorably",
+    "main_part": "Establish the core material and maintain the driving texture",
     "theme": "Present the melodic idea clearly",
     "outro": "Wind down, resolve tension, bring to peaceful conclusion",
     "development": "Develop themes, add complexity, build tension",
     "verse": "Lyrical, storytelling section",
     "chorus": "Emotional peak, memorable hook",
     "bridge": "Contrast section, transition between parts",
+    "climax": "Highest intensity and energy, bold gestures and strong dynamics",
 }
 
 
@@ -417,33 +419,34 @@ def build_prompt(
         user_prompt_parts.append(f"")
         user_prompt_parts.append(ensemble_context)
 
-    composition_structure = parse_composition_structure(request.user_prompt, bars, request.music.time_sig)
-    if composition_structure:
-        user_prompt_parts.append(f"")
-        user_prompt_parts.append("### COMPOSITION STRUCTURE - FOLLOW THIS FORM")
-        user_prompt_parts.append("The user has specified a specific structure. Generate according to these sections:")
-        user_prompt_parts.append("")
+    if not request.free_mode:
+        composition_structure = parse_composition_structure(request.user_prompt, bars, request.music.time_sig)
+        if composition_structure:
+            user_prompt_parts.append(f"")
+            user_prompt_parts.append("### COMPOSITION STRUCTURE - FOLLOW THIS FORM")
+            user_prompt_parts.append("The user has specified a specific structure. Generate according to these sections:")
+            user_prompt_parts.append("")
 
-        for section in composition_structure:
-            section_type = section["type"].replace("_", " ").title()
-            start_bar = section["start_bar"]
-            end_bar = section["end_bar"]
-            num_bars = section["bars"]
-            start_q = start_bar * quarters_per_bar
-            end_q = end_bar * quarters_per_bar
+            for section in composition_structure:
+                section_type = section["type"].replace("_", " ").title()
+                start_bar = section["start_bar"]
+                end_bar = section["end_bar"]
+                num_bars = section["bars"]
+                start_q = start_bar * quarters_per_bar
+                end_q = end_bar * quarters_per_bar
 
-            hint = STRUCTURE_SECTION_HINTS.get(section["type"], "")
+                hint = STRUCTURE_SECTION_HINTS.get(section["type"], "")
 
-            user_prompt_parts.append(f"  **{section_type}**: Bars {start_bar + 1}-{end_bar} ({num_bars} bars, quarters {start_q:.0f}-{end_q:.0f})")
-            if hint:
-                user_prompt_parts.append(f"    → {hint}")
+                user_prompt_parts.append(f"  **{section_type}**: Bars {start_bar + 1}-{end_bar} ({num_bars} bars, quarters {start_q:.0f}-{end_q:.0f})")
+                if hint:
+                    user_prompt_parts.append(f"    → {hint}")
 
-        user_prompt_parts.append("")
-        user_prompt_parts.append("STRUCTURE RULES:")
-        user_prompt_parts.append("- Each section should have distinct character matching its type")
-        user_prompt_parts.append("- Create smooth transitions between sections")
-        user_prompt_parts.append("- The outro should feel like a natural resolution")
-        user_prompt_parts.append("")
+            user_prompt_parts.append("")
+            user_prompt_parts.append("STRUCTURE RULES:")
+            user_prompt_parts.append("- Each section should have distinct character matching its type")
+            user_prompt_parts.append("- Create smooth transitions between sections")
+            user_prompt_parts.append("- The outro should feel like a natural resolution")
+            user_prompt_parts.append("")
 
     if request.free_mode:
         user_prompt_parts.extend([
