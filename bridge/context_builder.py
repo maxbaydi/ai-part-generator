@@ -1,6 +1,5 @@
 ﻿from __future__ import annotations
 
-import re
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -16,44 +15,6 @@ POSITION_DESCRIPTIONS = {
     "end": "This is the END of a musical section. There is existing material BEFORE the generation area.",
     "isolated": "This is an isolated section with no surrounding context on this track.",
 }
-
-CONTINUE_KEYWORDS = [
-    "продолжи", "продолжить", "continue", "extend",
-    "развей", "развить", "develop",
-    "далее", "дальше",
-]
-
-COMPLETE_KEYWORDS = [
-    "заверши", "завершить", "завершение",
-    "закончи", "закончить", "finish", "complete", "end",
-    "финал", "кода", "coda", "outro",
-]
-
-FILL_KEYWORDS = [
-    "заполни", "заполнить", "fill", "fill in",
-    "между", "between", "connect", "bridge",
-    "соедини", "соединить",
-]
-
-PROGRESSION_KEYWORDS = [
-    "аккордов", "аккорд", "chord", "progression", "прогрессию", "прогрессия",
-    "гармони", "harmon",
-]
-
-SECTION_PATTERNS = [
-    (r"intro\s*(?:of\s*)?(\d+)\s*bars?", "intro"),
-    (r"main\s*theme\s*(?:of\s*)?(\d+)\s*bars?", "main_theme"),
-    (r"main\s*part\s*(?:of\s*)?(\d+)\s*bars?", "main_part"),
-    (r"main\s*section\s*(?:of\s*)?(\d+)\s*bars?", "main_part"),
-    (r"theme\s*(?:of\s*)?(\d+)\s*bars?", "theme"),
-    (r"outro\s*(?:of\s*)?(\d+)\s*bars?", "outro"),
-    (r"development\s*(?:of\s*)?(\d+)\s*bars?", "development"),
-    (r"verse\s*(?:of\s*)?(\d+)\s*bars?", "verse"),
-    (r"chorus\s*(?:of\s*)?(\d+)\s*bars?", "chorus"),
-    (r"bridge\s*(?:of\s*)?(\d+)\s*bars?", "bridge"),
-    (r"climax\s*(?:part|section)?\s*(?:of\s*)?(\d+)\s*bars?", "climax"),
-    (r"climactic\s*(?:part|section)?\s*(?:of\s*)?(\d+)\s*bars?", "climax"),
-]
 
 ROLE_HINTS = {
     "melody": "MELODY: Carry the main theme. Clear, memorable lines. Be the focus.",
@@ -191,58 +152,6 @@ def build_horizontal_context_summary(horizontal: Optional[HorizontalContext]) ->
     return "\n".join(parts), position
 
 
-def detect_continuation_intent(user_prompt: str) -> Optional[str]:
-    if not user_prompt:
-        return None
-
-    prompt_lower = user_prompt.lower()
-
-    has_progression = any(kw in prompt_lower for kw in PROGRESSION_KEYWORDS)
-
-    for kw in CONTINUE_KEYWORDS:
-        if kw in prompt_lower:
-            return "continue_progression" if has_progression else "continue"
-
-    for kw in COMPLETE_KEYWORDS:
-        if kw in prompt_lower:
-            return "complete_progression" if has_progression else "complete"
-
-    for kw in FILL_KEYWORDS:
-        if kw in prompt_lower:
-            return "fill_progression" if has_progression else "fill"
-
-    return None
-
-
-def parse_composition_structure(prompt: str, total_bars: int, time_sig: str = "4/4") -> List[Dict[str, Any]]:
-    if not prompt:
-        return []
-
-    prompt_lower = prompt.lower()
-    found_sections = []
-    for pattern, section_type in SECTION_PATTERNS:
-        matches = re.finditer(pattern, prompt_lower)
-        for match in matches:
-            bars = int(match.group(1))
-            position = match.start()
-            found_sections.append({
-                "type": section_type,
-                "bars": bars,
-                "position": position,
-            })
-
-    found_sections.sort(key=lambda x: x["position"])
-
-    current_bar = 0
-    for section in found_sections:
-        section["start_bar"] = current_bar
-        section["end_bar"] = current_bar + section["bars"]
-        current_bar = section["end_bar"]
-        del section["position"]
-
-    return found_sections
-
-
 def format_notes_for_context(notes: List[Dict[str, Any]], max_notes: int = 50) -> str:
     if not notes:
         return ""
@@ -301,9 +210,14 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
         already_done = inst.index < ensemble.generation_order
         done_marker = " [ALREADY GENERATED]" if already_done and ensemble.is_sequential else ""
         family = inst.family.lower() if inst.family else "unknown"
-        role = inst.role if inst.role else "unknown"
+        role = str(inst.role or "").strip()
+        if role.lower() == "unknown":
+            role = ""
         label = format_inst_label(inst)
-        parts.append(f"  {inst.index}. {label} ({family}, role: {role}){marker}{done_marker}")
+        detail = family
+        if role:
+            detail = f"{detail}, role: {role}"
+        parts.append(f"  {inst.index}. {label} ({detail}){marker}{done_marker}")
 
     parts.append("")
 
@@ -314,10 +228,12 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
 
         for prev_part in ensemble.previously_generated:
             part_name = prev_part.get("profile_name", prev_part.get("track_name", "Unknown"))
-            part_role = prev_part.get("role", "unknown")
+            part_role = str(prev_part.get("role") or "").strip()
+            if part_role.lower() == "unknown":
+                part_role = ""
             prev_notes = prev_part.get("notes", [])
-
-            parts.append(f"**{part_name}** (role: {part_role}):")
+            role_suffix = f" (role: {part_role})" if part_role else ""
+            parts.append(f"**{part_name}**{role_suffix}:")
 
             if prev_notes:
                 note_summary = format_notes_for_context(prev_notes, 30)

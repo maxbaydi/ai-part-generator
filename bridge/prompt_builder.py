@@ -15,9 +15,7 @@ try:
     from context_builder import (
         build_context_summary,
         build_ensemble_context,
-        detect_continuation_intent,
         get_quarters_per_bar,
-        parse_composition_structure,
     )
     from models import GenerateRequest
     from music_theory import get_scale_note_names, get_scale_notes
@@ -37,9 +35,7 @@ except ImportError:
     from .context_builder import (
         build_context_summary,
         build_ensemble_context,
-        detect_continuation_intent,
         get_quarters_per_bar,
-        parse_composition_structure,
     )
     from .models import GenerateRequest
     from .music_theory import get_scale_note_names, get_scale_notes
@@ -47,78 +43,6 @@ except ImportError:
     from .style import DYNAMICS_HINTS, MOOD_HINTS
     from .type import ARTICULATION_HINTS, TYPE_HINTS
     from .utils import safe_format
-
-CONTINUATION_INTENT_INSTRUCTIONS = {
-    "continue": """### CONTINUATION TASK
-You must CONTINUE the existing musical material. Study the notes BEFORE the target area carefully.
-- Maintain the same melodic direction and momentum
-- Use similar rhythmic patterns
-- Keep the same register and style
-- Create a seamless connection from the preceding material""",
-    "continue_progression": """### CHORD PROGRESSION CONTINUATION TASK
-You must CONTINUE the chord progression. Analyze the existing harmony carefully.
-- Follow the harmonic direction established before
-- Use appropriate voice leading
-- Maintain the same harmonic rhythm
-- Create a natural extension of the progression""",
-    "complete": """### COMPLETION TASK
-You must COMPLETE/FINISH the musical phrase or section. The material should feel like a natural ending.
-- Create a sense of resolution and finality
-- Use cadential patterns (V-I, IV-I, etc.)
-- Gradually reduce activity toward the end
-- End on stable scale degrees (1, 3, 5)
-- Consider using ritardando effect (longer notes toward the end)""",
-    "complete_progression": """### CHORD PROGRESSION COMPLETION TASK
-You must COMPLETE the chord progression with a satisfying cadence.
-- Analyze the preceding chords to determine the key
-- Use appropriate cadential formulas (V-I, IV-V-I, ii-V-I, etc.)
-- Create harmonic resolution
-- The final chord should provide closure""",
-    "fill": """### FILL/BRIDGE TASK
-You must FILL the gap between existing material BEFORE and AFTER the target area.
-- Study both the preceding and following notes
-- Create a smooth transition that connects both sections
-- Match the starting point of what comes after
-- Gradually transform from where the before section ends""",
-    "fill_progression": """### HARMONIC FILL TASK
-You must FILL the harmonic gap between existing chord progressions.
-- Analyze chords before AND after the target area
-- Create a smooth harmonic bridge
-- Use passing chords and voice leading
-- Ensure the connection sounds natural""",
-}
-
-POSITION_INSTRUCTIONS = {
-    "start": """### POSITION: START OF SECTION
-This is the beginning. The generated material should:
-- Establish the theme/motif clearly
-- Create memorable opening phrase
-- Set up the musical direction for what follows""",
-    "middle": """### POSITION: MIDDLE OF SECTION  
-This fills a gap between existing material. The generated material should:
-- Connect naturally with preceding notes
-- Prepare for the following notes
-- Maintain continuity of style and register""",
-    "end": """### POSITION: END OF SECTION
-This is the ending. The generated material should:
-- Bring the phrase to a natural conclusion
-- Consider using cadential patterns
-- Create a sense of completion""",
-}
-
-STRUCTURE_SECTION_HINTS = {
-    "intro": "Build anticipation, establish the mood, simpler texture",
-    "main_theme": "Present the main melodic idea clearly and memorably",
-    "main_part": "Establish the core material and maintain the driving texture",
-    "theme": "Present the melodic idea clearly",
-    "outro": "Wind down, resolve tension, bring to peaceful conclusion",
-    "development": "Develop themes, add complexity, build tension",
-    "verse": "Lyrical, storytelling section",
-    "chorus": "Emotional peak, memorable hook",
-    "bridge": "Contrast section, transition between parts",
-    "climax": "Highest intensity and energy, bold gestures and strong dynamics",
-}
-
 
 def estimate_note_count(length_q: float, bpm: float, time_sig: str, generation_type: str) -> Tuple[int, int, str]:
     """Estimate recommended note count based on musical context."""
@@ -330,13 +254,13 @@ def build_prompt(
         ]
     system_prompt = "\n\n".join([p for p in system_parts if p])
 
-    context_summary, detected_key, position = build_context_summary(request.context, request.music.time_sig, length_q)
+    context_summary, detected_key, _position = build_context_summary(
+        request.context, request.music.time_sig, length_q
+    )
 
     final_key = request.music.key
     if final_key == "unknown" and detected_key != "unknown":
         final_key = detected_key
-
-    continuation_intent = detect_continuation_intent(request.user_prompt)
 
     quarters_per_bar = get_quarters_per_bar(request.music.time_sig)
     bars = max(1, int(length_q / quarters_per_bar))
@@ -346,12 +270,6 @@ def build_prompt(
     valid_pitches_str = ", ".join(str(p) for p in valid_pitches[:PROMPT_PITCH_PREVIEW_LIMIT])
     if len(valid_pitches) > PROMPT_PITCH_PREVIEW_LIMIT:
         valid_pitches_str += f"... ({len(valid_pitches)} total)"
-
-    continuation_instructions = ""
-    if continuation_intent:
-        continuation_instructions = CONTINUATION_INTENT_INSTRUCTIONS.get(continuation_intent, "")
-    elif position != "isolated":
-        continuation_instructions = POSITION_INSTRUCTIONS.get(position, "")
 
     if request.free_mode:
         articulation_list_str = build_articulation_list_for_prompt(profile)
@@ -405,10 +323,6 @@ def build_prompt(
             f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
             f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
         ]
-
-    if continuation_instructions:
-        user_prompt_parts.append(f"")
-        user_prompt_parts.append(continuation_instructions)
 
     if context_summary:
         user_prompt_parts.append(f"")
@@ -465,29 +379,6 @@ def build_prompt(
                     if parts_line:
                         user_prompt_parts.append(f"- " + "; ".join(parts_line))
 
-    if not request.free_mode:
-        composition_structure = parse_composition_structure(request.user_prompt, bars, request.music.time_sig)
-        if composition_structure:
-            user_prompt_parts.append(f"")
-            user_prompt_parts.append("### COMPOSITION STRUCTURE - FOLLOW THIS FORM")
-            user_prompt_parts.append("The user has specified a specific structure. Generate according to these sections:")
-            user_prompt_parts.append("")
-
-            for section in composition_structure:
-                section_type = section["type"].replace("_", " ").title()
-                start_bar = section["start_bar"]
-                end_bar = section["end_bar"]
-                num_bars = section["bars"]
-                start_q = start_bar * quarters_per_bar
-                end_q = end_bar * quarters_per_bar
-
-                hint = STRUCTURE_SECTION_HINTS.get(section["type"], "")
-
-                user_prompt_parts.append(f"  **{section_type}**: Bars {start_bar + 1}-{end_bar} ({num_bars} bars, quarters {start_q:.0f}-{end_q:.0f})")
-                if hint:
-                    user_prompt_parts.append(f"    → {hint}")
-
-            user_prompt_parts.append("")
             user_prompt_parts.append("STRUCTURE RULES:")
             user_prompt_parts.append("- Each section should have distinct character matching its type")
             user_prompt_parts.append("- Create smooth transitions between sections")
@@ -609,9 +500,14 @@ def build_plan_prompt(request: GenerateRequest, length_q: float) -> Tuple[str, s
                 name = f"{track} ({profile_name})"
             else:
                 name = track or profile_name or "Unknown"
-            role = inst.role or "unknown"
+            role = str(inst.role or "").strip()
+            if role.lower() == "unknown":
+                role = ""
             family = inst.family or "unknown"
-            user_prompt_parts.append(f"- {inst.index}. {name} (family: {family}, role: {role})")
+            detail = f"family: {family}"
+            if role:
+                detail = f"{detail}, role: {role}"
+            user_prompt_parts.append(f"- {inst.index}. {name} ({detail})")
 
     if request.user_prompt and request.user_prompt.strip():
         user_prompt_parts.append("")

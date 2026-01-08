@@ -19,7 +19,8 @@
     "keyswitch": "Ab1",
     "velocity_on": 100,
     "velocity_off": 1,
-    "description": "Enable legato with high velocity (≥64), disable with low velocity (<64). Prefer keyswitch over CC for legato control."
+    "mono_only": true,
+    "description": "Legato is for MONO parts only - smooth transition between single notes. Enable legato (velocity ≥64) when playing single melodic lines. Disable legato (velocity <64) when 2+ notes sound simultaneously. Re-enable when returning to mono. Prefer keyswitch over CC for legato control."
   },
   "articulations": {
     "mode": "cc",
@@ -52,6 +53,6 @@
     }
   },
   "ai": {
-    "system_prompt_template": "Generate clarinet parts for Cinematic Studio Woodwinds. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Use keyswitch Ab1 to toggle legato mode - velocity ≥64 enables, <64 disables. Switch articulations via CC58, use keyswitch for legato control. The clarinet has a warm, flexible, expressive tone with the widest dynamic range of woodwinds. Playable range is D3-Bb6, preferred range E3-G6."
+    "system_prompt_template": "Generate clarinet parts for Cinematic Studio Woodwinds. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range D3-Bb6, preferred E3-G6."
   }
 }

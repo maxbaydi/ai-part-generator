@@ -11,11 +11,38 @@ MUSIC THEORY RULES:
 4. PHRASING: Create 2-4 bar phrases. End phrases on stable scale degrees (1, 3, 5).
 5. CONTOUR: Melodies should have a shape - build up to a climax, then resolve down.
 
+MOTIF VS MELODY:
+- Motif: a short, repeatable, memorable fragment (can be ostinato or arpeggio).
+- Melody: a longer line that develops over time but is built from a simple, memorable core.
+- The core of the melody should repeat through the piece (repetition with variation).
+
+OSTINATO RULES:
+- Ostinato = a repeating rhythmic pattern. The rhythm is the identity, not necessarily the exact pitches.
+- When chords change, you may keep the same rhythm but adapt notes to the new chord.
+- Example: repeat A-E, then when harmony shifts to F major, keep the pattern but use F-A.
+
+USE RESTS AND HANDOFFS:
+- Notes do NOT have to sound continuously. Silence is musical and intentional.
+- Leave gaps for breathing and contrast; use rests as part of phrasing.
+- Let lines hand off between instruments (call-and-response): one plays, another continues.
+- A doubling instrument can appear only occasionally to highlight phrases or accents.
+
+SECTION TRANSITIONS:
+- Always shape smooth transitions between sections; avoid abrupt jumps.
+- Use dynamics and note density to lead into/out of sections.
+- Consider the start/end of each section when shaping phrases (tapers, swells, handoffs).
+
+PART DEVELOPMENT:
+- Each part must evolve over time: a clear beginning, development, and resolution.
+- Treat each instrument like a character with its own arc inside the larger story.
+- Start with a simpler idea, grow or transform it, and lead it to a meaningful end.
+
 PLAYABILITY & REGISTER RULES:
-- Low register (approx MIDI <= 45): avoid fast runs; prefer accents, pedal tones, and longer values (quarters/eighths).
-- Mid register (approx MIDI 46-65): moderate rhythmic density; mix 8ths with longer notes.
-- High register (approx MIDI 66+): faster figures are acceptable but avoid heavy, long fortissimo tones.
+- Low register: avoid fast runs; prefer accents, pedal tones, and longer values (quarters/eighths).
+- Mid register: moderate rhythmic density; mix 8ths with longer notes.
+- High register: faster figures are acceptable but avoid heavy, long fortissimo tones.
 - At tempos >130 BPM, simplify low-register motion and keep it rhythmically sparse.
+- Wind instruments (brass/woodwinds): do not sustain a single note longer than 2 bars; add breaths/rests.
 
 OUTPUT FORMAT:
 {
@@ -73,6 +100,18 @@ DYNAMICS STRATEGIES (per-note shapes):
 - Gentle/intimate: notes with gentle FADE IN shapes
 - Expressive solo: mix of swells, fades, and strong attacks per note
 
+DYNAMICS SHAPES (CC1 per-note, especially long notes):
+- Long notes (1+ beats): soft->loud->soft swell (strings), loud attack with slow decay, loud attack -> quick dip -> slow rise (sfz dip), gentle fade-in -> sustain -> fade-out.
+- Medium notes (0.5-1 beat): accent with short decay, small bump swell, subtle pulse (for tremolo/trills).
+- Strings: bow-driven swell, gentle taper at the end, small dip at bow changes.
+- Brass: strong attack then decay, breathy swell (bloom), avoid constant flat CC1 on long notes.
+- Woodwinds: smooth swell, gentle taper, avoid abrupt CC1 jumps.
+- Sustain/legato: use swells or blooms; avoid flat unless a pad is requested.
+- Tremolo/measured tremolo: repeated mini-swells or pulsing CC1.
+- Trills: small oscillating CC1 movement around a center value.
+- Marcato/sforzando: strong attack + fast decay, then stabilize.
+- Staccato/spiccato/pizzicato: CC1 mostly flat; use velocity for the attack.
+
 EXAMPLE - 4 sustained notes over 8 bars (each note = 2 bars):
 - Expression: global arc from 60 to 95 (building section)
 - Dynamics for each note (per-note shaping):
@@ -119,6 +158,33 @@ PLAYABILITY & REGISTER RULES:
 - Mid register (approx MIDI 46-65): moderate rhythmic density; mix 8ths with longer notes.
 - High register (approx MIDI 66+): faster figures are acceptable but avoid heavy, long fortissimo tones.
 - At tempos >130 BPM, simplify low-register motion and keep it rhythmically sparse.
+- Wind instruments (brass/woodwinds): do not sustain a single note longer than 2 bars; add breaths/rests.
+
+MOTIF VS MELODY:
+- Motif: a short, repeatable, memorable fragment (can be ostinato or arpeggio).
+- Melody: a longer line that develops over time but is built from a simple, memorable core.
+- The core of the melody should repeat through the piece (repetition with variation).
+
+OSTINATO RULES:
+- Ostinato = a repeating rhythmic pattern. The rhythm is the identity, not necessarily the exact pitches.
+- When chords change, you may keep the same rhythm but adapt notes to the new chord.
+- Example: repeat A-E, then when harmony shifts to F major, keep the pattern but use F-A.
+
+USE RESTS AND HANDOFFS:
+- Notes do NOT have to sound continuously. Silence is musical and intentional.
+- Leave gaps for breathing and contrast; use rests as part of phrasing.
+- Let lines hand off between instruments (call-and-response): one plays, another continues.
+- A doubling instrument can appear only occasionally to highlight phrases or accents.
+
+SECTION TRANSITIONS:
+- Always shape smooth transitions between sections; avoid abrupt jumps.
+- Use dynamics and note density to lead into/out of sections.
+- Consider the start/end of each section when shaping phrases (tapers, swells, handoffs).
+
+PART DEVELOPMENT:
+- Each part must evolve over time: a clear beginning, development, and resolution.
+- Treat each instrument like a character with its own arc inside the larger story.
+- Start with a simpler idea, grow or transform it, and lead it to a meaningful end.
 
 ARTICULATION USAGE:
 You CAN use multiple articulations, but ONLY when musically justified:
@@ -169,6 +235,18 @@ DYNAMICS STRATEGIES (per-note shapes):
 - Gentle/intimate: notes with soft FADE IN shapes
 - Simple parts: flat dynamics is OK for rhythmic/percussive parts
 
+DYNAMICS SHAPES (CC1 per-note, especially long notes):
+- Long notes (1+ beats): soft->loud->soft swell (strings), loud attack with slow decay, loud attack -> quick dip -> slow rise (sfz dip), gentle fade-in -> sustain -> fade-out.
+- Medium notes (0.5-1 beat): accent with short decay, small bump swell, subtle pulse (for tremolo/trills).
+- Strings: bow-driven swell, gentle taper at the end, small dip at bow changes.
+- Brass: strong attack then decay, breathy swell (bloom), avoid constant flat CC1 on long notes.
+- Woodwinds: smooth swell, gentle taper, avoid abrupt CC1 jumps.
+- Sustain/legato: use swells or blooms; avoid flat unless a pad is requested.
+- Tremolo/measured tremolo: repeated mini-swells or pulsing CC1.
+- Trills: small oscillating CC1 movement around a center value.
+- Marcato/sforzando: strong attack + fast decay, then stabilize.
+- Staccato/spiccato/pizzicato: CC1 mostly flat; use velocity for the attack.
+
 OUTPUT FORMAT:
 {
   "notes": [
@@ -191,14 +269,14 @@ OPTIONAL PATTERN REPETITION (recommended for ostinato and repeating figures):
 - "repeats": [{"pattern": "ost1", "start_q": 8, "times": 12, "step_q": 4}]
 - Notes inside patterns use start_q relative to the pattern start.
 - You may mix "notes" with pattern-based repeats if needed.
- - Use patterns/repeats when a figure repeats 2+ times; do not list each repeat.
+- Use patterns/repeats when a figure repeats 2+ times; do not list each repeat.
 
 IMPORTANT:
 - Each note CAN have "articulation" field (optional if all notes use same articulation)
 - For simple pad/chord parts, you may omit per-note articulation and set global "articulation": "sustain"
 - VARY velocity values appropriately - not all notes should have same velocity
 - Include 'generation_type' and 'generation_style' in response
- - Use patterns/repeats for repeating ostinato instead of listing every note
+- Use patterns/repeats for repeating ostinato instead of listing every note
 
 SUSTAIN PEDAL TECHNIQUE (CC64 / curves.sustain_pedal):
 - ALWAYS use interp: "hold" (no smoothing)
