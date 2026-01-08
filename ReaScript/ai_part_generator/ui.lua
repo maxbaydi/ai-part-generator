@@ -23,6 +23,9 @@ local UI = {
   COMPOSE_BTN_COLOR = 0x7D4D2DFF,
   COMPOSE_BTN_HOVER = 0x9D6D3AFF,
   COMPOSE_BTN_ACTIVE = 0x6D3D24FF,
+  BAR_ALIGN_EPS = 1e-4,
+  BAR_RULER_MAX_BARS = 64,
+  BAR_RULER_CHAR = "▮",
 }
 
 local function escape_separator(s)
@@ -91,6 +94,114 @@ local function draw_input(ctx, id, value, flags)
   local changed, new_val = reaper.ImGui_InputText(ctx, id, value or "", flags or 0)
   reaper.ImGui_PopItemWidth(ctx)
   return changed, new_val
+end
+
+local function is_near_zero(v)
+  return math.abs(v or 0) < UI.BAR_ALIGN_EPS
+end
+
+local function get_time_selection_info()
+  local start_sec, end_sec = utils.get_time_selection()
+  if not start_sec or not end_sec or start_sec == end_sec then
+    return nil
+  end
+
+  local start_beats, start_meas, start_cml, _, start_cdenom = reaper.TimeMap2_timeToBeats(0, start_sec)
+  local end_beats, end_meas = reaper.TimeMap2_timeToBeats(0, end_sec)
+
+  local num = math.floor((start_cml or 4) + 0.5)
+  local denom = math.floor((start_cdenom or 4) + 0.5)
+  if num <= 0 then num = 4 end
+  if denom <= 0 then denom = 4 end
+
+  local aligned_start = is_near_zero(start_beats)
+  local aligned_end = is_near_zero(end_beats)
+
+  local bars_int = nil
+  if aligned_start and aligned_end and start_meas and end_meas then
+    bars_int = end_meas - start_meas
+    if bars_int < 0 then
+      bars_int = 0
+    end
+  end
+
+  local start_qn = reaper.TimeMap2_timeToQN(0, start_sec)
+  local end_qn = reaper.TimeMap2_timeToQN(0, end_sec)
+  local length_qn = end_qn - start_qn
+  local quarters_per_bar = num * (4.0 / denom)
+  local bars_float = quarters_per_bar > 0 and (length_qn / quarters_per_bar) or nil
+
+  local start_bar = (start_meas or 0) + 1
+
+  return {
+    start_sec = start_sec,
+    end_sec = end_sec,
+    start_bar = start_bar,
+    bars_int = bars_int,
+    bars_float = bars_float,
+    num = num,
+    denom = denom,
+    aligned_start = aligned_start,
+    aligned_end = aligned_end,
+  }
+end
+
+local function build_bar_ruler(start_bar, bars, group_size)
+  local max_bars = UI.BAR_RULER_MAX_BARS
+  local shown = math.min(bars, max_bars)
+  local out = {}
+  local g = math.max(1, group_size or 4)
+
+  for i = 0, shown - 1 do
+    local bar_num = start_bar + i
+    if i % g == 0 then
+      table.insert(out, string.format("[%d]", bar_num))
+    end
+    table.insert(out, UI.BAR_RULER_CHAR)
+  end
+
+  if bars > shown then
+    table.insert(out, string.format("… (+%d)", bars - shown))
+  end
+
+  return table.concat(out, "")
+end
+
+local function draw_time_selection_bar_counter(ctx)
+  local info = get_time_selection_info()
+  if not info then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x808080FF)
+    reaper.ImGui_TextWrapped(ctx, "No time selection set. Bars count is based on your time selection.")
+    reaper.ImGui_PopStyleColor(ctx)
+    return
+  end
+
+  local bars_text = ""
+  if info.bars_int then
+    local end_bar = info.start_bar + info.bars_int - 1
+    bars_text = string.format("Selected bars: %d (%d–%d)", info.bars_int, info.start_bar, end_bar)
+  else
+    local approx = info.bars_float and string.format("%.2f", info.bars_float) or "?"
+    bars_text = string.format("Selected bars: ~%s", approx)
+  end
+
+  reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), UI.ACCENT_COLOR)
+  reaper.ImGui_Text(ctx, bars_text)
+  reaper.ImGui_PopStyleColor(ctx)
+
+  if info.bars_int and info.bars_int > 0 then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), UI.LABEL_COLOR)
+    reaper.ImGui_Text(ctx, string.format("Time signature at start: %d/%d", info.num, info.denom))
+    reaper.ImGui_PopStyleColor(ctx)
+
+    reaper.ImGui_TextWrapped(ctx, build_bar_ruler(info.start_bar, info.bars_int, info.num))
+  end
+
+  if not info.aligned_start or not info.aligned_end then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0xFFAA00FF)
+    reaper.ImGui_TextWrapped(ctx, "⚠ Time selection is not aligned to bar boundaries.")
+    reaper.ImGui_PopStyleColor(ctx)
+  end
 end
 
 function M.run_dialog_fallback(state, profile_list, profiles_by_id, on_generate)
@@ -333,6 +444,9 @@ end
 
 local function draw_multi_track_section(ctx, state, profile_list, profiles_by_id)
   draw_section_header(ctx, "🎼 Multi-Track Generation")
+
+  draw_time_selection_bar_counter(ctx)
+  reaper.ImGui_Spacing(ctx)
   
   local tracks_info = profiles.get_selected_tracks_with_profiles(profile_list, profiles_by_id)
   local selected_count = #tracks_info

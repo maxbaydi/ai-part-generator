@@ -115,4 +115,9 @@ function M.get_track_name(track)
   return name or ""
 end
 
+function M.get_time_selection()
+  local start_sec, end_sec = reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
+  return start_sec, end_sec
+end
+
 return M

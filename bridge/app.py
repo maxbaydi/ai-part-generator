@@ -92,37 +92,51 @@ There are THREE independent dynamics controls - use ALL for expressive musical p
    - Use to create accents, ghost notes, note-level shaping
    - Vary to avoid mechanical feel: accented 100-127, normal 70-90, soft 40-60
 
-2. CC11 EXPRESSION CURVE (curves.expression) - GLOBAL/SECTION dynamics:
-   - Controls the overall volume envelope of the ENTIRE PART/SECTION
-   - Defines the macro-level dynamic arc: how the whole passage develops dynamically
-   - Use for: overall crescendo/decrescendo of a section, dynamic level of the piece
+2. CC11 EXPRESSION CURVE (curves.expression) - GLOBAL PART DYNAMICS:
+   - Controls the overall volume of the ENTIRE PART from start to end
+   - This is the "master volume fader" for the whole generated section
+   - Use for: overall crescendo/decrescendo across the entire part, setting dynamic level (pp, mp, mf, f, ff)
    - Example: A section starts mp and builds to ff over 8 bars → expression curve rises from 60 to 110
    - Values 0-127, include 3-6 breakpoints across the full duration
+   - This affects ALL notes equally - it's the global dynamic envelope
 
-3. CC1 DYNAMICS CURVE (curves.dynamics) - LOCAL/NOTE dynamics:
-   - Controls micro-level dynamics for individual notes and SHORT phrases
-   - Shapes the volume within and between individual notes
-   - Use for: note swells, phrase breathing, fading notes, hairpin dynamics on single notes
-   - Example: A sustained note that swells and fades → dynamics curve rises then falls within that note
-   - Values 0-127, include 4-12 breakpoints for detailed shaping
+3. CC1 DYNAMICS CURVE (curves.dynamics) - INDIVIDUAL NOTE DYNAMICS:
+   - Controls how EACH SINGLE NOTE sounds - its internal dynamic shape
+   - This shapes the character of individual notes, one by one
+   - CRITICAL: Each note needs its own dynamic contour within the curve!
+   - Note shape types:
+     * FLAT: note sounds even/steady (constant value during note)
+     * SWELL: note starts soft, grows louder, then fades (↗↘ shape)
+     * FADE IN: note starts soft and grows (↗ shape)  
+     * FADE OUT: note starts strong and decays (↘ shape)
+     * STRONG ATTACK + DECAY: powerful start then fade (like sfz)
+     * CRESCENDO: gradual build within the note
+   - Example: For a 4-beat sustained note starting at beat 0:
+     * Swell shape: value 50 at 0, rises to 100 at beat 2, falls to 60 at beat 4
+     * Fade out: value 110 at 0, falls to 40 at beat 4
+   - Values 0-127, include breakpoints for EACH NOTE to shape its dynamics
 
 HOW THE TWO CC CURVES WORK TOGETHER:
-- EXPRESSION (CC11) = the "master volume" that sets the overall dynamic level
-- DYNAMICS (CC1) = the "expression pedal" that adds detail and movement within that level
-- Think of it as: Expression sets "how loud is this section" while Dynamics adds "how does each note breathe"
+- EXPRESSION (CC11) = GLOBAL dynamics - "how loud is the entire part"
+- DYNAMICS (CC1) = PER-NOTE dynamics - "how does each individual note breathe and evolve"
+- Think: Expression is the section volume, Dynamics sculpts each note's internal life
 
-DYNAMICS STRATEGIES:
-- Sustained notes: Expression sets overall level, Dynamics adds internal swell/fade (hairpin)
-- Melodic phrases: Expression shapes the phrase arc, Dynamics adds note-to-note breathing
-- Building section: Expression gradually rises, Dynamics adds local movement
-- Fading section: Expression gradually falls, Dynamics can still have local swells
-- Constant intensity: Flat Expression at target level, Dynamics adds subtle life
-- Terraced dynamics: Expression jumps between levels, Dynamics smooth within each level
+DYNAMICS STRATEGIES (per-note shapes):
+- Sustained notes: give each note a SWELL shape (rise then fall) for life
+- Melodic phrases: shape each note - longer notes get swells, short notes stay flat or fade
+- Legato line: each note fades slightly into the next (FADE OUT shape)
+- Powerful phrase: notes start strong and decay (STRONG ATTACK + DECAY)
+- Gentle/intimate: notes with gentle FADE IN shapes
+- Expressive solo: mix of swells, fades, and strong attacks per note
 
-EXAMPLE - 8-bar melodic phrase building from mp to f:
-- Expression: starts at 60, smoothly rises to 95 over 8 bars (the overall arc)
-- Dynamics: has small swells within each 2-bar phrase (70→85→70, 75→90→75, etc.)
-- Velocity: varies per note for accents and phrase peaks
+EXAMPLE - 4 sustained notes over 8 bars (each note = 2 bars):
+- Expression: global arc from 60 to 95 (building section)
+- Dynamics for each note (per-note shaping):
+  * Note 1 (beats 0-8): swell shape - 60→90→65
+  * Note 2 (beats 8-16): swell shape - 65→95→70
+  * Note 3 (beats 16-24): swell shape - 70→100→75
+  * Note 4 (beats 24-32): fade out - 80→50
+- Velocity: varies per note for accents
 
 SUSTAIN PEDAL TECHNIQUE (CC64 / curves.sustain_pedal):
 - ALWAYS use interp: "hold" (no smoothing)
@@ -169,29 +183,35 @@ THREE-LAYER DYNAMICS SYSTEM:
    - For SHORT articulations (staccato, pizzicato): velocity IS the dynamics
    - Vary for accents: strong beats 90-110, weak 60-80, accents 100-127, ghost notes 40-55
    
-2. CC11 EXPRESSION CURVE (curves.expression) - GLOBAL dynamics:
-   - Overall volume level of the ENTIRE SECTION
-   - Sets the macro-level: "how loud is this part of the music"
-   - Use for: section-wide crescendo/decrescendo, overall dynamic level
+2. CC11 EXPRESSION CURVE (curves.expression) - GLOBAL PART DYNAMICS:
+   - Overall volume of the ENTIRE PART from start to end
+   - The "master volume fader" for the whole section
+   - Use for: section-wide crescendo/decrescendo, setting dynamic level (pp to ff)
    - Example: Section builds from mp to ff → expression rises from 60 to 110 over duration
    
-3. CC1 DYNAMICS CURVE (curves.dynamics) - LOCAL dynamics:
-   - Micro-level dynamics for individual notes and short phrases
-   - Adds life and breathing WITHIN each note
-   - Use for: note swells, fading notes, hairpin dynamics, phrase breathing
-   - Example: Sustained note with internal swell → dynamics rises and falls within that note
+3. CC1 DYNAMICS CURVE (curves.dynamics) - INDIVIDUAL NOTE DYNAMICS:
+   - Controls how EACH SINGLE NOTE sounds - its internal dynamic shape
+   - This shapes individual notes one by one - NOT the whole section!
+   - Note shape types:
+     * FLAT: even/steady sound (constant value)
+     * SWELL: soft→loud→soft (↗↘)
+     * FADE IN: soft→loud (↗)
+     * FADE OUT: loud→soft (↘)
+     * STRONG ATTACK + DECAY: powerful start then fade (sfz-like)
+   - Each note needs breakpoints to define its shape!
+   - Example: 4-beat note with swell: value 50 at start, 100 at middle, 60 at end
 
 HOW EXPRESSION AND DYNAMICS WORK TOGETHER:
-- EXPRESSION (CC11) = the "master volume" - overall section level
-- DYNAMICS (CC1) = the "expression pedal" - detail and movement within notes
+- EXPRESSION (CC11) = GLOBAL - "how loud is the entire part"
+- DYNAMICS (CC1) = PER-NOTE - "how does each individual note breathe"
 
-DYNAMICS STRATEGIES BY PART TYPE:
-- Sustained pads/chords: Expression sets level, Dynamics adds subtle internal movement
-- Melodic lines: Expression shapes phrase arc, Dynamics adds note breathing
-- Building section: Expression rises gradually, Dynamics has local swells
-- Fading section: Expression falls, Dynamics can still have life
-- Constant intensity: Flat Expression, Dynamics adds subtle variation
-- Intimate/soft: Low Expression (40-60), low Dynamics with gentle movement
+DYNAMICS STRATEGIES (per-note shapes):
+- Sustained pads/chords: each note gets SWELL shape for life
+- Melodic lines: longer notes get swells, short notes flat or fade
+- Legato: each note FADES OUT slightly into the next
+- Powerful/dramatic: notes with STRONG ATTACK + DECAY
+- Gentle/intimate: notes with soft FADE IN shapes
+- Simple parts: flat dynamics is OK for rhythmic/percussive parts
 
 OUTPUT FORMAT:
 {
@@ -454,18 +474,6 @@ def normalize_channel(value: Optional[Any], default_chan: int) -> int:
     return default_chan
 
 
-def deduplicate_notes(notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    if not notes:
-        return notes
-    best: Dict[Tuple[float, int, int], Dict[str, Any]] = {}
-    for note in notes:
-        key = (round(note["start_q"], 4), note["pitch"], note["chan"])
-        existing = best.get(key)
-        if existing is None or note["dur_q"] > existing["dur_q"]:
-            best[key] = note
-    return list(best.values())
-
-
 def normalize_notes(
     notes: List[Dict[str, Any]],
     length_q: float,
@@ -485,12 +493,10 @@ def normalize_notes(
         except (TypeError, ValueError):
             continue
 
-        start_q = clamp(start_q, 0.0, max(0.0, length_q))
+        start_q = clamp(start_q, 0.0, max(0.0, length_q - MIN_NOTE_DUR_Q))
         dur_q = max(MIN_NOTE_DUR_Q, dur_q)
         if start_q + dur_q > length_q:
-            dur_q = max(0.0, length_q - start_q)
-        if dur_q <= 0:
-            continue
+            dur_q = max(MIN_NOTE_DUR_Q, length_q - start_q)
 
         pitch = fit_pitch_to_range(pitch, abs_range, fix_policy)
         pitch = int(clamp(pitch, MIDI_MIN, MIDI_MAX))
@@ -506,8 +512,6 @@ def normalize_notes(
             }
         )
 
-    normalized = deduplicate_notes(normalized)
-
     if not mono:
         return normalized
 
@@ -520,11 +524,8 @@ def normalize_notes(
         prev = mono_notes[-1]
         prev_end = prev["start_q"] + prev["dur_q"]
         if prev_end > note["start_q"]:
-            new_dur = note["start_q"] - prev["start_q"] - MIN_NOTE_GAP_Q
-            if new_dur < MIN_NOTE_DUR_Q:
-                mono_notes.pop()
-            else:
-                prev["dur_q"] = new_dur
+            new_dur = max(MIN_NOTE_DUR_Q, note["start_q"] - prev["start_q"] - MIN_NOTE_GAP_Q)
+            prev["dur_q"] = new_dur
         mono_notes.append(note)
     return mono_notes
 

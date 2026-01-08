@@ -93,11 +93,6 @@ local function sort_tracks_by_generation_order(tracks, prompt)
   return sorted
 end
 
-local function get_time_selection()
-  local start_sec, end_sec = reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
-  return start_sec, end_sec
-end
-
 local function get_bpm_and_timesig(time_sec)
   local bpm = reaper.Master_GetTempo()
   local num = 4
@@ -555,7 +550,7 @@ local function run_generation_after_bridge(state, profiles_by_id, start_sec, end
 end
 
 local function run_generation(state, profiles_by_id)
-  local start_sec, end_sec = get_time_selection()
+  local start_sec, end_sec = utils.get_time_selection()
   if start_sec == end_sec then
     utils.show_error("No time selection set.")
     return
@@ -745,7 +740,7 @@ function start_next_compose_generation()
 end
 
 local function run_compose(state, profile_list, profiles_by_id)
-  local start_sec, end_sec = get_time_selection()
+  local start_sec, end_sec = utils.get_time_selection()
   if start_sec == end_sec then
     utils.show_error("No time selection set.")
     return
