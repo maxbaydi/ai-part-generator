@@ -178,6 +178,33 @@ def build_articulation_list_for_prompt(profile: Dict[str, Any]) -> str:
     return "\n".join(result_parts)
 
 
+def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> List[str]:
+    if not request.allow_tempo_changes:
+        return []
+
+    if request.ensemble and request.ensemble.is_sequential:
+        generation_order = int(request.ensemble.generation_order or 0)
+        if generation_order > 1:
+            return [
+                "### TEMPO CHANGES",
+                "Tempo changes are already defined by an earlier part.",
+                "DO NOT output tempo_markers for this response.",
+            ]
+
+    length_hint = round(float(length_q or 0.0), 2)
+    lines = [
+        "### TEMPO CHANGES (optional)",
+        "You may include tempo changes across the selection.",
+        "Use top-level tempo_markers: [{\"time_q\": 0, \"bpm\": 120, \"linear\": false}, ...].",
+        f"time_q is in quarter notes from the selection start (0..{length_hint}).",
+        "Keep markers in ascending order, 1-4 markers max.",
+        "linear=true means a smooth ramp to the next marker; false means an immediate change.",
+    ]
+    if request.ensemble and request.ensemble.is_sequential:
+        lines.append("IMPORTANT: Only output tempo_markers for the FIRST instrument in sequential generation.")
+    return lines
+
+
 def build_prompt(
     request: GenerateRequest,
     profile: Dict[str, Any],
@@ -428,6 +455,11 @@ def build_prompt(
             f"   - Expression (CC11): GLOBAL arc of the section",
             f"   - Dynamics (CC1): LOCAL swells/fades within notes and phrases",
         ])
+
+    tempo_guidance = build_tempo_change_guidance(request, length_q)
+    if tempo_guidance:
+        user_prompt_parts.append(f"")
+        user_prompt_parts.extend(tempo_guidance)
 
     if request.user_prompt and request.user_prompt.strip():
         user_prompt_parts.append(f"")

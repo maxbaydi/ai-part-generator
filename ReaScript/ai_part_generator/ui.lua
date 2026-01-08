@@ -317,6 +317,7 @@ function M.run_dialog_fallback(state, profile_list, profiles_by_id, on_generate)
     state.use_selected_tracks and "1" or "0",
     state.insert_target or const.INSERT_TARGET_ACTIVE,
     state.key_mode == "Auto" and "auto" or default_key,
+    state.allow_tempo_changes and "1" or "0",
   }
   local labels = table.concat({
     "Profile ID",
@@ -326,6 +327,7 @@ function M.run_dialog_fallback(state, profile_list, profiles_by_id, on_generate)
     "Use selected tracks (0/1)",
     "Insert target (active/new)",
     "Key",
+    "Allow tempo changes (0/1)",
   }, ",")
   local ok, values = reaper.GetUserInputs(
     const.SCRIPT_NAME,
@@ -344,6 +346,7 @@ function M.run_dialog_fallback(state, profile_list, profiles_by_id, on_generate)
   state.use_selected_tracks = parts[5] == "1"
   state.insert_target = parts[6] == const.INSERT_TARGET_NEW and const.INSERT_TARGET_NEW or const.INSERT_TARGET_ACTIVE
   state.key = parts[7] ~= "" and parts[7] or const.DEFAULT_KEY
+  state.allow_tempo_changes = parts[8] == "1"
   if state.key:lower() == "auto" then
     state.key_mode = "Auto"
     state.key = const.DEFAULT_KEY
@@ -435,6 +438,17 @@ local function draw_generation_section(ctx, state)
   local changed, new_prompt = draw_input(ctx, "##prompt_input", state.prompt or "")
   if changed then
     state.prompt = new_prompt
+  end
+
+  reaper.ImGui_Spacing(ctx)
+  local changed_tempo, allow_tempo = reaper.ImGui_Checkbox(ctx, "Allow tempo changes (AI)", state.allow_tempo_changes or false)
+  if changed_tempo then
+    state.allow_tempo_changes = allow_tempo
+  end
+  if state.allow_tempo_changes then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x90A0B0FF)
+    reaper.ImGui_TextWrapped(ctx, "AI may output tempo markers within the selected range.")
+    reaper.ImGui_PopStyleColor(ctx)
   end
 end
 

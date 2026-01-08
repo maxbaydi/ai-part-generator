@@ -97,5 +97,6 @@ class GenerateRequest(BaseModel):
     generation_type: str = DEFAULT_GENERATION_TYPE
     generation_style: str = DEFAULT_GENERATION_STYLE
     free_mode: bool = False
+    allow_tempo_changes: bool = False
     user_prompt: str = ""
     model: Optional[ModelInfo] = None

@@ -9,10 +9,14 @@ try:
         DEFAULT_ARTICULATION_CC,
         DEFAULT_KEYSWITCH_VELOCITY,
         KEYSWITCH_DUR_Q,
+        MAX_TEMPO_MARKERS,
         MIDI_MAX,
         MIDI_MIN,
         MIDI_VEL_MIN,
         SHORT_ARTICULATION_FALLBACK_MAX_Q,
+        TEMPO_MARKER_MAX_BPM,
+        TEMPO_MARKER_MIN_BPM,
+        TEMPO_MARKER_MIN_GAP_Q,
     )
     from curve_utils import build_cc_events
     from midi_utils import (
@@ -30,10 +34,14 @@ except ImportError:
         DEFAULT_ARTICULATION_CC,
         DEFAULT_KEYSWITCH_VELOCITY,
         KEYSWITCH_DUR_Q,
+        MAX_TEMPO_MARKERS,
         MIDI_MAX,
         MIDI_MIN,
         MIDI_VEL_MIN,
         SHORT_ARTICULATION_FALLBACK_MAX_Q,
+        TEMPO_MARKER_MAX_BPM,
+        TEMPO_MARKER_MIN_BPM,
+        TEMPO_MARKER_MIN_GAP_Q,
     )
     from .curve_utils import build_cc_events
     from .midi_utils import (
@@ -186,6 +194,45 @@ def expand_pattern_notes(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
     return expanded
 
 
+def normalize_tempo_markers(raw_markers: Any, length_q: float) -> List[Dict[str, Any]]:
+    if not isinstance(raw_markers, list):
+        return []
+
+    length_q = max(0.0, float(length_q or 0.0))
+    cleaned: List[Dict[str, Any]] = []
+    for marker in raw_markers:
+        if not isinstance(marker, dict):
+            continue
+        time_q = marker.get("time_q", marker.get("start_q", marker.get("time")))
+        bpm = marker.get("bpm", marker.get("tempo"))
+        try:
+            time_q = float(time_q)
+            bpm = float(bpm)
+        except (TypeError, ValueError):
+            continue
+        time_q = clamp(time_q, 0.0, length_q)
+        bpm = clamp(bpm, TEMPO_MARKER_MIN_BPM, TEMPO_MARKER_MAX_BPM)
+        linear = bool(marker.get("linear") or marker.get("ramp"))
+        cleaned.append({
+            "time_q": round(time_q, 6),
+            "bpm": round(bpm, 3),
+            "linear": linear,
+        })
+
+    cleaned.sort(key=lambda m: m["time_q"])
+
+    result: List[Dict[str, Any]] = []
+    last_time: Optional[float] = None
+    for marker in cleaned:
+        if last_time is None or abs(marker["time_q"] - last_time) >= TEMPO_MARKER_MIN_GAP_Q:
+            result.append(marker)
+            last_time = marker["time_q"]
+        if len(result) >= MAX_TEMPO_MARKERS:
+            break
+
+    return result
+
+
 def apply_articulation(
     articulation: Optional[str],
     profile: Dict[str, Any],
@@ -306,6 +353,7 @@ def build_response(
     profile: Dict[str, Any],
     length_q: float,
     free_mode: bool = False,
+    allow_tempo_changes: bool = False,
 ) -> Dict[str, Any]:
     midi_cfg = profile.get("midi", {})
     default_chan = int(midi_cfg.get("channel", 1))
@@ -359,7 +407,7 @@ def build_response(
 
     all_cc_events = articulation_cc + cc_events
 
-    return {
+    response = {
         "notes": notes,
         "cc_events": all_cc_events,
         "keyswitches": keyswitches,
@@ -368,3 +416,10 @@ def build_response(
         "generation_type": raw.get("generation_type"),
         "generation_style": raw.get("generation_style"),
     }
+
+    if allow_tempo_changes:
+        tempo_markers = normalize_tempo_markers(raw.get("tempo_markers"), length_q)
+        if tempo_markers:
+            response["tempo_markers"] = tempo_markers
+
+    return response

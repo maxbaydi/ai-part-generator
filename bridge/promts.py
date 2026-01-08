@@ -44,6 +44,43 @@ PLAYABILITY & REGISTER RULES:
 - At tempos >130 BPM, simplify low-register motion and keep it rhythmically sparse.
 - Wind instruments (brass/woodwinds): do not sustain a single note longer than 2 bars; add breaths/rests.
 
+ORCHESTRAL PERCUSSION (drums, toms, taiko - NOT cymbals/metals):
+Percussion provides rhythmic foundation and dramatic power. Key principles:
+- ROLE: Reinforce downbeats, create tension builds, accentuate climaxes, provide rhythmic ostinatos.
+- LAYERING: Combine instruments for impact (deep + mid drums on downbeats). Use one layer for pulse, another for accents.
+- DENSITY: Start sparse, build toward climax. Too many hits = loss of impact.
+- REGISTER: Use low drums (bass drums, low toms) for power; mid toms for agility; taiko for ethnic color.
+- ROLLS: Use for transitions, tension builds, and crescendos. Shape dynamics with CC1.
+- DYNAMICS: Single hits use velocity; rolls use CC1 for sustained intensity control.
+
+GENRE PERCUSSION PREFERENCES:
+- ORCHESTRAL/CLASSICAL: Timpani-style patterns, sparse but powerful, accent structural points.
+- CINEMATIC/TRAILER: Epic tom ensembles, taiko, layered impacts on downbeats, building ostinatos.
+- ACTION/BATTLE: Aggressive taiko patterns, syncopated rhythms, driving 8th-note pulses.
+- EPIC/FANTASY: Massive low-end impacts, tribal tom patterns, ceremonial feel.
+- HORROR/TENSION: Sparse hits, unpredictable placement, rolls for sustained dread.
+- ETHNIC/WORLD: Taiko for Japanese, djembe-style patterns for African, specific cultural rhythms.
+
+PERCUSSION GROOVE & MUSICALITY:
+CRITICAL: Before generating percussion, ANALYZE THE TRACK STRUCTURE from context. Shape the percussion part to match:
+- Intro/verse: sparse, minimal hits, building anticipation
+- Pre-chorus/build: increasing density, rolls, crescendo
+- Chorus/climax: full power, layered instruments, strong downbeats
+- Bridge/breakdown: drop out or simplify, create contrast
+- Outro: gradually thin out or end with a final impact
+The percussion part must SERVE THE SONG STRUCTURE, not exist in isolation!
+
+Percussion parts must feel ALIVE, not mechanical. Create groove with subtle timing and velocity variations.
+- GROOVE: Vary velocity on off-beats, add ghost notes (vel 35-50), slight accent shifts create swing.
+- FILLS: Add fills every 4-8 bars to break monotony. Use faster subdivisions (16ths) leading into downbeats.
+- ROLLS: Use rolls for transitions between sections, crescendo into new parts, or dramatic pauses.
+- DEVELOPMENT: Start simple, add layers/complexity as the piece progresses. Don't repeat the same bar endlessly.
+- BREATHING: Leave gaps! Not every beat needs a hit. Silence creates anticipation and impact.
+- HUMAN FEEL: Real percussionists accent strong beats, soften weak beats, and anticipate transitions with fills.
+- ENTRY TIMING: Don't always start percussion from bar 1! Enter mid-phrase, build up, drop out, re-enter for impact.
+- INTERNAL ARC: Percussion has its own story - moments of activity, moments of rest. Play 4 bars, rest 2 bars, return stronger.
+- AVOID MONOTONY: Never loop the exact same pattern for the entire piece. Evolve, simplify, intensify, drop out, surprise.
+
 OUTPUT FORMAT:
 {
   "notes": [{"start_q": 0, "dur_q": 2, "pitch": 72, "vel": 90, "chan": 1}, ...],
@@ -53,6 +90,9 @@ OUTPUT FORMAT:
   },
   "articulation": "legato"
 }
+
+OPTIONAL TEMPO MARKERS (only if explicitly allowed):
+"tempo_markers": [{"time_q": 0, "bpm": 120, "linear": false}, ...]
 
 OPTIONAL PATTERN REPETITION (recommended for ostinato and repeating figures):
 - You may output "patterns" and "repeats" to avoid listing the same notes many times.
@@ -64,7 +104,8 @@ OPTIONAL PATTERN REPETITION (recommended for ostinato and repeating figures):
 - Repeats are HORIZONTAL only: do NOT change pitches. For different chords, create a new pattern.
 
 THREE-LAYER DYNAMICS SYSTEM:
-There are THREE independent dynamics controls - use ALL for expressive musical parts:
+There are THREE independent dynamics controls - use ALL for expressive musical parts.
+EXCEPTION - PERCUSSION: For drums/toms/taiko, dynamics is controlled ONLY by VELOCITY (hit strength). Do NOT use CC curves for single hits. CC1 curves are ONLY for rolls (sustained articulations).
 
 1. VELOCITY (vel: 1-127) - NOTE ATTACK dynamics:
    - Attack intensity/hardness of each individual note
@@ -145,8 +186,9 @@ SUSTAIN PEDAL TECHNIQUE (CC64 / curves.sustain_pedal):
 CRITICAL: 
 - Use ONLY pitches from the ALLOWED PITCHES list
 - Generate enough notes spread across the entire duration
-- MUST include 'curves' with BOTH 'expression' AND 'dynamics'
-- VARY velocity values - do not use same velocity for all notes"""
+- MUST include 'curves' with BOTH 'expression' AND 'dynamics' (EXCEPT percussion - see below)
+- VARY velocity values - do not use same velocity for all notes
+- PERCUSSION EXCEPTION: For drums/percussion, do NOT generate CC curves for single hits. Dynamics = velocity only. Only generate CC1 (dynamics) curve if using ROLLS - shape roll intensity with CC1."""
 
 REPAIR_SYSTEM_PROMPT = (
     "Return valid JSON only. Do not include any extra text or markdown."
@@ -172,6 +214,43 @@ PLAYABILITY & REGISTER RULES:
 - High register (approx MIDI 66+): faster figures are acceptable but avoid heavy, long fortissimo tones.
 - At tempos >130 BPM, simplify low-register motion and keep it rhythmically sparse.
 - Wind instruments (brass/woodwinds): do not sustain a single note longer than 2 bars; add breaths/rests.
+
+ORCHESTRAL PERCUSSION (drums, toms, taiko - NOT cymbals/metals):
+Percussion provides rhythmic foundation and dramatic power. Key principles:
+- ROLE: Reinforce downbeats, create tension builds, accentuate climaxes, provide rhythmic ostinatos.
+- LAYERING: Combine instruments for impact (deep + mid drums on downbeats). Use one layer for pulse, another for accents.
+- DENSITY: Start sparse, build toward climax. Too many hits = loss of impact.
+- REGISTER: Use low drums (bass drums, low toms) for power; mid toms for agility; taiko for ethnic color.
+- ROLLS: Use for transitions, tension builds, and crescendos. Shape dynamics with CC1.
+- DYNAMICS: Single hits use velocity; rolls use CC1 for sustained intensity control.
+
+GENRE PERCUSSION PREFERENCES:
+- ORCHESTRAL/CLASSICAL: Timpani-style patterns, sparse but powerful, accent structural points.
+- CINEMATIC/TRAILER: Epic tom ensembles, taiko, layered impacts on downbeats, building ostinatos.
+- ACTION/BATTLE: Aggressive taiko patterns, syncopated rhythms, driving 8th-note pulses.
+- EPIC/FANTASY: Massive low-end impacts, tribal tom patterns, ceremonial feel.
+- HORROR/TENSION: Sparse hits, unpredictable placement, rolls for sustained dread.
+- ETHNIC/WORLD: Taiko for Japanese, djembe-style patterns for African, specific cultural rhythms.
+
+PERCUSSION GROOVE & MUSICALITY:
+CRITICAL: Before generating percussion, ANALYZE THE TRACK STRUCTURE from context. Shape the percussion part to match:
+- Intro/verse: sparse, minimal hits, building anticipation
+- Pre-chorus/build: increasing density, rolls, crescendo
+- Chorus/climax: full power, layered instruments, strong downbeats
+- Bridge/breakdown: drop out or simplify, create contrast
+- Outro: gradually thin out or end with a final impact
+The percussion part must SERVE THE SONG STRUCTURE, not exist in isolation!
+
+Percussion parts must feel ALIVE, not mechanical. Create groove with subtle timing and velocity variations.
+- GROOVE: Vary velocity on off-beats, add ghost notes (vel 35-50), slight accent shifts create swing.
+- FILLS: Add fills every 4-8 bars to break monotony. Use faster subdivisions (16ths) leading into downbeats.
+- ROLLS: Use rolls for transitions between sections, crescendo into new parts, or dramatic pauses.
+- DEVELOPMENT: Start simple, add layers/complexity as the piece progresses. Don't repeat the same bar endlessly.
+- BREATHING: Leave gaps! Not every beat needs a hit. Silence creates anticipation and impact.
+- HUMAN FEEL: Real percussionists accent strong beats, soften weak beats, and anticipate transitions with fills.
+- ENTRY TIMING: Don't always start percussion from bar 1! Enter mid-phrase, build up, drop out, re-enter for impact.
+- INTERNAL ARC: Percussion has its own story - moments of activity, moments of rest. Play 4 bars, rest 2 bars, return stronger.
+- AVOID MONOTONY: Never loop the exact same pattern for the entire piece. Evolve, simplify, intensify, drop out, surprise.
 
 MOTIF VS MELODY:
 - Motif: a short, repeatable, memorable fragment (can be ostinato or arpeggio).
@@ -213,6 +292,8 @@ CRITICAL - ARTICULATION DETERMINES NOTE DURATION:
 - If you need longer notes for dramatic effect, SWITCH to a LONG articulation (sustain, tremolo)
 
 THREE-LAYER DYNAMICS SYSTEM:
+EXCEPTION - PERCUSSION: For drums/toms/taiko, dynamics is controlled ONLY by VELOCITY (hit strength). Do NOT use CC curves for single hits. CC1 curves are ONLY for rolls (sustained articulations).
+
 1. VELOCITY (vel: 1-127) - NOTE ATTACK dynamics:
    - Attack intensity of each note
    - For SHORT articulations (staccato, pizzicato): velocity IS the dynamics
@@ -280,6 +361,9 @@ OUTPUT FORMAT:
   "generation_style": "Cinematic"
 }
 
+OPTIONAL TEMPO MARKERS (only if explicitly allowed):
+"tempo_markers": [{"time_q": 0, "bpm": 120, "linear": false}, ...]
+
 OPTIONAL PATTERN REPETITION (recommended for ostinato and repeating figures):
 - You may output "patterns" and "repeats" to avoid listing the same notes many times.
 - "patterns": [{"id": "ost1", "length_q": 4, "notes": [ ...pattern notes... ]}]
@@ -307,8 +391,9 @@ SUSTAIN PEDAL TECHNIQUE (CC64 / curves.sustain_pedal):
 CRITICAL: 
 - Use ONLY pitches from the ALLOWED PITCHES list
 - Generate enough notes to fill the duration musically
-- MUST include 'curves' with BOTH 'expression' AND 'dynamics'
-- MATCH the complexity of your output to what the user actually requested"""
+- MUST include 'curves' with BOTH 'expression' AND 'dynamics' (EXCEPT percussion - see below)
+- MATCH the complexity of your output to what the user actually requested
+- PERCUSSION EXCEPTION: For drums/percussion, do NOT generate CC curves for single hits. Dynamics = velocity only. Only generate CC1 (dynamics) curve if using ROLLS - shape roll intensity with CC1."""
 
 COMPOSITION_PLAN_SYSTEM_PROMPT = """You are a composition planner. Produce a concise plan for a multi-instrument piece.
 

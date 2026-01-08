@@ -1,0 +1,48 @@
+{
+  "id": "percussion_strezov_x3m",
+  "name": "Percussion - Strezov X3M",
+  "family": "percussion",
+  "vendor": "Strezov Sampling",
+  "description": "Strezov Sampling Percussion Essentials X3M. Epic cinematic percussion ensemble featuring massive impact drums. Includes Juggernaut (massive low-end impacts), Tom ensembles (8 low toms, 4 mid toms), and Taiko ensemble for dramatic orchestral and trailer music.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "poly",
+    "is_drum": true,
+    "drum_map": {
+      "juggernaut": 24,
+      "juggernaut_accent": 25,
+      "low_tom_ens": 30,
+      "low_tom_ens_accent": 31,
+      "mid_tom_ens": 36,
+      "mid_tom_ens_accent": 37,
+      "taiko_ens": 42,
+      "taiko_ens_accent": 43,
+      "juggernaut_roll": 48,
+      "low_tom_ens_roll": 54,
+      "mid_tom_ens_roll": 60
+    }
+  },
+  "range": {
+    "absolute": [24, 60],
+    "preferred": [24, 60]
+  },
+  "fix_policy": "clamp",
+  "articulations": {
+    "mode": "none",
+    "map": {}
+  },
+  "controllers": {
+    "semantic_to_cc": {
+      "dynamics": 1
+    },
+    "smoothing": {
+      "min_step": "1/32",
+      "interp": "linear",
+      "mode": "adaptive",
+      "write_every_step": false
+    }
+  },
+  "ai": {
+    "system_prompt_template": "Generate epic cinematic percussion parts for Strezov Sampling Percussion Essentials X3M.\n\nINSTRUMENT TIMBRES & USAGE:\n\n1. JUGGERNAUT (24-25):\n   - Massive, earth-shaking low-end impacts with industrial character\n   - Deep sub-bass frequencies, thunderous and dark\n   - Best for: main downbeats, dramatic accents, trailer hits, section endings\n   - Use sparingly for maximum impact\n\n2. LOW TOM ENSEMBLE 8 (30-31):\n   - 8 concert bass drums/low toms playing together\n   - Deep, resonant, powerful with rich low-mids\n   - Best for: rhythmic foundation, tribal grooves, building tension, ostinatos\n   - Good for steady pulse patterns and crescendo builds\n\n3. MID TOM ENSEMBLE 4 (36-37):\n   - 4 mid-range orchestral toms in unison\n   - Punchy, focused attack with warm body\n   - Best for: melodic tom patterns, fills, call-and-response with low toms\n   - More agile than low toms, good for faster rhythmic figures\n\n4. TAIKO ENSEMBLE 4 (42-43):\n   - Traditional Japanese taiko drums ensemble\n   - Powerful, woody attack with characteristic resonance\n   - Bright, cutting tone with ethnic color\n   - Best for: action sequences, battle music, Asian-influenced scores\n   - Strong rhythmic drive, works well in syncopated patterns\n\nROLL ARTICULATIONS (sustained, CC1 controlled):\n- Juggernaut Roll (48): Thunderous sustained rumble for transitions/builds\n- Low Tom Roll (54): Powerful sustained low rumble for tension\n- Mid Tom Roll (60): Lighter sustained roll for transitions\n\nDYNAMICS CONTROL:\nCRITICAL: For percussion, VELOCITY is the ONLY dynamics controller for hits!\nBuild the entire part dynamics through hit strength and accents. Shape crescendos, accents, and dynamics via velocity values.\nDO NOT use any CC curves for single hits - velocity alone controls dynamics.\n\n- SINGLE HITS (all non-roll instruments): VELOCITY ONLY!\n  * Velocity IS the dynamics - no CC curves needed for hits\n  * Soft hits: 40-60\n  * Medium: 70-90\n  * Strong: 95-110\n  * Accents: 115-127\n  * Build crescendos by gradually increasing velocity across hits\n  * Create groove by varying velocity on strong/weak beats\n\n- ROLLS: CC1 ONLY! (velocity just triggers, CC1 controls everything)\n  * Rolls respond ONLY to CC1 for dynamics - velocity has no effect on roll volume\n  * CC1 controls intensity throughout the entire roll duration\n  * Build tension: CC1 crescendo (40→110)\n  * Swells: CC1 rises then falls\n  * Fades: CC1 gradually decreases\n\nRHYTHMIC GUIDELINES:\n- Juggernaut: quarter/half notes, rarely faster than 8ths\n- Low Toms: 8ths and quarters, occasional 16ths for builds\n- Mid Toms: 8ths and 16ths, more agile patterns\n- Taiko: any division, syncopation encouraged\n- Layer instruments for power: Juggernaut + Low Toms on downbeats\n\nARRANGEMENT TIPS:\n- Start sparse, build density toward climax\n- Alternate between tom groups for call-and-response\n- Use rolls for transitions between sections\n- Reserve Juggernaut for key structural moments\n- Combine with taiko for aggressive action feel"
+  }
+}
