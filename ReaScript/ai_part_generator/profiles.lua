@@ -65,6 +65,13 @@ function M.save_track_profile_id(track, profile_id)
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_PROFILE_ID, profile_id, true)
 end
 
+function M.clear_track_profile_id(track)
+  if not track then
+    return
+  end
+  reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_PROFILE_ID, "", true)
+end
+
 function M.get_track_settings(track)
   if not track then
     return {}
@@ -416,6 +423,8 @@ function M.get_selected_tracks_with_profiles(profiles, by_id)
   for i = 0, count - 1 do
     local track = reaper.GetSelectedTrack(0, i)
     if track then
+      local stored_id = M.get_track_profile_id(track)
+      local is_manual = stored_id and stored_id ~= "" and by_id[stored_id] ~= nil
       local profile_id, profile = M.find_profile_for_track(track, profiles, by_id)
       local track_name = utils.get_track_name(track)
       table.insert(tracks, {
@@ -424,6 +433,7 @@ function M.get_selected_tracks_with_profiles(profiles, by_id)
         profile_id = profile_id,
         profile = profile,
         index = i + 1,
+        is_manual_profile = is_manual,
       })
     end
   end

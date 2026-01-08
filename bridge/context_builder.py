@@ -3,11 +3,17 @@
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
+    from constants import MIDI_MAX, MIDI_MIN
+    from midi_utils import note_to_midi
     from models import ContextInfo, EnsembleInfo, HorizontalContext
-    from music_theory import analyze_chord, detect_key_from_chords, pitch_to_note
+    from music_theory import analyze_chord, detect_key_from_chords, pitch_to_note, velocity_to_dynamic
+    from profile_utils import load_profile
 except ImportError:
+    from .constants import MIDI_MAX, MIDI_MIN
+    from .midi_utils import note_to_midi
     from .models import ContextInfo, EnsembleInfo, HorizontalContext
-    from .music_theory import analyze_chord, detect_key_from_chords, pitch_to_note
+    from .music_theory import analyze_chord, detect_key_from_chords, pitch_to_note, velocity_to_dynamic
+    from .profile_utils import load_profile
 
 POSITION_DESCRIPTIONS = {
     "start": "This is the BEGINNING of a musical section. There is existing material AFTER the generation area.",
@@ -29,6 +35,16 @@ ROLE_HINTS = {
     "woodwinds": "WOODWINDS: Color and melody. Lyrical countermelodies.",
     "brass": "BRASS: Power and drama. Heroic melodies or fanfares.",
     "drums": "PERCUSSION: Rhythm foundation. Define the groove.",
+}
+
+CC_TREND_WINDOW_RATIO = 0.2
+CC_TREND_MIN_DELTA = 8
+CC_TREND_MIN_EVENTS = 4
+NOTE_CONTEXT_PREVIEW_LIMIT = 30
+ARTICULATION_CHANGE_PREVIEW_LIMIT = 6
+CC_LABELS = {
+    1: "Dynamics",
+    11: "Expression",
 }
 
 
@@ -108,12 +124,16 @@ def analyze_horizontal_notes(notes: List[Dict[str, Any]], label: str) -> str:
 
     note_strs = []
     for note in first_few:
-        note_strs.append(f"{pitch_to_note(note['pitch'])}@{note.get('start_q', 0):.2f}")
+        extra = collect_note_extras(note)
+        extra_str = f"({','.join(extra)})" if extra else ""
+        note_strs.append(f"{pitch_to_note(note['pitch'])}@{note.get('start_q', 0):.2f}{extra_str}")
 
     if last_few and last_few != first_few:
         note_strs.append("...")
         for note in last_few:
-            note_strs.append(f"{pitch_to_note(note['pitch'])}@{note.get('start_q', 0):.2f}")
+            extra = collect_note_extras(note)
+            extra_str = f"({','.join(extra)})" if extra else ""
+            note_strs.append(f"{pitch_to_note(note['pitch'])}@{note.get('start_q', 0):.2f}{extra_str}")
 
     parts.append(" ".join(note_strs))
 
@@ -162,9 +182,292 @@ def format_notes_for_context(notes: List[Dict[str, Any]], max_notes: int = 50) -
         start = note.get("start_q", 0)
         dur = note.get("dur_q", 1)
         pitch = note.get("pitch", 60)
-        note_strs.append(f"({start:.1f}, {pitch}, {dur:.2f})")
+        extra = collect_note_extras(note)
+        extra_str = f", {', '.join(extra)}" if extra else ""
+        note_strs.append(f"({start:.1f}, {pitch}, {dur:.2f}{extra_str})")
 
     return ", ".join(note_strs)
+
+
+def safe_int(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def safe_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def average(values: List[int]) -> float:
+    return sum(values) / len(values)
+
+
+def collect_note_extras(note: Dict[str, Any]) -> List[str]:
+    extras: List[str] = []
+    vel = note.get("vel")
+    chan = note.get("chan")
+    if vel is not None:
+        extras.append(f"v{vel}")
+    if chan is not None:
+        extras.append(f"ch{chan}")
+    return extras
+
+
+def summarize_velocity_context(notes: List[Dict[str, Any]]) -> List[str]:
+    velocities: List[int] = []
+    channel_counts: Dict[int, int] = {}
+
+    for note in notes:
+        vel = safe_int(note.get("vel"))
+        if vel is not None:
+            vel = max(MIDI_MIN, min(MIDI_MAX, vel))
+            velocities.append(vel)
+        chan = safe_int(note.get("chan"))
+        if chan is not None:
+            channel_counts[chan] = channel_counts.get(chan, 0) + 1
+
+    parts: List[str] = []
+    if velocities:
+        min_vel = min(velocities)
+        max_vel = max(velocities)
+        avg_vel = average(velocities)
+        min_dyn = velocity_to_dynamic(min_vel)
+        max_dyn = velocity_to_dynamic(max_vel)
+        avg_dyn = velocity_to_dynamic(int(round(avg_vel)))
+        span = max_vel - min_vel
+        parts.append(
+            f"Velocity range: {min_vel}-{max_vel} ({min_dyn}-{max_dyn}), avg {avg_vel:.1f} ({avg_dyn}), span {span}"
+        )
+
+    if channel_counts:
+        channel_str = ", ".join(
+            f"ch{chan}:{count}" for chan, count in sorted(channel_counts.items(), key=lambda x: x[0])
+        )
+        parts.append(f"Channel usage: {channel_str}")
+
+    return parts
+
+
+def summarize_cc_trend(values: List[int]) -> str:
+    if len(values) < CC_TREND_MIN_EVENTS:
+        return "unknown"
+    window = max(1, int(len(values) * CC_TREND_WINDOW_RATIO))
+    start_avg = average(values[:window])
+    end_avg = average(values[-window:])
+    delta = end_avg - start_avg
+    if abs(delta) < CC_TREND_MIN_DELTA:
+        return "stable"
+    return "rising (crescendo)" if delta > 0 else "falling (decrescendo)"
+
+
+def format_cc_label(cc_num: int) -> str:
+    name = CC_LABELS.get(cc_num)
+    if name:
+        return f"{name} (CC{cc_num})"
+    return f"CC{cc_num}"
+
+
+def summarize_cc_events(cc_events: List[Dict[str, Any]]) -> List[str]:
+    grouped: Dict[int, List[Tuple[float, int]]] = {}
+    for evt in cc_events:
+        cc = safe_int(evt.get("cc") or evt.get("controller"))
+        value = safe_int(evt.get("value") or evt.get("val"))
+        if cc is None or value is None:
+            continue
+        time_q = safe_float(evt.get("time_q") or evt.get("start_q") or 0.0) or 0.0
+        value = max(MIDI_MIN, min(MIDI_MAX, value))
+        grouped.setdefault(cc, []).append((time_q, value))
+
+    lines: List[str] = []
+    for cc_num in sorted(grouped.keys()):
+        events = sorted(grouped[cc_num], key=lambda x: x[0])
+        values = [v for _, v in events]
+        if not values:
+            continue
+        min_val = min(values)
+        max_val = max(values)
+        avg_val = average(values)
+        trend = summarize_cc_trend(values)
+        label = format_cc_label(cc_num)
+        lines.append(
+            f"{label}: range {min_val}-{max_val}, avg {avg_val:.1f}, trend {trend}, events {len(values)}"
+        )
+    return lines
+
+
+def build_keyswitch_map(art_cfg: Dict[str, Any]) -> Dict[int, str]:
+    mapping: Dict[int, str] = {}
+    art_map = art_cfg.get("map", {})
+    octave_offset = safe_int(art_cfg.get("octave_offset")) or 0
+    if not isinstance(art_map, dict):
+        return mapping
+    for name, data in art_map.items():
+        if not isinstance(data, dict):
+            continue
+        pitch = data.get("pitch")
+        if pitch is None:
+            continue
+        try:
+            midi_pitch = note_to_midi(pitch) + (octave_offset * 12)
+        except ValueError:
+            continue
+        mapping[midi_pitch] = name
+    return mapping
+
+
+def collect_keyswitch_changes(
+    notes: List[Dict[str, Any]],
+    mapping: Dict[int, str],
+) -> List[Tuple[float, str]]:
+    changes: List[Tuple[float, str]] = []
+    if not mapping:
+        return changes
+    for note in notes:
+        pitch = safe_int(note.get("pitch"))
+        if pitch is None:
+            continue
+        name = mapping.get(pitch)
+        if not name:
+            continue
+        time_q = safe_float(note.get("start_q") or 0.0) or 0.0
+        changes.append((time_q, name))
+    changes.sort(key=lambda x: x[0])
+    return changes
+
+
+def collect_cc_articulation_changes(
+    cc_events: List[Dict[str, Any]],
+    art_cfg: Dict[str, Any],
+) -> List[Tuple[float, str]]:
+    cc_num = safe_int(art_cfg.get("cc_number"))
+    if cc_num is None:
+        return []
+    value_to_name: Dict[int, str] = {}
+    art_map = art_cfg.get("map", {})
+    if isinstance(art_map, dict):
+        for name, data in art_map.items():
+            if not isinstance(data, dict):
+                continue
+            raw_val = data.get("cc_value") or data.get("value") or data.get("cc")
+            val = safe_int(raw_val)
+            if val is not None:
+                value_to_name[val] = name
+
+    changes: List[Tuple[float, str]] = []
+    for evt in cc_events:
+        cc = safe_int(evt.get("cc") or evt.get("controller"))
+        if cc != cc_num:
+            continue
+        val = safe_int(evt.get("value") or evt.get("val"))
+        if val is None:
+            continue
+        name = value_to_name.get(val)
+        if not name:
+            continue
+        time_q = safe_float(evt.get("time_q") or evt.get("start_q") or 0.0) or 0.0
+        changes.append((time_q, name))
+
+    changes.sort(key=lambda x: x[0])
+    return changes
+
+
+def summarize_legato_keyswitch(
+    notes: List[Dict[str, Any]],
+    legato_cfg: Dict[str, Any],
+) -> Optional[str]:
+    if not legato_cfg or str(legato_cfg.get("mode", "")).lower() != "keyswitch":
+        return None
+    keyswitch = legato_cfg.get("keyswitch")
+    if not keyswitch:
+        return None
+    try:
+        ks_pitch = note_to_midi(keyswitch)
+    except ValueError:
+        return None
+
+    vel_on = safe_int(legato_cfg.get("velocity_on"))
+    vel_off = safe_int(legato_cfg.get("velocity_off"))
+    events: List[str] = []
+
+    for note in notes:
+        pitch = safe_int(note.get("pitch"))
+        if pitch != ks_pitch:
+            continue
+        vel = safe_int(note.get("vel"))
+        state = None
+        if vel is not None:
+            if vel_on is not None and vel >= vel_on:
+                state = "ON"
+            elif vel_off is not None and vel <= vel_off:
+                state = "OFF"
+        events.append(state or "TOGGLE")
+
+    if not events:
+        return None
+    last_state = next((state for state in reversed(events) if state in {"ON", "OFF"}), None)
+    if last_state:
+        return f"legato keyswitch: {len(events)} events, last {last_state}"
+    return f"legato keyswitch: {len(events)} events"
+
+
+def compress_changes(changes: List[Tuple[float, str]]) -> List[str]:
+    seq: List[str] = []
+    for _, name in changes:
+        if not seq or seq[-1] != name:
+            seq.append(name)
+    return seq
+
+
+def summarize_articulation_context(context_tracks: Optional[List[Dict[str, Any]]]) -> List[str]:
+    if not context_tracks:
+        return []
+
+    summaries: List[str] = []
+    for track in context_tracks:
+        track_name = str(track.get("name") or track.get("track") or track.get("track_name") or "").strip()
+        profile_id = str(track.get("profile_id") or "").strip()
+        if not profile_id:
+            continue
+        try:
+            profile = load_profile(profile_id)
+        except Exception:
+            continue
+
+        art_cfg = profile.get("articulations", {}) if isinstance(profile, dict) else {}
+        mode = str(art_cfg.get("mode", "none")).lower()
+        notes = track.get("notes", []) if isinstance(track.get("notes"), list) else []
+        cc_events = track.get("cc_events", []) if isinstance(track.get("cc_events"), list) else []
+
+        changes: List[Tuple[float, str]] = []
+        if mode == "keyswitch":
+            mapping = build_keyswitch_map(art_cfg)
+            changes = collect_keyswitch_changes(notes, mapping)
+        elif mode == "cc":
+            changes = collect_cc_articulation_changes(cc_events, art_cfg)
+
+        seq = compress_changes(changes)
+        if seq:
+            preview = " -> ".join(seq[:ARTICULATION_CHANGE_PREVIEW_LIMIT])
+            if len(seq) > ARTICULATION_CHANGE_PREVIEW_LIMIT:
+                preview = f"{preview} -> ..."
+            name_prefix = f"{track_name}: " if track_name else ""
+            summaries.append(f"{name_prefix}{preview} (changes {len(seq)})")
+
+        legato_summary = summarize_legato_keyswitch(notes, profile.get("legato", {}))
+        if legato_summary:
+            name_prefix = f"{track_name}: " if track_name else ""
+            summaries.append(f"{name_prefix}{legato_summary}")
+
+    return summaries
 
 
 def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_name: str) -> str:
@@ -236,8 +539,8 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
             parts.append(f"**{part_name}**{role_suffix}:")
 
             if prev_notes:
-                note_summary = format_notes_for_context(prev_notes, 30)
-                parts.append(f"  Notes (start_q, pitch, dur_q): {note_summary}")
+                note_summary = format_notes_for_context(prev_notes, NOTE_CONTEXT_PREVIEW_LIMIT)
+                parts.append(f"  Notes (start_q, pitch, dur_q, vel, chan): {note_summary}")
 
                 pitches = [n.get("pitch", 60) for n in prev_notes]
                 if pitches:
@@ -288,6 +591,18 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
     return "\n".join(parts)
 
 
+def collect_context_notes_for_velocity(context: ContextInfo) -> List[Dict[str, Any]]:
+    notes: List[Dict[str, Any]] = []
+    if context.existing_notes:
+        notes.extend(context.existing_notes)
+    if context.horizontal:
+        if context.horizontal.before:
+            notes.extend(context.horizontal.before)
+        if context.horizontal.after:
+            notes.extend(context.horizontal.after)
+    return notes
+
+
 def build_context_summary(
     context: Optional[ContextInfo],
     time_sig: str = "4/4",
@@ -318,6 +633,22 @@ def build_context_summary(
             suggested_low = max_p
             suggested_high = min(max_p + 12, 96)
             parts.append(f"SUGGESTED MELODY RANGE: MIDI {suggested_low}-{suggested_high} (above existing parts)")
+        note_summary = format_notes_for_context(context.existing_notes, NOTE_CONTEXT_PREVIEW_LIMIT)
+        if note_summary:
+            parts.append(f"Context notes (start_q, pitch, dur_q, vel, chan): {note_summary}")
+
+    velocity_notes = collect_context_notes_for_velocity(context)
+    dynamics_lines = summarize_velocity_context(velocity_notes)
+    if dynamics_lines:
+        parts.append("### DYNAMICS CONTEXT\n" + "\n".join(dynamics_lines))
+
+    cc_lines = summarize_cc_events(context.cc_events or [])
+    if cc_lines:
+        parts.append("### CC CONTEXT\n" + "\n".join(cc_lines))
+
+    articulation_lines = summarize_articulation_context(context.context_tracks)
+    if articulation_lines:
+        parts.append("### ARTICULATION CONTEXT\n" + "\n".join(articulation_lines))
 
     if context.context_notes:
         parts.append(context.context_notes.strip())

@@ -324,7 +324,7 @@ function M.run_dialog_fallback(state, profile_list, profiles_by_id, on_generate)
     "Articulation",
     "Type (Melody/Arpeggio/Bass Line/Chords)",
     "Instructions",
-    "Use selected tracks (0/1)",
+    "Use selected items (0/1)",
     "Insert target (active/new)",
     "Key",
     "Allow tempo changes (0/1)",
@@ -455,7 +455,7 @@ end
 local function draw_context_section(ctx, state)
   draw_section_header(ctx, "🎯 Context & Target")
 
-  local changed_ctx, use_ctx = reaper.ImGui_Checkbox(ctx, "Use selected tracks as context", state.use_selected_tracks)
+  local changed_ctx, use_ctx = reaper.ImGui_Checkbox(ctx, "Use selected items as context", state.use_selected_tracks)
   if changed_ctx then
     state.use_selected_tracks = use_ctx
   end
@@ -601,15 +601,55 @@ local function draw_multi_track_section(ctx, state, profile_list, profiles_by_id
     reaper.ImGui_PopStyleColor(ctx)
   end
 
-  if reaper.ImGui_TreeNode(ctx, "Track Details") then
-    for _, track_data in ipairs(tracks_info) do
+  local tree_flags = reaper.ImGui_TreeNodeFlags_DefaultOpen()
+  if reaper.ImGui_TreeNode(ctx, "Track → Profile Mapping", tree_flags) then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x90A0B0FF)
+    reaper.ImGui_TextWrapped(ctx, "Click on profile to change mapping manually")
+    reaper.ImGui_PopStyleColor(ctx)
+    reaper.ImGui_Spacing(ctx)
+    
+    local profile_items = {{ display = "(no profile)", value = "" }}
+    for _, profile in ipairs(profile_list) do
+      table.insert(profile_items, { display = profile.name, value = profile.id })
+    end
+    
+    for i, track_data in ipairs(tracks_info) do
       local status_icon = track_data.profile and "✓" or "⚠"
       local profile_name = track_data.profile and track_data.profile.name or "(no match)"
       local color = track_data.profile and 0xB0FFB0FF or 0xFFAA00FF
+      local is_manual = track_data.is_manual_profile
       
       reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), color)
-      reaper.ImGui_Text(ctx, string.format("%s %s → %s", status_icon, track_data.name, profile_name))
+      local label_text = string.format("%s %s", status_icon, track_data.name)
+      if is_manual then
+        label_text = label_text .. " [manual]"
+      end
+      reaper.ImGui_Text(ctx, label_text)
       reaper.ImGui_PopStyleColor(ctx)
+      
+      reaper.ImGui_SameLine(ctx)
+      reaper.ImGui_Text(ctx, "→")
+      reaper.ImGui_SameLine(ctx)
+      
+      reaper.ImGui_PushItemWidth(ctx, 180)
+      local combo_id = "##track_profile_" .. tostring(i)
+      if reaper.ImGui_BeginCombo(ctx, combo_id, profile_name) then
+        for _, item in ipairs(profile_items) do
+          local selected = item.value == (track_data.profile_id or "")
+          if reaper.ImGui_Selectable(ctx, item.display, selected) then
+            if item.value == "" then
+              profiles.clear_track_profile_id(track_data.track)
+            else
+              profiles.save_track_profile_id(track_data.track, item.value)
+            end
+            track_data.profile_id = item.value ~= "" and item.value or nil
+            track_data.profile = item.value ~= "" and profiles_by_id[item.value] or nil
+            track_data.is_manual_profile = item.value ~= ""
+          end
+        end
+        reaper.ImGui_EndCombo(ctx)
+      end
+      reaper.ImGui_PopItemWidth(ctx)
     end
     reaper.ImGui_TreePop(ctx)
   end

@@ -91,7 +91,15 @@ def generate(request: GenerateRequest) -> JSONResponse:
             logger.error("LLM JSON parse failed after repair attempts")
             raise HTTPException(status_code=502, detail="LLM JSON parse failed after repair attempts")
 
-    response = build_response(parsed, profile, length_q, request.free_mode, request.allow_tempo_changes)
+    response = build_response(
+        parsed,
+        profile,
+        length_q,
+        request.free_mode,
+        request.allow_tempo_changes,
+        request.context,
+        request.user_prompt or "",
+    )
     logger.info(
         "Response built: notes=%d cc_events=%d keyswitches=%d program_changes=%d articulation=%s",
         len(response.get("notes", [])),

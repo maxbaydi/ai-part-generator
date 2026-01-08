@@ -67,6 +67,189 @@ def get_articulation_cc_value(data: Dict[str, Any]) -> Optional[int]:
     return None
 
 
+def safe_int(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def safe_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def extract_context_cc_events(context: Optional[Any]) -> List[Dict[str, Any]]:
+    if not context:
+        return []
+    if isinstance(context, dict):
+        return context.get("cc_events") or []
+    return getattr(context, "cc_events", []) or []
+
+
+def extract_context_horizontal(context: Optional[Any]) -> Optional[Any]:
+    if not context:
+        return None
+    if isinstance(context, dict):
+        return context.get("horizontal")
+    return getattr(context, "horizontal", None)
+
+
+def extract_context_existing_notes(context: Optional[Any]) -> List[Dict[str, Any]]:
+    if not context:
+        return []
+    if isinstance(context, dict):
+        return context.get("existing_notes") or []
+    return getattr(context, "existing_notes", []) or []
+
+
+def extract_horizontal_notes(horizontal: Optional[Any], key: str) -> List[Dict[str, Any]]:
+    if not horizontal:
+        return []
+    if isinstance(horizontal, dict):
+        return horizontal.get(key) or []
+    return getattr(horizontal, key, []) or []
+
+
+def normalize_track_name(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def extract_context_track_names(context: Optional[Any]) -> set[str]:
+    if not context:
+        return set()
+    if isinstance(context, dict):
+        tracks = context.get("context_tracks") or []
+    else:
+        tracks = getattr(context, "context_tracks", []) or []
+
+    names: set[str] = set()
+    for track in tracks:
+        if isinstance(track, dict):
+            name = normalize_track_name(track.get("name") or track.get("track") or track.get("track_name"))
+        else:
+            name = normalize_track_name(
+                getattr(track, "name", None)
+                or getattr(track, "track", None)
+                or getattr(track, "track_name", None)
+            )
+        if name:
+            names.add(name)
+    return names
+
+
+def pick_context_state(events: List[Tuple[float, str]]) -> Optional[str]:
+    if not events:
+        return None
+    events = sorted(events, key=lambda x: x[0])
+    before = [e for e in events if e[0] <= 0]
+    if before:
+        return before[-1][1]
+    return events[0][1]
+
+
+def detect_context_articulation(profile: Dict[str, Any], context: Optional[Any]) -> Optional[str]:
+    if not context:
+        return None
+    art_cfg = profile.get("articulations", {})
+    mode = str(art_cfg.get("mode", "none")).lower()
+    art_map = art_cfg.get("map", {})
+    if mode == "none" or not isinstance(art_map, dict):
+        return None
+
+    if mode == "cc":
+        cc_num = safe_int(art_cfg.get("cc_number", DEFAULT_ARTICULATION_CC))
+        if cc_num is None:
+            return None
+        value_to_name: Dict[int, str] = {}
+        for name, data in art_map.items():
+            if not isinstance(data, dict):
+                continue
+            raw_val = data.get("cc_value") or data.get("value") or data.get("cc")
+            val = safe_int(raw_val)
+            if val is not None:
+                value_to_name[val] = name
+        events: List[Tuple[float, str]] = []
+        excluded_tracks = extract_context_track_names(context)
+        for evt in extract_context_cc_events(context):
+            if not isinstance(evt, dict):
+                continue
+            if excluded_tracks:
+                evt_track = normalize_track_name(evt.get("track") or evt.get("track_name") or evt.get("name"))
+                if evt_track and evt_track in excluded_tracks:
+                    continue
+            cc = safe_int(evt.get("cc") or evt.get("controller"))
+            if cc != cc_num:
+                continue
+            val = safe_int(evt.get("value") or evt.get("val"))
+            name = value_to_name.get(val)
+            if not name:
+                continue
+            time_q = safe_float(evt.get("time_q") or evt.get("start_q") or 0.0) or 0.0
+            events.append((time_q, name))
+        return pick_context_state(events)
+
+    if mode == "keyswitch":
+        pitch_to_name: Dict[int, str] = {}
+        for name, data in art_map.items():
+            if not isinstance(data, dict):
+                continue
+            pitch = data.get("pitch")
+            if pitch is None:
+                continue
+            try:
+                midi_pitch = note_to_midi(pitch)
+            except ValueError:
+                continue
+            pitch_to_name[midi_pitch] = name
+
+        notes: List[Dict[str, Any]] = []
+        horizontal = extract_context_horizontal(context)
+        if horizontal:
+            notes.extend(extract_horizontal_notes(horizontal, "before"))
+            notes.extend(extract_horizontal_notes(horizontal, "after"))
+        notes.extend(extract_context_existing_notes(context))
+
+        events: List[Tuple[float, str]] = []
+        for note in notes:
+            pitch = safe_int(note.get("pitch"))
+            name = pitch_to_name.get(pitch)
+            if not name:
+                continue
+            time_q = safe_float(note.get("start_q") or 0.0) or 0.0
+            events.append((time_q, name))
+        return pick_context_state(events)
+
+    return None
+
+
+def user_requests_articulation_change(user_prompt: str, profile: Dict[str, Any]) -> bool:
+    text = str(user_prompt or "").lower()
+    if not text:
+        return False
+    if "articulation" in text or "articulations" in text or "артикуляц" in text:
+        return True
+    art_cfg = profile.get("articulations", {})
+    art_map = art_cfg.get("map", {})
+    if not isinstance(art_map, dict):
+        return False
+    for name in art_map.keys():
+        if not name:
+            continue
+        name_lower = str(name).lower()
+        if name_lower in text:
+            return True
+        if name_lower.replace("_", " ") in text:
+            return True
+    return False
+
+
 def get_short_articulations(profile: Dict[str, Any]) -> set[str]:
     art_cfg = profile.get("articulations", {})
     short_list = art_cfg.get("short_articulations") or []
@@ -354,6 +537,8 @@ def build_response(
     length_q: float,
     free_mode: bool = False,
     allow_tempo_changes: bool = False,
+    context: Optional[Any] = None,
+    user_prompt: str = "",
 ) -> Dict[str, Any]:
     midi_cfg = profile.get("midi", {})
     default_chan = int(midi_cfg.get("channel", 1))
@@ -369,6 +554,14 @@ def build_response(
     pattern_notes = expand_pattern_notes(raw)
     if pattern_notes:
         notes_raw = notes_raw + pattern_notes
+
+    if free_mode:
+        lock_articulation = detect_context_articulation(profile, context)
+        if lock_articulation and not user_requests_articulation_change(user_prompt, profile):
+            for note in notes_raw:
+                if isinstance(note, dict):
+                    note.pop("articulation", None)
+            raw["articulation"] = lock_articulation
 
     if notes_raw:
         clamp_short_articulation_durations(notes_raw, profile, raw.get("articulation"))

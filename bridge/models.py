@@ -45,6 +45,8 @@ class ContextInfo(BaseModel):
     pitch_range: Optional[Dict[str, int]] = None
     horizontal: Optional[HorizontalContext] = None
     extended_progression: Optional[List[Dict[str, Any]]] = None
+    context_tracks: Optional[List[Dict[str, Any]]] = None
+    cc_events: Optional[List[Dict[str, Any]]] = None
 
 
 class ModelInfo(BaseModel):
