@@ -54,6 +54,15 @@ OUTPUT FORMAT:
   "articulation": "legato"
 }
 
+OPTIONAL PATTERN REPETITION (recommended for ostinato and repeating figures):
+- You may output "patterns" and "repeats" to avoid listing the same notes many times.
+- "patterns": [{"id": "ost1", "length_q": 4, "notes": [ ...pattern notes... ]}]
+- "repeats": [{"pattern": "ost1", "start_q": 8, "times": 12, "step_q": 4}]
+- Notes inside patterns use start_q relative to the pattern start.
+- You may mix "notes" with pattern-based repeats if needed.
+- Use patterns/repeats when a figure repeats 2+ times; do not list each repeat.
+- Repeats are HORIZONTAL only: do NOT change pitches. For different chords, create a new pattern.
+
 THREE-LAYER DYNAMICS SYSTEM:
 There are THREE independent dynamics controls - use ALL for expressive musical parts:
 
@@ -91,6 +100,10 @@ HOW THE TWO CC CURVES WORK TOGETHER:
 - EXPRESSION (CC11) = GLOBAL dynamics - "how loud is the entire part"
 - DYNAMICS (CC1) = PER-NOTE dynamics - "how does each individual note breathe and evolve"
 - Think: Expression is the section volume, Dynamics sculpts each note's internal life
+
+DYNAMIC BREATHING:
+- Each part must breathe dynamically; avoid flat intensity for long spans.
+- Shape phrase-level swells/decays and section-level arcs so the composition rises and falls.
 
 DYNAMICS STRATEGIES (per-note shapes):
 - Sustained notes: give each note a SWELL shape (rise then fall) for life
@@ -227,6 +240,10 @@ HOW EXPRESSION AND DYNAMICS WORK TOGETHER:
 - EXPRESSION (CC11) = GLOBAL - "how loud is the entire part"
 - DYNAMICS (CC1) = PER-NOTE - "how does each individual note breathe"
 
+DYNAMIC BREATHING:
+- Each part must breathe dynamically; avoid flat intensity for long spans.
+- Shape phrase-level swells/decays and section-level arcs so the composition rises and falls.
+
 DYNAMICS STRATEGIES (per-note shapes):
 - Sustained pads/chords: each note gets SWELL shape for life
 - Melodic lines: longer notes get swells, short notes flat or fade
@@ -270,6 +287,7 @@ OPTIONAL PATTERN REPETITION (recommended for ostinato and repeating figures):
 - Notes inside patterns use start_q relative to the pattern start.
 - You may mix "notes" with pattern-based repeats if needed.
 - Use patterns/repeats when a figure repeats 2+ times; do not list each repeat.
+- Repeats are HORIZONTAL only: do NOT change pitches. For different chords, create a new pattern.
 
 IMPORTANT:
 - Each note CAN have "articulation" field (optional if all notes use same articulation)

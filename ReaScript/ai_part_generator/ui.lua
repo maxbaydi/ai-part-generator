@@ -28,6 +28,95 @@ local UI = {
   BAR_RULER_CHAR = "▮",
 }
 
+local KEY_ROOTS = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
+local scale_names_cache = nil
+local key_options_cache = nil
+
+local function is_empty_or_unknown_key(key)
+  local val = tostring(key or ""):lower()
+  return val == "" or val == "unknown" or val == "auto"
+end
+
+local function extract_scale_names()
+  if scale_names_cache then
+    return scale_names_cache
+  end
+
+  local script_dir = utils.get_script_dir()
+  local path = utils.path_join(script_dir, "..", "..", "bridge", "music_theory.py")
+  local content = utils.read_file(path)
+  if not content then
+    scale_names_cache = {}
+    return scale_names_cache
+  end
+
+  local start_pos = content:find("SCALE_INTERVALS%s*=%s*{")
+  if not start_pos then
+    scale_names_cache = {}
+    return scale_names_cache
+  end
+
+  local brace_start = content:find("{", start_pos)
+  if not brace_start then
+    scale_names_cache = {}
+    return scale_names_cache
+  end
+
+  local depth = 0
+  local block_end = nil
+  local i = brace_start
+  while i <= #content do
+    local ch = content:sub(i, i)
+    if ch == "{" then
+      depth = depth + 1
+    elseif ch == "}" then
+      depth = depth - 1
+      if depth == 0 then
+        block_end = i
+        break
+      end
+    end
+    i = i + 1
+  end
+
+  if not block_end then
+    scale_names_cache = {}
+    return scale_names_cache
+  end
+
+  local block = content:sub(brace_start + 1, block_end - 1)
+  local names = {}
+  for name in block:gmatch("[\"']([^\"']+)[\"']%s*:") do
+    if name ~= "" then
+      table.insert(names, name)
+    end
+  end
+
+  scale_names_cache = names
+  return scale_names_cache
+end
+
+local function get_key_options()
+  if key_options_cache then
+    return key_options_cache
+  end
+
+  local scales = extract_scale_names()
+  if #scales == 0 then
+    scales = { "major", "minor" }
+  end
+
+  local options = {}
+  for _, root in ipairs(KEY_ROOTS) do
+    for _, scale in ipairs(scales) do
+      table.insert(options, root .. " " .. scale)
+    end
+  end
+
+  key_options_cache = options
+  return key_options_cache
+end
+
 local function escape_separator(s)
   return (s or ""):gsub(FALLBACK_SEPARATOR, "\\|")
 end
@@ -215,6 +304,11 @@ function M.run_dialog_fallback(state, profile_list, profiles_by_id, on_generate)
     0
   )
 
+  local default_key = state.key or const.DEFAULT_KEY
+  if state.key_mode == "Manual" and is_empty_or_unknown_key(default_key) then
+    default_key = const.DEFAULT_MANUAL_KEY
+  end
+
   local defaults = {
     escape_separator(state.profile_id or ""),
     escape_separator(state.articulation_name or ""),
@@ -222,7 +316,7 @@ function M.run_dialog_fallback(state, profile_list, profiles_by_id, on_generate)
     escape_separator(state.prompt or ""),
     state.use_selected_tracks and "1" or "0",
     state.insert_target or const.INSERT_TARGET_ACTIVE,
-    state.key_mode == "Auto" and "auto" or (state.key or const.DEFAULT_KEY),
+    state.key_mode == "Auto" and "auto" or default_key,
   }
   local labels = table.concat({
     "Profile ID",
@@ -378,11 +472,21 @@ local function draw_context_section(ctx, state)
     state.key_mode = value
     if value == "Unknown" then
       state.key = const.DEFAULT_KEY
+    elseif value == "Manual" and is_empty_or_unknown_key(state.key) then
+      state.key = const.DEFAULT_MANUAL_KEY
     end
   end)
 
   if state.key_mode == "Manual" then
     reaper.ImGui_Spacing(ctx)
+    if is_empty_or_unknown_key(state.key) then
+      state.key = const.DEFAULT_MANUAL_KEY
+    end
+    draw_label(ctx, "Key (Manual)")
+    local key_options = get_key_options()
+    draw_combo(ctx, "##key_combo", state.key or const.DEFAULT_MANUAL_KEY, key_options, function(value)
+      state.key = value
+    end)
     local changed_key, key = draw_input(ctx, "##key_input", state.key or "")
     if changed_key then
       state.key = key

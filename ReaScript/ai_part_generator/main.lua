@@ -1057,6 +1057,12 @@ function M.main()
   local articulation_list = profile and profiles.build_articulation_list(profile) or {}
   local articulation_info = profile and (profile.articulations or {}).map or {}
 
+  local key_mode = track_settings.key_mode or "Auto"
+  local key = track_settings.key or const.DEFAULT_KEY
+  if key_mode == "Manual" and (key == "" or key == const.DEFAULT_KEY) then
+    key = const.DEFAULT_MANUAL_KEY
+  end
+
   local state = {
     profile_id = profile_id,
     profile_name = profile and profile.name or "",
@@ -1069,8 +1075,8 @@ function M.main()
     prompt = track_settings.prompt or "",
     use_selected_tracks = track_settings.use_selected_tracks ~= nil and track_settings.use_selected_tracks or true,
     insert_target = track_settings.insert_target or const.INSERT_TARGET_ACTIVE,
-    key_mode = track_settings.key_mode or "Auto",
-    key = track_settings.key or const.DEFAULT_KEY,
+    key_mode = key_mode,
+    key = key,
     api_provider = api_provider,
     api_key = saved_api_key,
     api_base_url = api_base_url,
