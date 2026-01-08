@@ -10,6 +10,14 @@ local function get_note_dur_q(note)
   return tonumber(note.dur_q) or const.DEFAULT_NOTE_DUR_Q
 end
 
+local function get_note_pitch(note)
+  return tonumber(note.pitch) or const.DEFAULT_PITCH
+end
+
+local function get_note_chan(note)
+  return tonumber(note.chan) or const.MIDI_CHAN_MIN
+end
+
 function M.get_active_track()
   local track = reaper.GetSelectedTrack(0, 0)
   if track then
@@ -300,6 +308,69 @@ function M.apply_legato_overlap_by_articulation_changes(notes, overlap_q, change
       ensure_group_min_end(notes, groups[i].indices, groups[i + 1].start_q + overlap)
     end
   end
+end
+
+function M.resolve_same_pitch_overlaps(notes, min_gap_q)
+  if type(notes) ~= "table" then
+    return notes
+  end
+
+  local gap = tonumber(min_gap_q) or 0
+  if gap < 0 then
+    gap = 0
+  end
+
+  local groups = {}
+  for i, note in ipairs(notes) do
+    if type(note) == "table" then
+      local key = tostring(get_note_chan(note)) .. ":" .. tostring(get_note_pitch(note))
+      if not groups[key] then
+        groups[key] = {}
+      end
+      table.insert(groups[key], { idx = i, start_q = get_note_start_q(note) })
+    end
+  end
+
+  local remove = {}
+  for _, entries in pairs(groups) do
+    table.sort(entries, function(a, b)
+      if a.start_q == b.start_q then
+        return a.idx < b.idx
+      end
+      return a.start_q < b.start_q
+    end)
+
+    for i = 1, #entries - 1 do
+      local curr_idx = entries[i].idx
+      local next_idx = entries[i + 1].idx
+      local curr = notes[curr_idx]
+      local nxt = notes[next_idx]
+      local curr_start = get_note_start_q(curr)
+      local curr_end = curr_start + get_note_dur_q(curr)
+      local next_start = get_note_start_q(nxt)
+      local max_end = next_start - gap
+      if curr_end > max_end then
+        local new_dur = max_end - curr_start
+        if new_dur <= 0 then
+          remove[curr_idx] = true
+        else
+          curr.dur_q = new_dur
+        end
+      end
+    end
+  end
+
+  if not next(remove) then
+    return notes
+  end
+
+  local cleaned = {}
+  for i, note in ipairs(notes) do
+    if not remove[i] then
+      table.insert(cleaned, note)
+    end
+  end
+  return cleaned
 end
 
 return M

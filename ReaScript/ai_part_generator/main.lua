@@ -386,6 +386,7 @@ local function begin_apply(response, profile_id, profile, articulation_name, tar
       )
     end
   end
+  notes = midi.resolve_same_pitch_overlaps(notes, const.SAME_PITCH_MIN_GAP_Q)
 
   utils.log(string.format("begin_apply: to insert: notes=%d cc=%d ks=%d pc=%d",
     #notes, #cc_events, #keyswitches, #program_changes))

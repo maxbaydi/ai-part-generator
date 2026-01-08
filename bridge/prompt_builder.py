@@ -358,15 +358,21 @@ def build_prompt(
             f"## FREE MODE COMPOSITION for {profile.get('name', 'instrument')}",
         ]
 
-        if profile_user_formatted or custom_curves:
+        if profile_user_formatted:
             user_prompt_parts.extend([
                 f"",
                 f"### !!! CRITICAL INSTRUMENT RULES - READ FIRST !!!",
+                profile_user_formatted,
             ])
-            if profile_user_formatted:
-                user_prompt_parts.append(profile_user_formatted)
-            if custom_curves_info:
-                user_prompt_parts.append(f"USE THESE CURVES: {custom_curves_info}")
+        if custom_curves_info:
+            if not profile_user_formatted:
+                user_prompt_parts.extend([
+                    f"",
+                    f"### INSTRUMENT CURVES",
+                ])
+            user_prompt_parts.append(
+                f"Additional curves (optional unless instrument rules say otherwise): {custom_curves_info}"
+            )
 
         user_prompt_parts.extend([
             f"",
@@ -383,11 +389,10 @@ def build_prompt(
             articulation_list_str,
         ])
 
-        if not custom_curves:
-            user_prompt_parts.extend([
-                f"",
-                f"Note: Use Expression (CC11) for overall section dynamics, Dynamics (CC1) for note-level shaping. For SHORT articulations, velocity is primary.",
-            ])
+        user_prompt_parts.extend([
+            f"",
+            f"Note: Use Expression (CC11) for overall section dynamics, Dynamics (CC1) for note-level shaping. For SHORT articulations, velocity is primary.",
+        ])
     else:
         user_prompt_parts = [
             f"## COMPOSE: {generation_style.upper()} {generation_type.upper()} for {profile.get('name', 'instrument')}",

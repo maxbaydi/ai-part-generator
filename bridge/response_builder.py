@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from constants import (
+        ARTICULATION_MAX_DUR_Q,
         ARTICULATION_PRE_ROLL_Q,
         DEFAULT_ARTICULATION_CC,
         DEFAULT_KEYSWITCH_VELOCITY,
@@ -11,6 +12,7 @@ try:
         MIDI_MAX,
         MIDI_MIN,
         MIDI_VEL_MIN,
+        SHORT_ARTICULATION_FALLBACK_MAX_Q,
     )
     from curve_utils import build_cc_events
     from midi_utils import (
@@ -23,6 +25,7 @@ try:
     from utils import clamp
 except ImportError:
     from .constants import (
+        ARTICULATION_MAX_DUR_Q,
         ARTICULATION_PRE_ROLL_Q,
         DEFAULT_ARTICULATION_CC,
         DEFAULT_KEYSWITCH_VELOCITY,
@@ -30,6 +33,7 @@ except ImportError:
         MIDI_MAX,
         MIDI_MIN,
         MIDI_VEL_MIN,
+        SHORT_ARTICULATION_FALLBACK_MAX_Q,
     )
     from .curve_utils import build_cc_events
     from .midi_utils import (
@@ -53,6 +57,47 @@ def get_articulation_cc_value(data: Dict[str, Any]) -> Optional[int]:
     if cc_value is not None:
         return int(clamp(int(cc_value), MIDI_MIN, MIDI_MAX))
     return None
+
+
+def get_short_articulations(profile: Dict[str, Any]) -> set[str]:
+    art_cfg = profile.get("articulations", {})
+    short_list = art_cfg.get("short_articulations") or []
+    if short_list:
+        return {str(name).lower() for name in short_list}
+    art_map = art_cfg.get("map", {})
+    if not isinstance(art_map, dict):
+        return set()
+    return {
+        name.lower()
+        for name, data in art_map.items()
+        if isinstance(data, dict) and data.get("dynamics") == "velocity"
+    }
+
+
+def clamp_short_articulation_durations(
+    notes: List[Dict[str, Any]],
+    profile: Dict[str, Any],
+    default_articulation: Optional[str],
+) -> None:
+    short_articulations = get_short_articulations(profile)
+    if not short_articulations:
+        return
+    for note in notes:
+        if not isinstance(note, dict):
+            continue
+        articulation = note.get("articulation") or default_articulation
+        if not articulation:
+            continue
+        art_lower = str(articulation).lower()
+        if art_lower not in short_articulations:
+            continue
+        try:
+            dur_q = float(note.get("dur_q"))
+        except (TypeError, ValueError):
+            continue
+        max_dur = ARTICULATION_MAX_DUR_Q.get(art_lower, SHORT_ARTICULATION_FALLBACK_MAX_Q)
+        if dur_q > max_dur:
+            note["dur_q"] = max_dur
 
 
 def apply_articulation(
@@ -184,6 +229,10 @@ def build_response(
     fix_policy = profile.get("fix_policy", "octave_shift_to_fit")
 
     notes_raw = raw.get("notes", [])
+    if not isinstance(notes_raw, list):
+        notes_raw = []
+    else:
+        clamp_short_articulation_durations(notes_raw, profile, raw.get("articulation"))
 
     has_per_note_articulations = free_mode and any(
         isinstance(n, dict) and n.get("articulation") for n in notes_raw
