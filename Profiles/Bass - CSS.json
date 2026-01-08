@@ -14,6 +14,13 @@
     "preferred": ["E2", "D4"]
   },
   "fix_policy": "octave_shift_to_fit",
+  "legato": {
+    "mode": "keyswitch",
+    "keyswitch": "Ab1",
+    "velocity_on": 100,
+    "velocity_off": 1,
+    "description": "Enable legato with high velocity (≥64), disable with low velocity (<64). Prefer keyswitch over CC for legato control."
+  },
   "articulations": {
     "mode": "cc",
     "cc_number": 58,
@@ -51,6 +58,6 @@
     }
   },
   "ai": {
-    "system_prompt_template": "Generate double bass parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. The double bass provides orchestral foundation with massive, resonant low frequencies. Playable range is E1-G4, preferred range E1-D4."
+    "system_prompt_template": "Generate double bass parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Use keyswitch Ab1 to toggle legato mode - velocity ≥64 enables, <64 disables. Switch articulations via CC58, use keyswitch for legato control. The double bass provides orchestral foundation with massive, resonant low frequencies. Playable range is E1-G4, preferred range E1-D4."
   }
 }

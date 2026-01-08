@@ -263,11 +263,22 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
         return ""
 
     parts: List[str] = []
+    current_inst = ensemble.current_instrument or {}
+    current_track = str(current_inst.get("track_name", "")).strip().lower()
+    current_profile = str(current_inst.get("profile_name", "")).strip().lower()
+
+    def format_inst_label(inst: Any) -> str:
+        track = str(inst.track_name or "").strip()
+        profile = str(inst.profile_name or "").strip()
+        if track and profile and track != profile:
+            return f"{track} ({profile})"
+        return track or profile or "Unknown"
 
     if ensemble.is_sequential:
         parts.append("### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION")
         parts.append(f"You are generating part {ensemble.generation_order} of {ensemble.total_instruments} for a unified composition.")
-        parts.append("Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.")
+        if ensemble.generation_order > 1:
+            parts.append("Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.")
         parts.append("")
     else:
         parts.append("### ENSEMBLE GENERATION - CRITICAL FOR COHESIVE COMPOSITION")
@@ -278,13 +289,21 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
     parts.append("ENSEMBLE INSTRUMENTS (in generation order):")
 
     for inst in ensemble.instruments:
-        is_current = inst.profile_name == current_profile_name
+        inst_track = str(inst.track_name or "").strip().lower()
+        inst_profile = str(inst.profile_name or "").strip().lower()
+        if current_track:
+            is_current = inst_track == current_track
+        elif current_profile:
+            is_current = inst_profile == current_profile
+        else:
+            is_current = inst.profile_name == current_profile_name
         marker = " ← YOU ARE GENERATING THIS" if is_current else ""
         already_done = inst.index < ensemble.generation_order
         done_marker = " [ALREADY GENERATED]" if already_done and ensemble.is_sequential else ""
         family = inst.family.lower() if inst.family else "unknown"
         role = inst.role if inst.role else "unknown"
-        parts.append(f"  {inst.index}. {inst.profile_name} ({family}, role: {role}){marker}{done_marker}")
+        label = format_inst_label(inst)
+        parts.append(f"  {inst.index}. {label} ({family}, role: {role}){marker}{done_marker}")
 
     parts.append("")
 
@@ -334,7 +353,13 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
         family = current_inst.get("family", "unknown").lower()
         hint = ROLE_HINTS.get(role) or ROLE_HINTS.get(family, "")
         if hint:
-            parts.append(f"YOUR ROLE ({current_inst.get('profile_name', 'instrument')}): {hint}")
+            current_label = str(current_inst.get("track_name") or "").strip()
+            current_profile_name = str(current_inst.get("profile_name") or "").strip()
+            if current_label and current_profile_name and current_label != current_profile_name:
+                current_label = f"{current_label} ({current_profile_name})"
+            if not current_label:
+                current_label = current_profile_name or "instrument"
+            parts.append(f"YOUR ROLE ({current_label}): {hint}")
             parts.append("")
 
     if ensemble.total_instruments >= 3:

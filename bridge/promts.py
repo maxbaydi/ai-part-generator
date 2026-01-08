@@ -11,6 +11,12 @@ MUSIC THEORY RULES:
 4. PHRASING: Create 2-4 bar phrases. End phrases on stable scale degrees (1, 3, 5).
 5. CONTOUR: Melodies should have a shape - build up to a climax, then resolve down.
 
+PLAYABILITY & REGISTER RULES:
+- Low register (approx MIDI <= 45): avoid fast runs; prefer accents, pedal tones, and longer values (quarters/eighths).
+- Mid register (approx MIDI 46-65): moderate rhythmic density; mix 8ths with longer notes.
+- High register (approx MIDI 66+): faster figures are acceptable but avoid heavy, long fortissimo tones.
+- At tempos >130 BPM, simplify low-register motion and keep it rhythmically sparse.
+
 OUTPUT FORMAT:
 {
   "notes": [{"start_q": 0, "dur_q": 2, "pitch": 72, "vel": 90, "chan": 1}, ...],
@@ -108,6 +114,12 @@ CRITICAL RULE - USE ONLY ALLOWED PITCHES:
 You will be given a list of ALLOWED PITCHES (MIDI numbers). Use ONLY those exact pitch values.
 DO NOT use any pitch that is not in the allowed list. This ensures notes stay in the correct key/scale.
 
+PLAYABILITY & REGISTER RULES:
+- Low register (approx MIDI <= 45): avoid fast runs; prefer accents, pedal tones, and longer values (quarters/eighths).
+- Mid register (approx MIDI 46-65): moderate rhythmic density; mix 8ths with longer notes.
+- High register (approx MIDI 66+): faster figures are acceptable but avoid heavy, long fortissimo tones.
+- At tempos >130 BPM, simplify low-register motion and keep it rhythmically sparse.
+
 ARTICULATION USAGE:
 You CAN use multiple articulations, but ONLY when musically justified:
 - For SIMPLE PARTS (pads, sustained chords, basic accompaniment): use ONE articulation (usually "sustain")
@@ -173,11 +185,20 @@ OUTPUT FORMAT:
   "generation_style": "Cinematic"
 }
 
+OPTIONAL PATTERN REPETITION (recommended for ostinato and repeating figures):
+- You may output "patterns" and "repeats" to avoid listing the same notes many times.
+- "patterns": [{"id": "ost1", "length_q": 4, "notes": [ ...pattern notes... ]}]
+- "repeats": [{"pattern": "ost1", "start_q": 8, "times": 12, "step_q": 4}]
+- Notes inside patterns use start_q relative to the pattern start.
+- You may mix "notes" with pattern-based repeats if needed.
+ - Use patterns/repeats when a figure repeats 2+ times; do not list each repeat.
+
 IMPORTANT:
 - Each note CAN have "articulation" field (optional if all notes use same articulation)
 - For simple pad/chord parts, you may omit per-note articulation and set global "articulation": "sustain"
 - VARY velocity values appropriately - not all notes should have same velocity
 - Include 'generation_type' and 'generation_style' in response
+ - Use patterns/repeats for repeating ostinato instead of listing every note
 
 SUSTAIN PEDAL TECHNIQUE (CC64 / curves.sustain_pedal):
 - ALWAYS use interp: "hold" (no smoothing)
@@ -192,3 +213,25 @@ CRITICAL:
 - Generate enough notes to fill the duration musically
 - MUST include 'curves' with BOTH 'expression' AND 'dynamics'
 - MATCH the complexity of your output to what the user actually requested"""
+
+COMPOSITION_PLAN_SYSTEM_PROMPT = """You are a composition planner. Produce a concise plan for a multi-instrument piece.
+
+OUTPUT MUST BE VALID JSON ONLY (no markdown). Do NOT output notes or MIDI.
+
+OUTPUT FORMAT:
+{
+  "plan_summary": "Short guidance for the whole composition. Mention overall arc, texture, register spacing, and role balance.",
+  "section_overview": [
+    {"bars": "1-8", "focus": "intro, low density, mid register", "energy": "low"}
+  ],
+  "role_guidance": [
+    {"instrument": "Violin 1", "role": "melody", "guidance": "carry main motif in upper register"}
+  ]
+}
+
+RULES:
+- Keep plan_summary concise (under ~120 words).
+- section_overview and role_guidance are optional; omit if not enough info.
+- If the user specifies sections with bar counts, include section_overview entries with bar ranges.
+- Order role_guidance in the preferred generation order.
+- Use plain English, short phrases, and avoid strict bar-by-bar constraints unless the user specified them."""

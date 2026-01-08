@@ -14,6 +14,13 @@
     "preferred": ["F1", "Bb3"]
   },
   "fix_policy": "octave_shift_to_fit",
+  "legato": {
+    "mode": "keyswitch",
+    "keyswitch": "Ab1",
+    "velocity_on": 100,
+    "velocity_off": 1,
+    "description": "Enable legato with high velocity (≥64), disable with low velocity (<64). Prefer keyswitch over CC for legato control."
+  },
   "articulations": {
     "mode": "cc",
     "cc_number": 58,
@@ -48,6 +55,6 @@
     }
   },
   "ai": {
-    "system_prompt_template": "Generate tuba parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. The tuba provides brass section foundation with deep, resonant low frequencies. Playable range is D1-F4, preferred range F1-Bb3."
+    "system_prompt_template": "Generate tuba parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Use keyswitch Ab1 to toggle legato mode - velocity ≥64 enables, <64 disables. Switch articulations via CC58, use keyswitch for legato control. The tuba provides brass section foundation with deep, resonant low frequencies. Playable range is D1-F4, preferred range F1-Bb3."
   }
 }

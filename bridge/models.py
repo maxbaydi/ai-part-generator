@@ -79,6 +79,8 @@ class EnsembleInfo(BaseModel):
     instruments: List[EnsembleInstrument] = Field(default_factory=list)
     generation_style: str = DEFAULT_GENERATION_STYLE
     shared_prompt: str = ""
+    plan_summary: str = ""
+    plan: Optional[Dict[str, Any]] = None
     current_instrument_index: int = 1
     current_instrument: Optional[Dict[str, Any]] = None
     generation_order: int = 1

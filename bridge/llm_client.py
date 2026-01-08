@@ -1,6 +1,8 @@
 ﻿from __future__ import annotations
 
+import http.client
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -18,6 +20,8 @@ try:
         DEFAULT_PROVIDER,
         DEFAULT_TEMPERATURE,
         HTTP_TIMEOUT_SEC,
+        LLM_RETRY_ATTEMPTS,
+        LLM_RETRY_BACKOFF_SEC,
         LOCAL_HOSTS,
     )
     from logger_config import logger
@@ -32,6 +36,8 @@ except ImportError:
         DEFAULT_PROVIDER,
         DEFAULT_TEMPERATURE,
         HTTP_TIMEOUT_SEC,
+        LLM_RETRY_ATTEMPTS,
+        LLM_RETRY_BACKOFF_SEC,
         LOCAL_HOSTS,
     )
     from .logger_config import logger
@@ -262,13 +268,42 @@ def call_llm(
     messages: List[Dict[str, str]],
     api_key: Optional[str] = None,
 ) -> str:
-    logger.info("call_llm: provider=%s model=%s base_url=%s has_api_key=%s", 
-                provider, model_name, base_url, bool(api_key))
-    if provider == "openrouter":
-        if not api_key:
-            logger.error("OpenRouter requires an API key but none provided")
-            raise HTTPException(status_code=400, detail="OpenRouter requires an API key")
-        return call_openrouter(model_name, base_url, temperature, messages, api_key)
-    if provider == "ollama":
-        return call_ollama(model_name, base_url, temperature, messages)
-    return call_lmstudio(model_name, base_url, temperature, messages)
+    logger.info(
+        "call_llm: provider=%s model=%s base_url=%s has_api_key=%s",
+        provider,
+        model_name,
+        base_url,
+        bool(api_key),
+    )
+
+    if provider == "openrouter" and not api_key:
+        logger.error("OpenRouter requires an API key but none provided")
+        raise HTTPException(status_code=400, detail="OpenRouter requires an API key")
+
+    max_attempts = max(1, int(LLM_RETRY_ATTEMPTS))
+    for attempt in range(1, max_attempts + 1):
+        try:
+            if provider == "openrouter":
+                return call_openrouter(model_name, base_url, temperature, messages, api_key)
+            if provider == "ollama":
+                return call_ollama(model_name, base_url, temperature, messages)
+            return call_lmstudio(model_name, base_url, temperature, messages)
+        except HTTPException as exc:
+            if exc.status_code < 500 or attempt == max_attempts:
+                raise
+            logger.warning(
+                "LLM call failed (attempt %d/%d): %s",
+                attempt,
+                max_attempts,
+                exc.detail,
+            )
+        except (urllib.error.URLError, http.client.RemoteDisconnected, TimeoutError, ConnectionError, OSError) as exc:
+            if attempt == max_attempts:
+                raise HTTPException(status_code=502, detail=f"LLM connection error: {exc}") from exc
+            logger.warning(
+                "LLM call error (attempt %d/%d): %s",
+                attempt,
+                max_attempts,
+                exc,
+            )
+        time.sleep(float(LLM_RETRY_BACKOFF_SEC) * attempt)

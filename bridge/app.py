@@ -1,5 +1,7 @@
 ﻿from __future__ import annotations
 
+import json
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -8,7 +10,7 @@ try:
     from logger_config import logger
     from models import GenerateRequest
     from profile_utils import deep_merge, load_profile, resolve_preset
-    from prompt_builder import build_chat_messages, build_prompt
+    from prompt_builder import build_chat_messages, build_plan_prompt, build_prompt
     from llm_client import call_llm, parse_llm_json, resolve_model
     from promts import REPAIR_SYSTEM_PROMPT
     from response_builder import build_response
@@ -18,7 +20,7 @@ except ImportError:
     from .logger_config import logger
     from .models import GenerateRequest
     from .profile_utils import deep_merge, load_profile, resolve_preset
-    from .prompt_builder import build_chat_messages, build_prompt
+    from .prompt_builder import build_chat_messages, build_plan_prompt, build_prompt
     from .llm_client import call_llm, parse_llm_json, resolve_model
     from .promts import REPAIR_SYSTEM_PROMPT
     from .response_builder import build_response
@@ -98,6 +100,71 @@ def generate(request: GenerateRequest) -> JSONResponse:
         len(response.get("program_changes", [])),
         response.get("articulation"),
     )
+    return JSONResponse(content=response)
+
+
+@app.post("/plan")
+def plan(request: GenerateRequest) -> JSONResponse:
+    if request.time.end_sec <= request.time.start_sec:
+        raise HTTPException(status_code=400, detail="Invalid time selection")
+
+    profile = load_profile(request.target.profile_id)
+    if request.target.profile_overrides:
+        profile = deep_merge(profile, request.target.profile_overrides)
+
+    length_sec = request.time.end_sec - request.time.start_sec
+    length_q = length_sec * float(request.music.bpm) / SECONDS_PER_MINUTE
+    length_q = max(0.0, length_q)
+
+    system_prompt, user_prompt = build_plan_prompt(request, length_q)
+    messages = build_chat_messages(system_prompt, user_prompt)
+
+    provider, model_name, base_url, temperature, api_key = resolve_model(request, profile)
+
+    logger.info(
+        "Plan: profile=%s provider=%s model=%s style=%s free_mode=%s",
+        profile.get("id"),
+        provider,
+        model_name,
+        request.generation_style,
+        request.free_mode,
+    )
+    logger.info("Plan prompt to LLM:\n%s", user_prompt)
+
+    content = call_llm(provider, model_name, base_url, temperature, messages, api_key)
+    logger.info("LLM plan response received: %d chars", len(content))
+    logger.info("LLM plan preview: %s", summarize_text(content))
+    parsed = None
+    try:
+        parsed = parse_llm_json(content)
+    except ValueError:
+        logger.warning("LLM plan JSON parse failed, starting repair attempts")
+        for attempt in range(MAX_REPAIR_ATTEMPTS):
+            logger.info("Plan repair attempt %d/%d", attempt + 1, MAX_REPAIR_ATTEMPTS)
+            repair_messages = [
+                {"role": "system", "content": REPAIR_SYSTEM_PROMPT},
+                {"role": "user", "content": content},
+            ]
+            content = call_llm(provider, model_name, base_url, temperature, repair_messages, api_key)
+            logger.info("Plan repair response received: %d chars", len(content))
+            logger.info("Plan repair response preview: %s", summarize_text(content))
+            try:
+                parsed = parse_llm_json(content)
+                break
+            except ValueError:
+                parsed = None
+        if parsed is None:
+            logger.error("LLM plan JSON parse failed after repair attempts")
+            raise HTTPException(status_code=502, detail="LLM plan JSON parse failed after repair attempts")
+
+    plan_summary = str(parsed.get("plan_summary", "")).strip()
+    if not plan_summary:
+        plan_summary = summarize_text(json.dumps(parsed, ensure_ascii=False))
+
+    response = {
+        "plan_summary": plan_summary,
+        "plan": parsed,
+    }
     return JSONResponse(content=response)
 
 

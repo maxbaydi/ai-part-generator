@@ -14,6 +14,13 @@
     "preferred": ["C4", "F6"]
   },
   "fix_policy": "octave_shift_to_fit",
+  "legato": {
+    "mode": "keyswitch",
+    "keyswitch": "Ab1",
+    "velocity_on": 100,
+    "velocity_off": 1,
+    "description": "Enable legato with high velocity (≥64), disable with low velocity (<64). Prefer keyswitch over CC for legato control."
+  },
   "articulations": {
     "mode": "cc",
     "cc_number": 58,
@@ -45,6 +52,6 @@
     }
   },
   "ai": {
-    "system_prompt_template": "Generate oboe parts for Cinematic Studio Woodwinds. Use CC1 for dynamics on long articulations, velocity for short articulations. The oboe has a bright, penetrating, distinctively nasal tone. Playable range is Bb3-A6, preferred range C4-F6."
+    "system_prompt_template": "Generate oboe parts for Cinematic Studio Woodwinds. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Use keyswitch Ab1 to toggle legato mode - velocity ≥64 enables, <64 disables. Switch articulations via CC58, use keyswitch for legato control. The oboe has a bright, penetrating, distinctively nasal tone. Playable range is Bb3-A6, preferred range C4-F6."
   }
 }

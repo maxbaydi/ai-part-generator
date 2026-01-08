@@ -21,7 +21,7 @@ try:
     )
     from models import GenerateRequest
     from music_theory import get_scale_note_names, get_scale_notes
-    from promts import BASE_SYSTEM_PROMPT, FREE_MODE_SYSTEM_PROMPT
+    from promts import BASE_SYSTEM_PROMPT, COMPOSITION_PLAN_SYSTEM_PROMPT, FREE_MODE_SYSTEM_PROMPT
     from style import DYNAMICS_HINTS, MOOD_HINTS
     from type import ARTICULATION_HINTS, TYPE_HINTS
     from utils import safe_format
@@ -43,7 +43,7 @@ except ImportError:
     )
     from .models import GenerateRequest
     from .music_theory import get_scale_note_names, get_scale_notes
-    from .promts import BASE_SYSTEM_PROMPT, FREE_MODE_SYSTEM_PROMPT
+    from .promts import BASE_SYSTEM_PROMPT, COMPOSITION_PLAN_SYSTEM_PROMPT, FREE_MODE_SYSTEM_PROMPT
     from .style import DYNAMICS_HINTS, MOOD_HINTS
     from .type import ARTICULATION_HINTS, TYPE_HINTS
     from .utils import safe_format
@@ -418,6 +418,52 @@ def build_prompt(
     if ensemble_context:
         user_prompt_parts.append(f"")
         user_prompt_parts.append(ensemble_context)
+    if request.free_mode and request.ensemble:
+        plan_summary = (request.ensemble.plan_summary or "").strip()
+        plan_data = request.ensemble.plan if isinstance(request.ensemble.plan, dict) else {}
+        section_overview = plan_data.get("section_overview") if isinstance(plan_data, dict) else None
+        role_guidance = plan_data.get("role_guidance") if isinstance(plan_data, dict) else None
+        if plan_summary or section_overview or role_guidance:
+            user_prompt_parts.append(f"")
+            user_prompt_parts.append("### COMPOSITION PLAN (GUIDANCE)")
+            if plan_summary:
+                user_prompt_parts.append(plan_summary)
+            if isinstance(section_overview, list) and section_overview:
+                user_prompt_parts.append("")
+                user_prompt_parts.append("Plan sections:")
+                for entry in section_overview:
+                    if not isinstance(entry, dict):
+                        continue
+                    bars = str(entry.get("bars") or "").strip()
+                    focus = str(entry.get("focus") or "").strip()
+                    energy = str(entry.get("energy") or "").strip()
+                    parts_line = []
+                    if bars:
+                        parts_line.append(f"bars {bars}")
+                    if focus:
+                        parts_line.append(f"focus: {focus}")
+                    if energy:
+                        parts_line.append(f"energy: {energy}")
+                    if parts_line:
+                        user_prompt_parts.append(f"- " + "; ".join(parts_line))
+            if isinstance(role_guidance, list) and role_guidance:
+                user_prompt_parts.append("")
+                user_prompt_parts.append("Role guidance:")
+                for entry in role_guidance:
+                    if not isinstance(entry, dict):
+                        continue
+                    instrument = str(entry.get("instrument") or "").strip()
+                    role = str(entry.get("role") or "").strip()
+                    guidance = str(entry.get("guidance") or "").strip()
+                    parts_line = []
+                    if instrument:
+                        parts_line.append(instrument)
+                    if role:
+                        parts_line.append(f"role: {role}")
+                    if guidance:
+                        parts_line.append(guidance)
+                    if parts_line:
+                        user_prompt_parts.append(f"- " + "; ".join(parts_line))
 
     if not request.free_mode:
         composition_structure = parse_composition_structure(request.user_prompt, bars, request.music.time_sig)
@@ -521,6 +567,60 @@ def build_prompt(
     user_prompt_parts.extend([
         f"",
         f"### OUTPUT (valid JSON only):",
+    ])
+
+    user_prompt = "\n".join(user_prompt_parts)
+    return system_prompt, user_prompt
+
+
+def build_plan_prompt(request: GenerateRequest, length_q: float) -> Tuple[str, str]:
+    system_prompt = COMPOSITION_PLAN_SYSTEM_PROMPT
+
+    context_summary, detected_key, _ = build_context_summary(request.context, request.music.time_sig, length_q)
+    final_key = request.music.key
+    if final_key == "unknown" and detected_key != "unknown":
+        final_key = detected_key
+
+    quarters_per_bar = get_quarters_per_bar(request.music.time_sig)
+    bars = max(1, int(length_q / quarters_per_bar))
+
+    user_prompt_parts = [
+        "## FREE MODE COMPOSITION PLAN",
+        "Create a concise plan to guide multi-instrument generation.",
+        "If the user mentions sections with bar counts, include them in section_overview with bar ranges.",
+        "",
+        "### MUSICAL CONTEXT",
+        f"- Key: {final_key}",
+        f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
+        f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
+    ]
+
+    if context_summary:
+        user_prompt_parts.append("")
+        user_prompt_parts.append(context_summary)
+
+    if request.ensemble and request.ensemble.instruments:
+        user_prompt_parts.append("")
+        user_prompt_parts.append("### ENSEMBLE")
+        for inst in request.ensemble.instruments:
+            track = inst.track_name or ""
+            profile_name = inst.profile_name or ""
+            if track and profile_name and track != profile_name:
+                name = f"{track} ({profile_name})"
+            else:
+                name = track or profile_name or "Unknown"
+            role = inst.role or "unknown"
+            family = inst.family or "unknown"
+            user_prompt_parts.append(f"- {inst.index}. {name} (family: {family}, role: {role})")
+
+    if request.user_prompt and request.user_prompt.strip():
+        user_prompt_parts.append("")
+        user_prompt_parts.append("### USER REQUEST")
+        user_prompt_parts.append(request.user_prompt.strip())
+
+    user_prompt_parts.extend([
+        "",
+        "### OUTPUT (valid JSON only):",
     ])
 
     user_prompt = "\n".join(user_prompt_parts)

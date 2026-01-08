@@ -93,6 +93,83 @@ local function sort_tracks_by_generation_order(tracks, prompt)
   return sorted
 end
 
+local function normalize_plan_name(value)
+  local name = tostring(value or ""):lower()
+  name = name:gsub("[^%w]+", "")
+  return name
+end
+
+local function build_ensemble_instruments_from_tracks(tracks)
+  local ensemble_instruments = {}
+  for i, track_data in ipairs(tracks) do
+    table.insert(ensemble_instruments, {
+      index = i,
+      track_name = track_data.name,
+      profile_id = track_data.profile.id,
+      profile_name = track_data.profile.name,
+      family = track_data.profile.family or "unknown",
+      role = track_data.role or "unknown",
+      range = track_data.profile.range or {},
+      description = track_data.profile.description or "",
+    })
+  end
+  return ensemble_instruments
+end
+
+local function apply_plan_order(plan, tracks)
+  if type(plan) ~= "table" or type(plan.role_guidance) ~= "table" then
+    return tracks, false
+  end
+
+  local used = {}
+  local ordered = {}
+
+  for _, entry in ipairs(plan.role_guidance) do
+    if type(entry) == "table" then
+      local instrument_key = normalize_plan_name(entry.instrument)
+      if instrument_key ~= "" then
+        local best_idx = nil
+        local best_score = 0
+        for i, track_data in ipairs(tracks) do
+          if not used[i] then
+            local track_key = normalize_plan_name(track_data.name)
+            local profile_key = normalize_plan_name(track_data.profile and track_data.profile.name)
+            local score = 0
+            if track_key ~= "" and track_key:find(instrument_key, 1, true) then
+              score = 3
+            elseif track_key ~= "" and instrument_key:find(track_key, 1, true) then
+              score = 2
+            elseif profile_key ~= "" and profile_key:find(instrument_key, 1, true) then
+              score = 1
+            end
+            if score > best_score then
+              best_idx = i
+              best_score = score
+            end
+          end
+        end
+
+        if best_idx then
+          local track_data = tracks[best_idx]
+          if entry.role and entry.role ~= "" then
+            track_data.role = entry.role
+          end
+          table.insert(ordered, track_data)
+          used[best_idx] = true
+        end
+      end
+    end
+  end
+
+  for i, track_data in ipairs(tracks) do
+    if not used[i] then
+      table.insert(ordered, track_data)
+    end
+  end
+
+  return ordered, #ordered > 0
+end
+
 local function get_bpm_and_timesig(time_sec)
   local bpm = reaper.Master_GetTempo()
   local num = 4
@@ -371,7 +448,7 @@ local function begin_apply(response, profile_id, profile, articulation_name, tar
     effective_articulation = response_articulation
   end
 
-  if profiles.is_legato_articulation(profile, effective_articulation) then
+  if response_articulation ~= const.ARTICULATION_MIXED and profiles.is_legato_articulation(profile, effective_articulation) then
     midi.apply_legato_overlap(notes, const.LEGATO_NOTE_OVERLAP_Q)
   elseif response_articulation == const.ARTICULATION_MIXED then
     local changes = profiles.get_articulation_changes(profile, response)
@@ -622,6 +699,111 @@ local function apply_compose_result_and_continue()
   reaper.defer(start_next_compose_generation)
 end
 
+local function poll_compose_plan()
+  if not compose_state or not compose_state.plan_handle then
+    return
+  end
+
+  local done, data, err = http.poll_response(compose_state.plan_handle)
+  if not done then
+    reaper.defer(poll_compose_plan)
+    return
+  end
+
+  http.cleanup(compose_state.plan_handle)
+  compose_state.plan_handle = nil
+
+  if err then
+    utils.log("Compose plan ERROR: " .. tostring(err))
+    reaper.defer(start_next_compose_generation)
+    return
+  end
+
+  if data then
+    compose_state.plan_summary = data.plan_summary or ""
+    compose_state.plan = data.plan
+    utils.log("Compose: plan received.")
+    if compose_state.plan_summary ~= "" then
+      utils.log("Compose plan summary: " .. compose_state.plan_summary)
+    end
+    local ordered, applied = apply_plan_order(compose_state.plan, compose_state.tracks)
+    if applied then
+      compose_state.tracks = ordered
+      compose_state.total_tracks = #ordered
+      compose_state.ensemble_instruments = build_ensemble_instruments_from_tracks(ordered)
+      compose_state.current_index = 1
+      utils.log("Compose: generation order set from plan.")
+    end
+  end
+
+  reaper.defer(start_next_compose_generation)
+end
+
+local function start_compose_plan()
+  if not compose_state then
+    return
+  end
+
+  if compose_state.plan_handle then
+    return
+  end
+
+  local first_track = compose_state.tracks[1]
+  if not first_track then
+    reaper.defer(start_next_compose_generation)
+    return
+  end
+
+  utils.log("Compose: planning step (free mode).")
+
+  local plan_ctx = context.build_context(
+    compose_state.use_selected_tracks,
+    nil,
+    compose_state.start_sec,
+    compose_state.end_sec
+  )
+
+  local ensemble_info = {
+    total_instruments = compose_state.total_tracks,
+    instruments = compose_state.ensemble_instruments,
+    generation_style = compose_state.generation_style,
+    shared_prompt = compose_state.prompt,
+    current_instrument_index = 0,
+    current_instrument = nil,
+    generation_order = 0,
+    is_sequential = true,
+    previously_generated = {},
+  }
+
+  local request = build_request(
+    compose_state.start_sec,
+    compose_state.end_sec,
+    compose_state.bpm,
+    compose_state.num,
+    compose_state.denom,
+    compose_state.key,
+    first_track.profile.id,
+    "",
+    compose_state.generation_type,
+    compose_state.generation_style,
+    compose_state.prompt,
+    plan_ctx,
+    compose_state.api_settings,
+    true,
+    ensemble_info
+  )
+
+  local handle, err = http.begin_request(const.BRIDGE_PLAN_URL, request)
+  if not handle then
+    utils.log("Compose: plan request failed: " .. tostring(err))
+    reaper.defer(start_next_compose_generation)
+    return
+  end
+
+  compose_state.plan_handle = handle
+  reaper.defer(poll_compose_plan)
+end
+
 local function poll_compose_generation()
   if not compose_state or not compose_state.current_handle then
     return
@@ -698,6 +880,8 @@ function start_next_compose_generation()
     instruments = compose_state.ensemble_instruments,
     generation_style = compose_state.generation_style,
     shared_prompt = compose_state.prompt,
+    plan_summary = compose_state.plan_summary or "",
+    plan = compose_state.plan,
     current_instrument_index = compose_state.current_index,
     current_instrument = {
       track_name = current_track.name,
@@ -778,9 +962,13 @@ local function run_compose(state, profile_list, profiles_by_id)
     return
   end
 
-  local sorted_tracks = sort_tracks_by_generation_order(valid_tracks, state.prompt)
+  local sorted_tracks = {}
+  for _, track_data in ipairs(valid_tracks) do
+    track_data.role = "unknown"
+    table.insert(sorted_tracks, track_data)
+  end
   
-  utils.log(string.format("Compose: %d tracks (sorted by role)", #sorted_tracks))
+  utils.log(string.format("Compose: %d tracks (plan will define order)", #sorted_tracks))
   for i, td in ipairs(sorted_tracks) do
     utils.log(string.format("  %d. '%s' -> '%s' (role: %s)", i, td.name, td.profile.name, td.role or "unknown"))
   end
@@ -802,19 +990,7 @@ local function run_compose(state, profile_list, profiles_by_id)
     model_name = state.model_name,
   }
 
-  local ensemble_instruments = {}
-  for i, track_data in ipairs(sorted_tracks) do
-    table.insert(ensemble_instruments, {
-      index = i,
-      track_name = track_data.name,
-      profile_id = track_data.profile.id,
-      profile_name = track_data.profile.name,
-      family = track_data.profile.family or "unknown",
-      role = track_data.role or "unknown",
-      range = track_data.profile.range or {},
-      description = track_data.profile.description or "",
-    })
-  end
+  local ensemble_instruments = build_ensemble_instruments_from_tracks(sorted_tracks)
 
   compose_state = {
     tracks = sorted_tracks,
@@ -823,6 +999,9 @@ local function run_compose(state, profile_list, profiles_by_id)
     current_handle = nil,
     pending_apply = nil,
     generated_parts = {},
+    plan_handle = nil,
+    plan_summary = "",
+    plan = nil,
     start_sec = start_sec,
     end_sec = end_sec,
     bpm = bpm,
@@ -842,7 +1021,7 @@ local function run_compose(state, profile_list, profiles_by_id)
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_BASE_URL, state.api_base_url or "", true)
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_MODEL_NAME, state.model_name or "", true)
 
-  start_next_compose_generation()
+  start_compose_plan()
 end
 
 function M.main()

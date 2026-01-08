@@ -100,6 +100,92 @@ def clamp_short_articulation_durations(
             note["dur_q"] = max_dur
 
 
+def expand_pattern_notes(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
+    patterns = raw.get("patterns", [])
+    repeats = raw.get("repeats", [])
+    if not isinstance(patterns, list) or not isinstance(repeats, list):
+        return []
+
+    pattern_map: Dict[str, Dict[str, Any]] = {}
+    for pattern in patterns:
+        if not isinstance(pattern, dict):
+            continue
+        pattern_id = str(pattern.get("id") or "").strip()
+        notes = pattern.get("notes", [])
+        if not pattern_id or not isinstance(notes, list):
+            continue
+        length_q = None
+        if "length_q" in pattern:
+            try:
+                length_q = float(pattern.get("length_q"))
+            except (TypeError, ValueError):
+                length_q = None
+        if length_q is None:
+            max_end = None
+            for note in notes:
+                if not isinstance(note, dict):
+                    continue
+                try:
+                    start_q = float(note.get("start_q", note.get("time_q", 0.0)))
+                    dur_q = float(note.get("dur_q", 0.0))
+                except (TypeError, ValueError):
+                    continue
+                end_q = start_q + dur_q
+                if max_end is None or end_q > max_end:
+                    max_end = end_q
+            if max_end is not None:
+                length_q = max_end
+        pattern_map[pattern_id] = {"notes": notes, "length_q": length_q}
+
+    expanded: List[Dict[str, Any]] = []
+    for repeat in repeats:
+        if not isinstance(repeat, dict):
+            continue
+        pattern_id = str(repeat.get("pattern") or "").strip()
+        pattern_data = pattern_map.get(pattern_id)
+        if not pattern_data:
+            continue
+        times = repeat.get("times")
+        if times is None:
+            times = repeat.get("count")
+        try:
+            times = int(times)
+        except (TypeError, ValueError):
+            continue
+        if times <= 0:
+            continue
+        try:
+            start_q = float(repeat.get("start_q", 0.0))
+        except (TypeError, ValueError):
+            start_q = 0.0
+        step_q = repeat.get("step_q")
+        if step_q is None:
+            step_q = pattern_data.get("length_q")
+        try:
+            step_q = float(step_q)
+        except (TypeError, ValueError):
+            step_q = None
+        if step_q is None:
+            continue
+
+        for i in range(times):
+            offset = start_q + (i * step_q)
+            for note in pattern_data.get("notes", []):
+                if not isinstance(note, dict):
+                    continue
+                try:
+                    note_start = float(note.get("start_q", note.get("time_q", 0.0)))
+                except (TypeError, ValueError):
+                    note_start = 0.0
+                new_note = dict(note)
+                new_note["start_q"] = offset + note_start
+                if "time_q" in new_note:
+                    new_note.pop("time_q", None)
+                expanded.append(new_note)
+
+    return expanded
+
+
 def apply_articulation(
     articulation: Optional[str],
     profile: Dict[str, Any],
@@ -231,7 +317,12 @@ def build_response(
     notes_raw = raw.get("notes", [])
     if not isinstance(notes_raw, list):
         notes_raw = []
-    else:
+
+    pattern_notes = expand_pattern_notes(raw)
+    if pattern_notes:
+        notes_raw = notes_raw + pattern_notes
+
+    if notes_raw:
         clamp_short_articulation_durations(notes_raw, profile, raw.get("articulation"))
 
     has_per_note_articulations = free_mode and any(
