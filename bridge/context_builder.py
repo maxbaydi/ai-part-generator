@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -6,12 +6,30 @@ try:
     from constants import MIDI_MAX, MIDI_MIN
     from midi_utils import note_to_midi
     from models import ContextInfo, EnsembleInfo, HorizontalContext
+    from music_analysis import (
+        analyze_melodic_context,
+        analyze_previously_generated,
+        analyze_rhythmic_pattern,
+        build_full_context_prompt,
+        build_harmony_context_prompt,
+        build_melodic_context_prompt,
+        build_rhythmic_context_prompt,
+    )
     from music_theory import analyze_chord, detect_key_from_chords, pitch_to_note, velocity_to_dynamic
     from profile_utils import load_profile
 except ImportError:
     from .constants import MIDI_MAX, MIDI_MIN
     from .midi_utils import note_to_midi
     from .models import ContextInfo, EnsembleInfo, HorizontalContext
+    from .music_analysis import (
+        analyze_melodic_context,
+        analyze_previously_generated,
+        analyze_rhythmic_pattern,
+        build_full_context_prompt,
+        build_harmony_context_prompt,
+        build_melodic_context_prompt,
+        build_rhythmic_context_prompt,
+    )
     from .music_theory import analyze_chord, detect_key_from_chords, pitch_to_note, velocity_to_dynamic
     from .profile_utils import load_profile
 
@@ -470,7 +488,12 @@ def summarize_articulation_context(context_tracks: Optional[List[Dict[str, Any]]
     return summaries
 
 
-def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_name: str) -> str:
+def build_ensemble_context(
+    ensemble: Optional[EnsembleInfo],
+    current_profile_name: str,
+    time_sig: str = "4/4",
+    length_q: float = 16.0,
+) -> str:
     if not ensemble or ensemble.total_instruments <= 1:
         return ""
 
@@ -478,6 +501,7 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
     current_inst = ensemble.current_instrument or {}
     current_track = str(current_inst.get("track_name", "")).strip().lower()
     current_profile = str(current_inst.get("profile_name", "")).strip().lower()
+    current_role = str(current_inst.get("role", "")).strip()
 
     def format_inst_label(inst: Any) -> str:
         track = str(inst.track_name or "").strip()
@@ -525,8 +549,18 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
     parts.append("")
 
     if ensemble.is_sequential and ensemble.previously_generated:
-        parts.append("### PREVIOUSLY GENERATED PARTS - YOU MUST COMPLEMENT THESE")
-        parts.append("The following parts have already been composed. Study them carefully!")
+        full_analysis_prompt = build_full_context_prompt(
+            ensemble.previously_generated,
+            time_sig,
+            length_q,
+            current_role,
+        )
+        if full_analysis_prompt:
+            parts.append(full_analysis_prompt)
+            parts.append("")
+
+        parts.append("### RAW NOTE DATA FROM PREVIOUS PARTS")
+        parts.append("Study this data to understand exactly what has been played:")
         parts.append("")
 
         for prev_part in ensemble.previously_generated:
@@ -544,19 +578,11 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
 
                 pitches = [n.get("pitch", 60) for n in prev_notes]
                 if pitches:
-                    parts.append(f"  Pitch range: {min(pitches)}-{max(pitches)}")
+                    parts.append(f"  Pitch range: {min(pitches)}-{max(pitches)} ({pitch_to_note(min(pitches))}-{pitch_to_note(max(pitches))})")
 
                 note_count = len(prev_notes)
                 parts.append(f"  Total notes: {note_count}")
             parts.append("")
-
-        parts.append("CRITICAL RULES FOR COMPLEMENTING EXISTING PARTS:")
-        parts.append("1. DO NOT DUPLICATE melodies or rhythms from parts above")
-        parts.append("2. Use DIFFERENT register (higher or lower than existing parts)")
-        parts.append("3. Create COUNTERPOINT - when melody moves, you can hold; when melody holds, you can move")
-        parts.append("4. Match the HARMONIC RHYTHM - change chords when the bass/harmony changes")
-        parts.append("5. Support the PHRASE STRUCTURE - breathe when the melody breathes")
-        parts.append("")
 
     parts.append("ENSEMBLE COORDINATION RULES:")
     parts.append("1. AVOID UNISON: Don't duplicate exact same notes as other instruments")
@@ -564,6 +590,8 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
     parts.append("3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble")
     parts.append("4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody")
     parts.append("5. CALL & RESPONSE: Create phrases that leave space for other instruments")
+    parts.append("6. FOLLOW HARMONY: Play the same chord changes as existing parts")
+    parts.append("7. PHRASE TOGETHER: Start and end phrases at similar times")
     parts.append("")
 
     current_inst = ensemble.current_instrument
@@ -583,9 +611,10 @@ def build_ensemble_context(ensemble: Optional[EnsembleInfo], current_profile_nam
 
     if ensemble.total_instruments >= 3:
         parts.append("ORCHESTRATION LAYERS:")
-        parts.append("  - MELODY layer: Main theme carrier")
-        parts.append("  - HARMONY layer: Chords/sustained notes")
-        parts.append("  - BASS layer: Foundation and roots")
+        parts.append("  - MELODY layer: Main theme carrier (lead instrument)")
+        parts.append("  - HARMONY layer: Chords/sustained notes (support)")
+        parts.append("  - BASS layer: Foundation and roots (anchor)")
+        parts.append("  - COLOR layer: Countermelodies, fills (embellishment)")
         parts.append("")
 
     return "\n".join(parts)

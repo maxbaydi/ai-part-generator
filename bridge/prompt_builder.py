@@ -148,6 +148,68 @@ ARTICULATION_DURATION_HINTS = {
 DEFAULT_QUARTERS_PER_BAR = 4.0
 
 
+def build_orchestration_hints_prompt(profile: Dict[str, Any], is_ensemble: bool = False) -> str:
+    hints = profile.get("orchestration_hints", {})
+    if not hints:
+        return ""
+
+    lines = ["### ORCHESTRATION GUIDANCE (recommendations for this instrument)"]
+
+    character = hints.get("character", "")
+    if character:
+        lines.append(f"**Character:** {character}")
+
+    typical_roles = hints.get("typical_roles", [])
+    if typical_roles:
+        lines.append(f"**Typical roles:** {', '.join(typical_roles)}")
+
+    best_for = hints.get("best_for", [])
+    if best_for:
+        lines.append("**Best suited for:**")
+        for item in best_for[:5]:
+            lines.append(f"  - {item}")
+
+    register_char = hints.get("register_character", {})
+    if register_char:
+        lines.append("**Register characteristics:**")
+        for reg, desc in register_char.items():
+            lines.append(f"  - {reg}: {desc}")
+
+    if is_ensemble:
+        ensemble_tips = hints.get("ensemble_tips", [])
+        if ensemble_tips:
+            lines.append("**Ensemble tips:**")
+            for tip in ensemble_tips[:5]:
+                lines.append(f"  - {tip}")
+
+    texture_options = hints.get("texture_options", [])
+    if texture_options:
+        lines.append("**Texture options:**")
+        for option in texture_options[:5]:
+            lines.append(f"  - {option}")
+
+    avoid = hints.get("avoid", [])
+    if avoid:
+        lines.append("**Avoid:**")
+        for item in avoid:
+            lines.append(f"  - {item}")
+
+    solo_mode = hints.get("solo_mode", {})
+    if solo_mode and not is_ensemble:
+        lines.append("**Solo mode guidance:**")
+        if solo_mode.get("description"):
+            lines.append(f"  {solo_mode['description']}")
+        if solo_mode.get("left_hand"):
+            lines.append(f"  LEFT HAND: {solo_mode['left_hand']}")
+        if solo_mode.get("right_hand"):
+            lines.append(f"  RIGHT HAND: {solo_mode['right_hand']}")
+
+    lines.append("")
+    lines.append("Note: These are recommendations. User prompt may override these suggestions.")
+
+    return "\n".join(lines)
+
+
 def build_articulation_list_for_prompt(profile: Dict[str, Any]) -> str:
     art_cfg = profile.get("articulations", {})
     art_map = art_cfg.get("map", {})
@@ -360,6 +422,12 @@ def build_prompt(
             f"",
             f"Note: Use Expression (CC11) for overall section dynamics, Dynamics (CC1) for note-level shaping. For SHORT articulations, velocity is primary.",
         ])
+
+        is_ensemble = request.ensemble and request.ensemble.total_instruments > 1
+        orchestration_hints_prompt = build_orchestration_hints_prompt(profile, is_ensemble)
+        if orchestration_hints_prompt:
+            user_prompt_parts.append(f"")
+            user_prompt_parts.append(orchestration_hints_prompt)
     else:
         user_prompt_parts = [
             f"## COMPOSE: {generation_style.upper()} {generation_type.upper()} for {profile.get('name', 'instrument')}",
@@ -377,7 +445,12 @@ def build_prompt(
         user_prompt_parts.append(f"")
         user_prompt_parts.append(context_summary)
 
-    ensemble_context = build_ensemble_context(request.ensemble, profile.get("name", ""))
+    ensemble_context = build_ensemble_context(
+        request.ensemble,
+        profile.get("name", ""),
+        request.music.time_sig,
+        length_q,
+    )
     if ensemble_context:
         user_prompt_parts.append(f"")
         user_prompt_parts.append(ensemble_context)
@@ -386,52 +459,109 @@ def build_prompt(
         plan_data = request.ensemble.plan if isinstance(request.ensemble.plan, dict) else {}
         section_overview = plan_data.get("section_overview") if isinstance(plan_data, dict) else None
         role_guidance = plan_data.get("role_guidance") if isinstance(plan_data, dict) else None
-        if plan_summary or section_overview or role_guidance:
+        harmonic_plan = plan_data.get("harmonic_plan") if isinstance(plan_data, dict) else None
+        motif_guidance = plan_data.get("motif_guidance") if isinstance(plan_data, dict) else None
+
+        has_plan_content = plan_summary or section_overview or role_guidance or harmonic_plan or motif_guidance
+        if has_plan_content:
             user_prompt_parts.append(f"")
-            user_prompt_parts.append("### COMPOSITION PLAN (GUIDANCE)")
+            user_prompt_parts.append("### COMPOSITION PLAN (FOLLOW THIS GUIDANCE)")
             if plan_summary:
                 user_prompt_parts.append(plan_summary)
+
+            if isinstance(harmonic_plan, dict):
+                user_prompt_parts.append("")
+                user_prompt_parts.append("**HARMONIC FRAMEWORK:**")
+                prog_style = harmonic_plan.get("progression_style", "")
+                if prog_style:
+                    user_prompt_parts.append(f"- Style: {prog_style}")
+                chord_rhythm = harmonic_plan.get("chord_rhythm", "")
+                if chord_rhythm:
+                    user_prompt_parts.append(f"- Harmonic rhythm: {chord_rhythm}")
+                key_chords = harmonic_plan.get("key_chords", [])
+                if key_chords:
+                    user_prompt_parts.append(f"- Key chords: {', '.join(str(c) for c in key_chords)}")
+                harmonic_arc = harmonic_plan.get("harmonic_arc", "")
+                if harmonic_arc:
+                    user_prompt_parts.append(f"- Arc: {harmonic_arc}")
+                user_prompt_parts.append("RULE: All instruments must follow this harmonic framework!")
+
+            if isinstance(motif_guidance, dict):
+                user_prompt_parts.append("")
+                user_prompt_parts.append("**MOTIF/THEME:**")
+                main_idea = motif_guidance.get("main_idea", "")
+                if main_idea:
+                    user_prompt_parts.append(f"- Main idea: {main_idea}")
+                character = motif_guidance.get("character", "")
+                if character:
+                    user_prompt_parts.append(f"- Character: {character}")
+                dev_hints = motif_guidance.get("development_hints", "")
+                if dev_hints:
+                    user_prompt_parts.append(f"- Development: {dev_hints}")
+
             if isinstance(section_overview, list) and section_overview:
                 user_prompt_parts.append("")
-                user_prompt_parts.append("Plan sections:")
+                user_prompt_parts.append("**SECTION STRUCTURE:**")
                 for entry in section_overview:
                     if not isinstance(entry, dict):
                         continue
-                    bars = str(entry.get("bars") or "").strip()
-                    focus = str(entry.get("focus") or "").strip()
+                    section_bars = str(entry.get("bars") or "").strip()
+                    section_type = str(entry.get("type") or "").strip()
+                    texture = str(entry.get("texture") or "").strip()
+                    dynamics = str(entry.get("dynamics") or "").strip()
                     energy = str(entry.get("energy") or "").strip()
+                    active = entry.get("active_instruments", [])
+                    tacet = entry.get("tacet_instruments", [])
+
                     parts_line = []
-                    if bars:
-                        parts_line.append(f"bars {bars}")
-                    if focus:
-                        parts_line.append(f"focus: {focus}")
+                    if section_bars:
+                        parts_line.append(f"Bars {section_bars}")
+                    if section_type:
+                        parts_line.append(f"[{section_type.upper()}]")
+                    if texture:
+                        parts_line.append(f"texture: {texture}")
+                    if dynamics:
+                        parts_line.append(f"dynamics: {dynamics}")
                     if energy:
                         parts_line.append(f"energy: {energy}")
                     if parts_line:
-                        user_prompt_parts.append(f"- " + "; ".join(parts_line))
+                        user_prompt_parts.append(f"- " + " | ".join(parts_line))
+                    if active:
+                        user_prompt_parts.append(f"    Active: {', '.join(str(i) for i in active)}")
+                    if tacet:
+                        user_prompt_parts.append(f"    Tacet: {', '.join(str(i) for i in tacet)}")
+
             if isinstance(role_guidance, list) and role_guidance:
                 user_prompt_parts.append("")
-                user_prompt_parts.append("Role guidance:")
+                user_prompt_parts.append("**ROLE ASSIGNMENTS:**")
                 for entry in role_guidance:
                     if not isinstance(entry, dict):
                         continue
                     instrument = str(entry.get("instrument") or "").strip()
                     role = str(entry.get("role") or "").strip()
+                    register = str(entry.get("register") or "").strip()
                     guidance = str(entry.get("guidance") or "").strip()
-                    parts_line = []
-                    if instrument:
-                        parts_line.append(instrument)
-                    if role:
-                        parts_line.append(f"role: {role}")
-                    if guidance:
-                        parts_line.append(guidance)
-                    if parts_line:
-                        user_prompt_parts.append(f"- " + "; ".join(parts_line))
+                    relationship = str(entry.get("relationship") or "").strip()
 
+                    if not instrument:
+                        continue
+                    line = f"- **{instrument}**"
+                    if role:
+                        line += f" → {role.upper()}"
+                    if register:
+                        line += f" ({register} register)"
+                    user_prompt_parts.append(line)
+                    if guidance:
+                        user_prompt_parts.append(f"    {guidance}")
+                    if relationship:
+                        user_prompt_parts.append(f"    Relationship: {relationship}")
+
+            user_prompt_parts.append("")
             user_prompt_parts.append("STRUCTURE RULES:")
             user_prompt_parts.append("- Each section should have distinct character matching its type")
             user_prompt_parts.append("- Create smooth transitions between sections")
-            user_prompt_parts.append("- The outro should feel like a natural resolution")
+            user_prompt_parts.append("- Follow the harmonic framework - all instruments play the SAME chords")
+            user_prompt_parts.append("- Develop the motif across instruments for unity")
             user_prompt_parts.append("")
 
     if request.free_mode:
@@ -534,8 +664,7 @@ def build_plan_prompt(request: GenerateRequest, length_q: float) -> Tuple[str, s
 
     user_prompt_parts = [
         "## FREE MODE COMPOSITION PLAN",
-        "Create a concise plan to guide multi-instrument generation.",
-        "If the user mentions sections with bar counts, include them in section_overview with bar ranges.",
+        "Create a detailed musical blueprint for this multi-instrument piece.",
         "",
         "### MUSICAL CONTEXT",
         f"- Key: {final_key}",
@@ -549,7 +678,10 @@ def build_plan_prompt(request: GenerateRequest, length_q: float) -> Tuple[str, s
 
     if request.ensemble and request.ensemble.instruments:
         user_prompt_parts.append("")
-        user_prompt_parts.append("### ENSEMBLE")
+        user_prompt_parts.append("### ENSEMBLE TO ORCHESTRATE")
+        user_prompt_parts.append("Assign roles and plan how these instruments will work together:")
+        user_prompt_parts.append("")
+
         for inst in request.ensemble.instruments:
             track = inst.track_name or ""
             profile_name = inst.profile_name or ""
@@ -557,19 +689,34 @@ def build_plan_prompt(request: GenerateRequest, length_q: float) -> Tuple[str, s
                 name = f"{track} ({profile_name})"
             else:
                 name = track or profile_name or "Unknown"
-            role = str(inst.role or "").strip()
-            if role.lower() == "unknown":
-                role = ""
             family = inst.family or "unknown"
-            detail = f"family: {family}"
-            if role:
-                detail = f"{detail}, role: {role}"
-            user_prompt_parts.append(f"- {inst.index}. {name} ({detail})")
+            description = inst.description or ""
+            range_info = inst.range or {}
+            preferred_range = range_info.get("preferred", [])
+
+            detail_parts = [f"family: {family}"]
+            if preferred_range:
+                detail_parts.append(f"range: {preferred_range[0]}-{preferred_range[1]}")
+            detail = ", ".join(detail_parts)
+
+            user_prompt_parts.append(f"- {inst.index}. **{name}** ({detail})")
+            if description:
+                user_prompt_parts.append(f"    Description: {description[:100]}")
+
+        user_prompt_parts.append("")
+        user_prompt_parts.append("PLANNING TASKS:")
+        user_prompt_parts.append("1. Assign ROLE to each instrument (melody/bass/harmony/rhythm/countermelody/pad)")
+        user_prompt_parts.append("2. Define REGISTER allocation to avoid clashes")
+        user_prompt_parts.append("3. Plan HARMONIC framework (chord progression style)")
+        user_prompt_parts.append("4. Describe MOTIF or musical idea to develop")
+        user_prompt_parts.append("5. Order instruments by GENERATION PRIORITY (bass/rhythm first, melody second, etc.)")
 
     if request.user_prompt and request.user_prompt.strip():
         user_prompt_parts.append("")
-        user_prompt_parts.append("### USER REQUEST")
+        user_prompt_parts.append("### USER REQUEST (this is the main creative direction)")
         user_prompt_parts.append(request.user_prompt.strip())
+        user_prompt_parts.append("")
+        user_prompt_parts.append("Interpret the user's request and plan a composition that fulfills their vision.")
 
     user_prompt_parts.extend([
         "",

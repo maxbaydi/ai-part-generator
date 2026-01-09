@@ -10,8 +10,8 @@
     "is_drum": false
   },
   "range": {
-    "absolute": ["D1", "F4"],
-    "preferred": ["F1", "Bb3"]
+    "absolute": ["D2", "F5"],
+    "preferred": ["F2", "Bb4"]
   },
   "fix_policy": "octave_shift_to_fit",
   "legato": {
@@ -56,6 +56,6 @@
     }
   },
   "ai": {
-    "system_prompt_template": "Generate tuba parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range D1-F4, preferred F1-Bb3."
+    "system_prompt_template": "Generate tuba parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range D2-F5, preferred F2-Bb4."
   }
 }

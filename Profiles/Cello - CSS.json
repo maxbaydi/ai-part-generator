@@ -58,6 +58,43 @@
       "write_every_step": true
     }
   },
+  "orchestration_hints": {
+    "typical_roles": ["bass", "melody", "countermelody", "harmony"],
+    "character": "Deep, rich, vocal quality. The tenor/baritone of the string section. Extremely versatile.",
+    "best_for": [
+      "Bass line foundation in string ensemble",
+      "Emotional melodic solos (famous for expressiveness)",
+      "Countermelodies to violin",
+      "Sustained harmonic support",
+      "Driving ostinatos and rhythmic figures"
+    ],
+    "register_character": {
+      "low": "C2-G2: Deep, powerful, dark. Provides bass foundation.",
+      "mid-low": "G2-C4: Rich, warm, the 'heart' of the cello sound.",
+      "mid": "C4-A4: Singing, expressive, ideal for melodies.",
+      "high": "A4-C6: Intense, passionate, use for emotional climaxes."
+    },
+    "ensemble_tips": [
+      "In string quartet: typically plays bass or countermelody",
+      "Doubles violin melody at octave below for power",
+      "Can take over melody when violin rests",
+      "Pizzicato provides excellent rhythmic bass",
+      "Tremolo creates dramatic tension"
+    ],
+    "texture_options": [
+      "Sustained bass notes (foundation)",
+      "Lyrical melodic lines (soloistic)",
+      "Rhythmic pizzicato patterns",
+      "Driving ostinatos",
+      "Tremolo for drama and tension",
+      "Double stops for fuller harmony"
+    ],
+    "avoid": [
+      "Competing with bass/contrabass in very low register",
+      "Fast passages in extreme low register (becomes muddy)",
+      "Staying too high when violin is present (register clash)"
+    ]
+  },
   "ai": {
     "system_prompt_template": "Generate cello parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any chords or double stops (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range C2-C6, preferred C2-G5."
   }
