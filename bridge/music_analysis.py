@@ -546,3 +546,181 @@ def build_full_context_prompt(
     lines.append("5. CREATE complementary material that ENHANCES the whole")
 
     return "\n".join(lines)
+
+
+def extract_motif_from_notes(
+    notes: List[Dict[str, Any]],
+    max_notes: int = 8,
+    source_instrument: str = "",
+) -> Optional[Dict[str, Any]]:
+    if not notes or len(notes) < 3:
+        return None
+
+    sorted_notes = sorted(notes, key=lambda n: n.get("start_q", 0))
+    motif_notes = sorted_notes[:max_notes]
+
+    pitches = [n.get("pitch", 60) for n in motif_notes]
+    intervals = [pitches[i + 1] - pitches[i] for i in range(len(pitches) - 1)]
+
+    rhythm_pattern = [n.get("dur_q", 1.0) for n in motif_notes]
+
+    start_pitch = pitches[0] if pitches else 60
+
+    ascending = sum(1 for i in intervals if i > 0)
+    descending = sum(1 for i in intervals if i < 0)
+
+    if ascending > descending * 1.5:
+        character = "ascending"
+    elif descending > ascending * 1.5:
+        character = "descending"
+    elif max(intervals, default=0) - min(intervals, default=0) > 7:
+        character = "dramatic"
+    else:
+        character = "lyrical"
+
+    formatted_notes = []
+    for note in motif_notes:
+        formatted_notes.append({
+            "start_q": round(note.get("start_q", 0) - motif_notes[0].get("start_q", 0), 3),
+            "dur_q": round(note.get("dur_q", 1.0), 3),
+            "pitch": note.get("pitch", 60),
+        })
+
+    return {
+        "source_instrument": source_instrument,
+        "notes": formatted_notes,
+        "intervals": intervals,
+        "rhythm_pattern": rhythm_pattern,
+        "start_pitch": start_pitch,
+        "character": character,
+    }
+
+
+def analyze_horizontal_continuity(
+    before_notes: List[Dict[str, Any]],
+    after_notes: List[Dict[str, Any]],
+    key_str: str = "C major",
+) -> Dict[str, Any]:
+    result = {
+        "needs_continuation": False,
+        "melodic_direction": "neutral",
+        "last_pitch": None,
+        "last_interval": 0,
+        "suggested_start_direction": "any",
+        "phrase_incomplete": False,
+        "resolution_needed": False,
+        "suggested_resolution_pitch": None,
+    }
+
+    if not before_notes:
+        return result
+
+    sorted_before = sorted(before_notes, key=lambda n: n.get("start_q", 0))
+    last_notes = sorted_before[-min(6, len(sorted_before)):]
+
+    if last_notes:
+        result["last_pitch"] = last_notes[-1].get("pitch", 60)
+
+    if len(last_notes) >= 2:
+        pitches = [n.get("pitch", 60) for n in last_notes]
+        intervals = [pitches[i + 1] - pitches[i] for i in range(len(pitches) - 1)]
+
+        ascending = sum(1 for i in intervals if i > 0)
+        descending = sum(1 for i in intervals if i < 0)
+
+        if ascending > descending:
+            result["melodic_direction"] = "ascending"
+            result["suggested_start_direction"] = "continue_up_or_resolve_down"
+        elif descending > ascending:
+            result["melodic_direction"] = "descending"
+            result["suggested_start_direction"] = "continue_down_or_resolve_up"
+        else:
+            result["melodic_direction"] = "static"
+
+        result["last_interval"] = intervals[-1] if intervals else 0
+
+        if abs(intervals[-1]) > 4:
+            result["suggested_start_direction"] = "stepwise_opposite"
+            result["needs_continuation"] = True
+
+    if result["last_pitch"]:
+        last_pc = result["last_pitch"] % 12
+
+        try:
+            from music_theory import parse_key, SCALE_INTERVALS
+        except ImportError:
+            from .music_theory import parse_key, SCALE_INTERVALS
+
+        root_pc, scale_type = parse_key(key_str)
+        scale_intervals = SCALE_INTERVALS.get(scale_type, SCALE_INTERVALS["major"])
+        scale_pcs = set((root_pc + i) % 12 for i in scale_intervals)
+
+        relative_pc = (last_pc - root_pc) % 12
+
+        unstable_degrees = {1, 3, 6, 10, 11}
+        if relative_pc in unstable_degrees:
+            result["phrase_incomplete"] = True
+            result["resolution_needed"] = True
+            result["needs_continuation"] = True
+
+            if relative_pc == 11:
+                result["suggested_resolution_pitch"] = result["last_pitch"] + 1
+            elif relative_pc == 10:
+                result["suggested_resolution_pitch"] = result["last_pitch"] - 3
+            elif relative_pc in {1, 6}:
+                result["suggested_resolution_pitch"] = result["last_pitch"] - 1
+            elif relative_pc == 3:
+                result["suggested_resolution_pitch"] = result["last_pitch"] + 1
+
+    last_note = last_notes[-1] if last_notes else None
+    if last_note:
+        last_dur = last_note.get("dur_q", 1.0)
+        if last_dur < 0.5:
+            result["phrase_incomplete"] = True
+            result["needs_continuation"] = True
+
+    return result
+
+
+def build_horizontal_continuity_prompt(analysis: Dict[str, Any]) -> str:
+    if not analysis:
+        return ""
+
+    lines = ["### HORIZONTAL CONTINUITY (connect with surrounding material)"]
+
+    direction = analysis.get("melodic_direction", "neutral")
+    if direction != "neutral":
+        lines.append(f"- Previous phrase direction: {direction}")
+
+    suggestion = analysis.get("suggested_start_direction", "any")
+    if suggestion != "any":
+        lines.append(f"- Suggested start: {suggestion.replace('_', ' ')}")
+
+    last_pitch = analysis.get("last_pitch")
+    if last_pitch:
+        try:
+            from music_theory import pitch_to_note
+        except ImportError:
+            from .music_theory import pitch_to_note
+        lines.append(f"- Last note before selection: {pitch_to_note(last_pitch)} (MIDI {last_pitch})")
+
+    if analysis.get("resolution_needed"):
+        resolution = analysis.get("suggested_resolution_pitch")
+        if resolution:
+            try:
+                from music_theory import pitch_to_note
+            except ImportError:
+                from .music_theory import pitch_to_note
+            lines.append(f"- RESOLUTION NEEDED: Consider starting with {pitch_to_note(resolution)} (MIDI {resolution})")
+
+    if analysis.get("phrase_incomplete"):
+        lines.append("- Previous phrase feels INCOMPLETE - consider continuing or resolving it")
+    else:
+        lines.append("- Previous phrase ended naturally - OK to start fresh")
+
+    last_interval = analysis.get("last_interval", 0)
+    if abs(last_interval) > 4:
+        opposite = "down" if last_interval > 0 else "up"
+        lines.append(f"- Large leap ({last_interval:+d}) detected - move stepwise {opposite} to balance")
+
+    return "\n".join(lines)

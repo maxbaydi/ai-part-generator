@@ -361,7 +361,7 @@ def build_prompt(
     system_prompt = "\n\n".join([p for p in system_parts if p])
 
     context_summary, detected_key, _position = build_context_summary(
-        request.context, request.music.time_sig, length_q
+        request.context, request.music.time_sig, length_q, request.music.key
     )
 
     final_key = request.music.key
@@ -459,49 +459,114 @@ def build_prompt(
         plan_data = request.ensemble.plan if isinstance(request.ensemble.plan, dict) else {}
         section_overview = plan_data.get("section_overview") if isinstance(plan_data, dict) else None
         role_guidance = plan_data.get("role_guidance") if isinstance(plan_data, dict) else None
-        harmonic_plan = plan_data.get("harmonic_plan") if isinstance(plan_data, dict) else None
-        motif_guidance = plan_data.get("motif_guidance") if isinstance(plan_data, dict) else None
+        chord_map = plan_data.get("chord_map") if isinstance(plan_data, dict) else None
+        phrase_structure = plan_data.get("phrase_structure") if isinstance(plan_data, dict) else None
+        accent_map = plan_data.get("accent_map") if isinstance(plan_data, dict) else None
+        motif_blueprint = plan_data.get("motif_blueprint") if isinstance(plan_data, dict) else None
 
-        has_plan_content = plan_summary or section_overview or role_guidance or harmonic_plan or motif_guidance
+        has_plan_content = plan_summary or section_overview or role_guidance or chord_map or phrase_structure
         if has_plan_content:
             user_prompt_parts.append(f"")
-            user_prompt_parts.append("### COMPOSITION PLAN (FOLLOW THIS GUIDANCE)")
+            user_prompt_parts.append("### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)")
             if plan_summary:
                 user_prompt_parts.append(plan_summary)
 
-            if isinstance(harmonic_plan, dict):
+            if isinstance(chord_map, list) and chord_map:
                 user_prompt_parts.append("")
-                user_prompt_parts.append("**HARMONIC FRAMEWORK:**")
-                prog_style = harmonic_plan.get("progression_style", "")
-                if prog_style:
-                    user_prompt_parts.append(f"- Style: {prog_style}")
-                chord_rhythm = harmonic_plan.get("chord_rhythm", "")
-                if chord_rhythm:
-                    user_prompt_parts.append(f"- Harmonic rhythm: {chord_rhythm}")
-                key_chords = harmonic_plan.get("key_chords", [])
-                if key_chords:
-                    user_prompt_parts.append(f"- Key chords: {', '.join(str(c) for c in key_chords)}")
-                harmonic_arc = harmonic_plan.get("harmonic_arc", "")
-                if harmonic_arc:
-                    user_prompt_parts.append(f"- Arc: {harmonic_arc}")
-                user_prompt_parts.append("RULE: All instruments must follow this harmonic framework!")
+                user_prompt_parts.append("**CHORD MAP (MANDATORY - ALL INSTRUMENTS MUST FOLLOW):**")
+                user_prompt_parts.append("```")
+                user_prompt_parts.append("time_q | bar.beat | chord | roman | chord_tones (pitch classes)")
+                for chord_entry in chord_map:
+                    if not isinstance(chord_entry, dict):
+                        continue
+                    time_q = chord_entry.get("time_q", 0)
+                    bar = chord_entry.get("bar", 1)
+                    beat = chord_entry.get("beat", 1)
+                    chord = chord_entry.get("chord", "?")
+                    roman = chord_entry.get("roman", "?")
+                    chord_tones = chord_entry.get("chord_tones", [])
+                    tones_str = ",".join(str(t) for t in chord_tones) if chord_tones else "?"
+                    user_prompt_parts.append(f"{time_q:6.1f} | {bar}.{beat}     | {chord:5} | {roman:4} | [{tones_str}]")
+                user_prompt_parts.append("```")
+                user_prompt_parts.append("CHORD MAP RULES:")
+                user_prompt_parts.append("- BASS: Play ROOT (first chord_tone) on beat 1 of each chord change")
+                user_prompt_parts.append("- HARMONY: Voice-lead smoothly, prioritize chord_tones on strong beats")
+                user_prompt_parts.append("- MELODY: Chord tones on downbeats, passing tones resolve to chord tones")
+                user_prompt_parts.append("- ALL: Switch to new chord tones at EXACTLY the time_q specified")
 
-            if isinstance(motif_guidance, dict):
+            if isinstance(phrase_structure, list) and phrase_structure:
                 user_prompt_parts.append("")
-                user_prompt_parts.append("**MOTIF/THEME:**")
-                main_idea = motif_guidance.get("main_idea", "")
-                if main_idea:
-                    user_prompt_parts.append(f"- Main idea: {main_idea}")
-                character = motif_guidance.get("character", "")
+                user_prompt_parts.append("**PHRASE STRUCTURE (BREATHING & CADENCES):**")
+                for phrase in phrase_structure:
+                    if not isinstance(phrase, dict):
+                        continue
+                    name = phrase.get("name", "phrase")
+                    bars = phrase.get("bars", "")
+                    function = phrase.get("function", "")
+                    start_q = phrase.get("start_q", 0)
+                    end_q = phrase.get("end_q", 0)
+                    cadence = phrase.get("cadence", {})
+                    breathing = phrase.get("breathing_points", [])
+                    climax = phrase.get("climax_point", {})
+
+                    user_prompt_parts.append(f"- **{name.upper()}** (bars {bars}, time_q {start_q}-{end_q})")
+                    if function:
+                        user_prompt_parts.append(f"    Function: {function}")
+                    if isinstance(cadence, dict) and cadence:
+                        cad_type = cadence.get("type", "")
+                        cad_bar = cadence.get("bar", "")
+                        target = cadence.get("target_degree", "")
+                        user_prompt_parts.append(f"    Cadence: {cad_type} at bar {cad_bar}, end on scale degree {target}")
+                    if breathing:
+                        breath_str = ", ".join(str(b) for b in breathing)
+                        user_prompt_parts.append(f"    BREATHING POINTS (insert 0.25-0.5q rest): time_q [{breath_str}]")
+                    if isinstance(climax, dict) and climax:
+                        climax_q = climax.get("time_q", "")
+                        intensity = climax.get("intensity", "")
+                        user_prompt_parts.append(f"    CLIMAX: time_q {climax_q}, intensity {intensity}")
+
+            if isinstance(accent_map, list) and accent_map:
+                user_prompt_parts.append("")
+                user_prompt_parts.append("**ACCENT MAP (RHYTHMIC SYNC):**")
+                strong_accents = [a for a in accent_map if isinstance(a, dict) and a.get("strength") == "strong"]
+                if strong_accents:
+                    strong_times = ", ".join(f"{a.get('time_q', 0):.1f}" for a in strong_accents[:12])
+                    user_prompt_parts.append(f"- STRONG accents (all instruments): time_q [{strong_times}]")
+                    user_prompt_parts.append("  → Place notes ON these times, increase velocity by 15-25")
+                medium_accents = [a for a in accent_map if isinstance(a, dict) and a.get("strength") == "medium"]
+                if medium_accents:
+                    medium_times = ", ".join(f"{a.get('time_q', 0):.1f}" for a in medium_accents[:8])
+                    user_prompt_parts.append(f"- MEDIUM accents (optional): time_q [{medium_times}]")
+
+            if isinstance(motif_blueprint, dict) and motif_blueprint:
+                user_prompt_parts.append("")
+                user_prompt_parts.append("**MOTIF BLUEPRINT:**")
+                description = motif_blueprint.get("description", "")
+                character = motif_blueprint.get("character", "")
+                intervals = motif_blueprint.get("intervals", [])
+                rhythm = motif_blueprint.get("rhythm_pattern", [])
+                start_pitch = motif_blueprint.get("suggested_start_pitch")
+                techniques = motif_blueprint.get("development_techniques", [])
+
+                if description:
+                    user_prompt_parts.append(f"- Idea: {description}")
                 if character:
                     user_prompt_parts.append(f"- Character: {character}")
-                dev_hints = motif_guidance.get("development_hints", "")
-                if dev_hints:
-                    user_prompt_parts.append(f"- Development: {dev_hints}")
+                if intervals:
+                    int_str = ", ".join(f"{i:+d}" for i in intervals)
+                    user_prompt_parts.append(f"- Intervals (semitones): [{int_str}]")
+                if rhythm:
+                    rhythm_str = ", ".join(str(r) for r in rhythm)
+                    user_prompt_parts.append(f"- Rhythm pattern (quarters): [{rhythm_str}]")
+                if start_pitch:
+                    user_prompt_parts.append(f"- Suggested start pitch: MIDI {start_pitch}")
+                if techniques:
+                    user_prompt_parts.append(f"- Development: {', '.join(techniques)}")
+                user_prompt_parts.append("MOTIF RULE: MELODY role should establish this motif, others respond/develop it")
 
             if isinstance(section_overview, list) and section_overview:
                 user_prompt_parts.append("")
-                user_prompt_parts.append("**SECTION STRUCTURE:**")
+                user_prompt_parts.append("**SECTION OVERVIEW:**")
                 for entry in section_overview:
                     if not isinstance(entry, dict):
                         continue
@@ -557,11 +622,52 @@ def build_prompt(
                         user_prompt_parts.append(f"    Relationship: {relationship}")
 
             user_prompt_parts.append("")
-            user_prompt_parts.append("STRUCTURE RULES:")
-            user_prompt_parts.append("- Each section should have distinct character matching its type")
-            user_prompt_parts.append("- Create smooth transitions between sections")
-            user_prompt_parts.append("- Follow the harmonic framework - all instruments play the SAME chords")
-            user_prompt_parts.append("- Develop the motif across instruments for unity")
+
+        generated_motif = request.ensemble.generated_motif if request.ensemble else None
+        if isinstance(generated_motif, dict) and generated_motif:
+            user_prompt_parts.append("### ESTABLISHED MOTIF (from melody instrument - RESPOND TO THIS)")
+            source = generated_motif.get("source_instrument", "melody")
+            user_prompt_parts.append(f"**Source:** {source}")
+
+            motif_notes = generated_motif.get("notes", [])
+            if motif_notes:
+                user_prompt_parts.append("**Motif notes (relative to start):**")
+                user_prompt_parts.append("```")
+                user_prompt_parts.append("start_q | dur_q | pitch")
+                for note in motif_notes[:12]:
+                    if isinstance(note, dict):
+                        start_q = note.get("start_q", 0)
+                        dur_q = note.get("dur_q", 1.0)
+                        pitch = note.get("pitch", 60)
+                        user_prompt_parts.append(f"{start_q:6.2f} | {dur_q:.2f} | {pitch}")
+                user_prompt_parts.append("```")
+
+            intervals = generated_motif.get("intervals", [])
+            if intervals:
+                int_str = ", ".join(f"{i:+d}" for i in intervals)
+                user_prompt_parts.append(f"**Intervals:** [{int_str}]")
+
+            rhythm = generated_motif.get("rhythm_pattern", [])
+            if rhythm:
+                rhythm_str = ", ".join(f"{r:.2f}" for r in rhythm)
+                user_prompt_parts.append(f"**Rhythm:** [{rhythm_str}]")
+
+            character = generated_motif.get("character", "")
+            if character:
+                user_prompt_parts.append(f"**Character:** {character}")
+
+            current_role = request.ensemble.current_instrument.get("role", "").lower() if request.ensemble.current_instrument else ""
+            user_prompt_parts.append("")
+            if current_role == "melody":
+                user_prompt_parts.append("YOUR TASK: You ARE the motif carrier. Develop/vary this motif.")
+            elif current_role == "bass":
+                user_prompt_parts.append("YOUR TASK: Support the motif rhythm with root notes on strong beats.")
+            elif current_role in ("harmony", "pad"):
+                user_prompt_parts.append("YOUR TASK: Provide harmonic backdrop that frames this motif.")
+            elif current_role == "countermelody":
+                user_prompt_parts.append("YOUR TASK: Create a complementary line that answers this motif.")
+            else:
+                user_prompt_parts.append("YOUR TASK: Complement this motif - don't duplicate it, respond to it.")
             user_prompt_parts.append("")
 
     if request.free_mode:
@@ -654,7 +760,9 @@ def build_prompt(
 def build_plan_prompt(request: GenerateRequest, length_q: float) -> Tuple[str, str]:
     system_prompt = COMPOSITION_PLAN_SYSTEM_PROMPT
 
-    context_summary, detected_key, _ = build_context_summary(request.context, request.music.time_sig, length_q)
+    context_summary, detected_key, _ = build_context_summary(
+        request.context, request.music.time_sig, length_q, request.music.key
+    )
     final_key = request.music.key
     if final_key == "unknown" and detected_key != "unknown":
         final_key = detected_key

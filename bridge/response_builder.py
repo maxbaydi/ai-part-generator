@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -26,6 +26,7 @@ try:
         note_to_midi,
         parse_range,
     )
+    from music_analysis import extract_motif_from_notes
     from utils import clamp
 except ImportError:
     from .constants import (
@@ -51,6 +52,7 @@ except ImportError:
         note_to_midi,
         parse_range,
     )
+    from .music_analysis import extract_motif_from_notes
     from .utils import clamp
 
 
@@ -539,6 +541,8 @@ def build_response(
     allow_tempo_changes: bool = False,
     context: Optional[Any] = None,
     user_prompt: str = "",
+    extract_motif: bool = False,
+    source_instrument: str = "",
 ) -> Dict[str, Any]:
     midi_cfg = profile.get("midi", {})
     default_chan = int(midi_cfg.get("channel", 1))
@@ -614,5 +618,10 @@ def build_response(
         tempo_markers = normalize_tempo_markers(raw.get("tempo_markers"), length_q)
         if tempo_markers:
             response["tempo_markers"] = tempo_markers
+
+    if extract_motif and notes and not is_drum:
+        motif = extract_motif_from_notes(notes, max_notes=8, source_instrument=source_instrument)
+        if motif:
+            response["extracted_motif"] = motif
 
     return response

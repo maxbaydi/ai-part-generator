@@ -10,10 +10,13 @@ try:
         analyze_melodic_context,
         analyze_previously_generated,
         analyze_rhythmic_pattern,
+        analyze_horizontal_continuity,
         build_full_context_prompt,
         build_harmony_context_prompt,
+        build_horizontal_continuity_prompt,
         build_melodic_context_prompt,
         build_rhythmic_context_prompt,
+        extract_motif_from_notes,
     )
     from music_theory import analyze_chord, detect_key_from_chords, pitch_to_note, velocity_to_dynamic
     from profile_utils import load_profile
@@ -25,10 +28,13 @@ except ImportError:
         analyze_melodic_context,
         analyze_previously_generated,
         analyze_rhythmic_pattern,
+        analyze_horizontal_continuity,
         build_full_context_prompt,
         build_harmony_context_prompt,
+        build_horizontal_continuity_prompt,
         build_melodic_context_prompt,
         build_rhythmic_context_prompt,
+        extract_motif_from_notes,
     )
     from .music_theory import analyze_chord, detect_key_from_chords, pitch_to_note, velocity_to_dynamic
     from .profile_utils import load_profile
@@ -158,7 +164,10 @@ def analyze_horizontal_notes(notes: List[Dict[str, Any]], label: str) -> str:
     return " ".join(parts)
 
 
-def build_horizontal_context_summary(horizontal: Optional[HorizontalContext]) -> Tuple[str, str]:
+def build_horizontal_context_summary(
+    horizontal: Optional[HorizontalContext],
+    key_str: str = "C major",
+) -> Tuple[str, str]:
     if not horizontal:
         return "", "isolated"
 
@@ -176,6 +185,16 @@ def build_horizontal_context_summary(horizontal: Optional[HorizontalContext]) ->
         if last_notes:
             last_pitches = [n.get("pitch", 60) for n in last_notes]
             parts.append(f"Last notes before target: {', '.join(pitch_to_note(p) for p in last_pitches)}")
+
+        continuity_analysis = analyze_horizontal_continuity(
+            horizontal.before,
+            horizontal.after if horizontal.after else [],
+            key_str,
+        )
+        continuity_prompt = build_horizontal_continuity_prompt(continuity_analysis)
+        if continuity_prompt:
+            parts.append("")
+            parts.append(continuity_prompt)
 
     if horizontal.after:
         after_summary = analyze_horizontal_notes(horizontal.after, "AFTER (following notes)")
@@ -635,7 +654,8 @@ def collect_context_notes_for_velocity(context: ContextInfo) -> List[Dict[str, A
 def build_context_summary(
     context: Optional[ContextInfo],
     time_sig: str = "4/4",
-    length_q: float = 16.0
+    length_q: float = 16.0,
+    key_str: str = "unknown",
 ) -> Tuple[str, str, str]:
     if not context:
         return "", "unknown", "isolated"
@@ -644,15 +664,16 @@ def build_context_summary(
     detected_key = "unknown"
     position = "isolated"
 
-    horizontal_summary, position = build_horizontal_context_summary(context.horizontal)
-    if horizontal_summary:
-        parts.append(horizontal_summary)
-
     notes_for_progression = context.extended_progression or context.existing_notes
     if notes_for_progression:
         progression, detected_key = analyze_harmony_progression(notes_for_progression, time_sig, length_q)
         if progression:
             parts.append(f"### HARMONY CONTEXT\nCHORD PROGRESSION: {progression}")
+
+    effective_key = key_str if key_str != "unknown" else detected_key
+    horizontal_summary, position = build_horizontal_context_summary(context.horizontal, effective_key)
+    if horizontal_summary:
+        parts.append(horizontal_summary)
 
     if context.existing_notes:
         if context.pitch_range:

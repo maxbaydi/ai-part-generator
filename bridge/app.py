@@ -93,6 +93,17 @@ def generate(request: GenerateRequest) -> JSONResponse:
             logger.error("LLM JSON parse failed after repair attempts")
             raise HTTPException(status_code=502, detail="LLM JSON parse failed after repair attempts")
 
+    should_extract_motif = False
+    source_instrument = ""
+    if request.free_mode and request.ensemble:
+        current_inst = request.ensemble.current_instrument or {}
+        current_role = str(current_inst.get("role", "")).lower()
+        gen_order = request.ensemble.generation_order or 1
+        existing_motif = request.ensemble.generated_motif
+        if current_role in ("melody", "lead") and gen_order <= 2 and not existing_motif:
+            should_extract_motif = True
+            source_instrument = current_inst.get("profile_name") or current_inst.get("track_name") or "melody"
+
     response = build_response(
         parsed,
         profile,
@@ -101,14 +112,17 @@ def generate(request: GenerateRequest) -> JSONResponse:
         request.allow_tempo_changes,
         request.context,
         request.user_prompt or "",
+        extract_motif=should_extract_motif,
+        source_instrument=source_instrument,
     )
     logger.info(
-        "Response built: notes=%d cc_events=%d keyswitches=%d program_changes=%d articulation=%s",
+        "Response built: notes=%d cc_events=%d keyswitches=%d program_changes=%d articulation=%s motif=%s",
         len(response.get("notes", [])),
         len(response.get("cc_events", [])),
         len(response.get("keyswitches", [])),
         len(response.get("program_changes", [])),
         response.get("articulation"),
+        "yes" if response.get("extracted_motif") else "no",
     )
     return JSONResponse(content=response)
 

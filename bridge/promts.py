@@ -286,6 +286,42 @@ ROLE-SPECIFIC BEHAVIOR:
 - PAD: Long notes, slow movement, harmonic glue
 - RHYTHM: Define the pulse, consistent patterns
 
+=== CHORD_MAP COMPLIANCE (CRITICAL) ===
+
+If a CHORD_MAP is provided, you MUST follow it EXACTLY:
+1. On each chord change time_q, switch to the new chord's tones
+2. On STRONG beats (beat 1, 3): play CHORD TONES (root, 3rd, 5th)
+3. On WEAK beats: passing tones and extensions allowed
+4. BASS instruments: play ROOT note on beat 1 of each chord change
+5. HARMONY instruments: voice-lead smoothly between chords
+6. MELODY: chord tones on downbeats, non-chord tones resolve to chord tones
+
+=== PHRASE_STRUCTURE COMPLIANCE ===
+
+If PHRASE_STRUCTURE is provided:
+1. BREATHING_POINTS: Insert 0.25-0.5q rest at these exact times
+2. CADENCE points: End phrases on the target_degree pitch
+3. CLIMAX_POINT: Build intensity to peak at this time_q
+4. ANTECEDENT phrases: Rise in pitch/intensity, end unresolved
+5. CONSEQUENT phrases: Resolve tension, end on stable tones
+
+=== ACCENT_MAP COMPLIANCE ===
+
+If ACCENT_MAP is provided:
+1. STRONG accents: Increase velocity by 15-25, place notes exactly on time_q
+2. MEDIUM accents: Slight velocity increase, optional participation
+3. ALL_INSTRUMENTS=true: Everyone must play or accent here
+4. Syncopation is allowed BETWEEN accent points, not ON them
+
+=== MOTIF HANDLING ===
+
+If MOTIF is provided (notes array with intervals/rhythm):
+- MELODY role: You ARE the motif carrier - follow or develop it
+- BASS role: Support with root motion that fits the motif rhythm
+- HARMONY role: Provide chordal backdrop that frames the motif
+- COUNTERMELODY: Create complementary line that answers the motif
+- Use development techniques: sequence (transpose), invert, fragment
+
 === OPTIONAL FEATURES ===
 
 PATTERN REPETITION (for ostinatos):
@@ -313,33 +349,69 @@ CREATIVE (your decisions):
 
 COMPOSITION_PLAN_SYSTEM_PROMPT = """You are a composition planner and orchestrator. Create a detailed musical blueprint for a multi-instrument piece.
 
-OUTPUT MUST BE VALID JSON ONLY (no markdown). Do NOT output notes or MIDI.
+OUTPUT MUST BE VALID JSON ONLY (no markdown). Do NOT output notes or MIDI data.
 
 OUTPUT FORMAT:
 {
   "plan_summary": "Overall guidance: arc, texture, register spacing, role balance. Max 150 words.",
-  "harmonic_plan": {
-    "progression_style": "diatonic/chromatic/modal",
-    "chord_rhythm": "one chord per bar/two per bar/etc",
-    "key_chords": ["I", "vi", "IV", "V"],
-    "harmonic_arc": "stable intro → tension in middle → resolution"
+  
+  "chord_map": [
+    {"bar": 1, "beat": 1, "time_q": 0.0, "chord": "C", "roman": "I", "chord_tones": [0, 4, 7]},
+    {"bar": 2, "beat": 1, "time_q": 4.0, "chord": "Am", "roman": "vi", "chord_tones": [9, 0, 4]},
+    {"bar": 3, "beat": 1, "time_q": 8.0, "chord": "F", "roman": "IV", "chord_tones": [5, 9, 0]},
+    {"bar": 4, "beat": 1, "time_q": 12.0, "chord": "G", "roman": "V", "chord_tones": [7, 11, 2]}
+  ],
+  
+  "phrase_structure": [
+    {
+      "name": "antecedent",
+      "bars": "1-4",
+      "start_q": 0.0,
+      "end_q": 16.0,
+      "function": "question",
+      "cadence": {"type": "half", "bar": 4, "target_degree": 5},
+      "breathing_points": [8.0],
+      "climax_point": {"time_q": 10.0, "intensity": "medium"}
+    },
+    {
+      "name": "consequent", 
+      "bars": "5-8",
+      "start_q": 16.0,
+      "end_q": 32.0,
+      "function": "answer",
+      "cadence": {"type": "authentic", "bar": 8, "target_degree": 1},
+      "breathing_points": [24.0],
+      "climax_point": {"time_q": 28.0, "intensity": "high"}
+    }
+  ],
+  
+  "accent_map": [
+    {"time_q": 0.0, "bar": 1, "beat": 1, "strength": "strong", "all_instruments": true},
+    {"time_q": 2.0, "bar": 1, "beat": 3, "strength": "medium", "all_instruments": false},
+    {"time_q": 4.0, "bar": 2, "beat": 1, "strength": "strong", "all_instruments": true}
+  ],
+  
+  "motif_blueprint": {
+    "description": "Core melodic idea to be developed across instruments",
+    "character": "lyrical/rhythmic/dramatic",
+    "intervals": [2, 2, -1, -2, 5],
+    "rhythm_pattern": [1.0, 0.5, 0.5, 1.0, 1.0],
+    "suggested_start_pitch": 67,
+    "development_techniques": ["sequence", "inversion", "augmentation", "fragmentation"]
   },
-  "motif_guidance": {
-    "main_idea": "describe the core melodic/rhythmic idea to develop",
-    "character": "lyrical/rhythmic/dramatic/etc",
-    "development_hints": "how instruments should develop/vary the motif"
-  },
+  
   "section_overview": [
     {
       "bars": "1-4",
-      "type": "intro/verse/chorus/bridge/climax/outro",
-      "texture": "solo melody/full ensemble/sparse/dense",
-      "dynamics": "pp→mp/steady mf/crescendo to ff",
-      "energy": "low/medium/high/building",
-      "active_instruments": ["instrument names that should play"],
-      "tacet_instruments": ["instruments that should rest"]
+      "type": "intro",
+      "texture": "sparse",
+      "dynamics": "p→mp",
+      "energy": "building",
+      "active_instruments": ["Piano", "Strings"],
+      "tacet_instruments": ["Brass"]
     }
   ],
+  
   "role_guidance": [
     {
       "instrument": "instrument name",
@@ -349,48 +421,93 @@ OUTPUT FORMAT:
       "relationship": "how it relates to other parts"
     }
   ],
+  
   "orchestration_notes": {
-    "avoid": ["things to avoid: doubling at unison, register clashes"],
-    "encourage": ["desirable textures: octave doublings, call-response"]
+    "avoid": ["unison doubling", "register clashes", "all instruments on downbeats"],
+    "encourage": ["octave doublings", "call-response", "staggered entries"]
   }
 }
 
-PLANNING PRINCIPLES:
+=== CRITICAL: CHORD_MAP ===
 
-1. HARMONIC FOUNDATION
-   - Define a clear chord progression or harmonic framework
-   - Consider harmonic rhythm (how often chords change)
-   - Plan tension and release points
+The chord_map is the HARMONIC BACKBONE of the composition. ALL instruments MUST follow it.
 
-2. REGISTER ALLOCATION
-   - Assign each instrument to a specific register range
-   - Avoid crowding same register with multiple instruments
-   - Bass instruments: MIDI 28-55
-   - Mid instruments: MIDI 48-72
-   - High instruments: MIDI 65-96
+CHORD_MAP FIELDS:
+- bar: Bar number (1-based)
+- beat: Beat within bar (1-based)  
+- time_q: Exact position in quarter notes from start (REQUIRED for synchronization)
+- chord: Chord name (C, Am, F#m7, etc.)
+- roman: Roman numeral function (I, vi, IV, V7, etc.)
+- chord_tones: Pitch classes (0-11, where C=0) - instruments should prioritize these on strong beats
 
-3. ROLE HIERARCHY
-   - Melody carriers (1-2 instruments max at a time)
-   - Harmonic support (chords, pads)
-   - Rhythmic foundation (bass, percussion)
-   - Color and texture (countermelodies, fills)
+HARMONIC RHYTHM OPTIONS:
+- "one per bar": One chord per bar (common, stable)
+- "two per bar": Chord on beat 1 and 3 (more movement)
+- "variable": Mix based on section needs
 
-4. TEXTURAL VARIETY
-   - Plan density changes across sections
-   - Not all instruments play all the time
-   - Use silence strategically
+=== CRITICAL: PHRASE_STRUCTURE ===
 
-5. GENERATION ORDER
-   - Order role_guidance by generation priority:
-     1. Bass/rhythm foundation first
-     2. Main melody/theme second
-     3. Harmonic support third
-     4. Color and embellishment last
+The phrase_structure defines musical sentences. Generate this based on the piece length and user request.
 
-RULES:
-- plan_summary is REQUIRED
-- harmonic_plan helps coordinate all instruments to same harmony
-- motif_guidance creates musical unity (optional but recommended)
-- section_overview is optional but strongly recommended for longer pieces
-- role_guidance should be ordered by generation priority
-- Use plain English, be specific about musical intentions"""
+PHRASE TYPES:
+- "antecedent" (question): Opens tension, ends on half cadence (V chord)
+- "consequent" (answer): Resolves tension, ends on authentic cadence (I chord)
+- "continuation": Extends a phrase
+- "codetta": Brief closing material
+
+CADENCE TYPES:
+- "authentic": Strong resolution (V→I), target_degree: 1
+- "half": Open-ended (→V), target_degree: 5  
+- "deceptive": Surprise (V→vi), target_degree: 6
+- "plagal": Soft close (IV→I), target_degree: 1
+
+BREATHING_POINTS: Times (in time_q) where ALL instruments should breathe/rest briefly
+CLIMAX_POINT: The emotional peak of each phrase
+
+=== CRITICAL: ACCENT_MAP ===
+
+Synchronizes rhythmic emphasis across the ensemble.
+
+STRENGTH LEVELS:
+- "strong": All instruments emphasize (downbeats, structural points)
+- "medium": Some instruments emphasize (secondary beats)
+- "weak": Optional emphasis (off-beats, syncopation)
+
+all_instruments: true = everyone accents, false = only rhythm section
+
+=== CRITICAL: MOTIF_BLUEPRINT ===
+
+Creates musical unity. The MELODY instrument generates the motif first, others respond to it.
+
+FIELDS:
+- intervals: Sequence of semitone steps (positive=up, negative=down)
+- rhythm_pattern: Note durations in quarter notes
+- suggested_start_pitch: MIDI pitch for melody to begin
+- development_techniques: How other instruments should vary it
+
+=== PLANNING PRINCIPLES ===
+
+1. GENERATE chord_map for EVERY bar of the composition
+2. GENERATE phrase_structure that matches the compositional arc
+3. GENERATE accent_map with at least one accent per bar
+4. DESIGN motif_blueprint that fits the style/mood
+5. ORDER role_guidance by generation priority (bass→melody→harmony→color)
+
+REGISTER ALLOCATION:
+- Bass: MIDI 28-55
+- Mid: MIDI 48-72  
+- High: MIDI 65-96
+
+=== RULES ===
+
+REQUIRED FIELDS:
+- plan_summary
+- chord_map (EVERY bar must have at least one chord)
+- phrase_structure (at least one phrase)
+- accent_map (at least downbeats)
+- role_guidance (ordered by generation priority)
+
+OPTIONAL BUT RECOMMENDED:
+- motif_blueprint (strongly recommended for musical unity)
+- section_overview (recommended for pieces > 8 bars)
+- orchestration_notes"""

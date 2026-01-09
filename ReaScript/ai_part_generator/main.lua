@@ -947,6 +947,13 @@ local function poll_compose_generation()
       end
     end
 
+    if data.extracted_motif and not compose_state.generated_motif then
+      compose_state.generated_motif = data.extracted_motif
+      utils.log(string.format("Compose: motif extracted from '%s' with %d notes",
+        current_track.name,
+        data.extracted_motif.notes and #data.extracted_motif.notes or 0))
+    end
+
     compose_state.pending_apply = {
       response = data,
       profile_id = current_track.profile.id,
@@ -1003,6 +1010,7 @@ function start_next_compose_generation()
     generation_order = compose_state.current_index,
     is_sequential = true,
     previously_generated = compose_state.generated_parts,
+    generated_motif = compose_state.generated_motif,
   }
   
   local request = build_request(
@@ -1261,6 +1269,7 @@ local function run_compose(state, profile_list, profiles_by_id)
     current_handle = nil,
     pending_apply = nil,
     generated_parts = {},
+    generated_motif = nil,
     plan_handle = nil,
     plan_summary = "",
     plan = nil,

@@ -76,6 +76,15 @@ class GeneratedPartInfo(BaseModel):
     cc_events: List[Dict[str, Any]] = Field(default_factory=list)
 
 
+class GeneratedMotif(BaseModel):
+    source_instrument: str = ""
+    notes: List[Dict[str, Any]] = Field(default_factory=list)
+    intervals: List[int] = Field(default_factory=list)
+    rhythm_pattern: List[float] = Field(default_factory=list)
+    start_pitch: int = 60
+    character: str = ""
+
+
 class EnsembleInfo(BaseModel):
     total_instruments: int = 1
     instruments: List[EnsembleInstrument] = Field(default_factory=list)
@@ -88,6 +97,7 @@ class EnsembleInfo(BaseModel):
     generation_order: int = 1
     is_sequential: bool = False
     previously_generated: List[Dict[str, Any]] = Field(default_factory=list)
+    generated_motif: Optional[Dict[str, Any]] = None
 
 
 class GenerateRequest(BaseModel):

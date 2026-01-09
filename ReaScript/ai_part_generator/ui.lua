@@ -191,19 +191,26 @@ local function draw_input(ctx, id, value, flags)
   return changed, new_val
 end
 
-local function count_lines(text)
+local function count_visual_lines(text, chars_per_line)
   if not text or text == "" then
     return 1
   end
-  local count = 1
-  for _ in text:gmatch("\n") do
-    count = count + 1
+  local count = 0
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    local line_len = #line
+    if line_len == 0 then
+      count = count + 1
+    else
+      count = count + math.ceil(line_len / chars_per_line)
+    end
   end
-  return count
+  return math.max(1, count)
 end
 
-local function calc_prompt_height(text)
-  local lines = count_lines(text)
+local function calc_prompt_height(text, width)
+  local char_width = 7
+  local chars_per_line = math.max(20, math.floor((width or 400) / char_width))
+  local lines = count_visual_lines(text, chars_per_line)
   local height = math.max(UI.PROMPT_MIN_HEIGHT, lines * UI.PROMPT_LINE_HEIGHT + 16)
   return math.min(height, UI.PROMPT_MAX_HEIGHT)
 end
@@ -460,17 +467,16 @@ local function draw_generation_section(ctx, state, callbacks, tracks_info)
   draw_label(ctx, "Additional Instructions")
   
   local prompt_text = state.prompt or ""
-  local prompt_height = calc_prompt_height(prompt_text)
   local avail_width = reaper.ImGui_GetContentRegionAvail(ctx)
+  local prompt_height = calc_prompt_height(prompt_text, avail_width)
   
-  local flags = reaper.ImGui_InputTextFlags_AllowTabInput()
   local changed, new_prompt = reaper.ImGui_InputTextMultiline(
     ctx, 
     "##prompt_input", 
     prompt_text, 
     avail_width, 
     prompt_height, 
-    flags
+    0
   )
   if changed then
     state.prompt = new_prompt
