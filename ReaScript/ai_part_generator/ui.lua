@@ -8,7 +8,7 @@ local FALLBACK_SEPARATOR = "|"
 
 local UI = {
   WINDOW_WIDTH = 500,
-  WINDOW_HEIGHT = 650,
+  WINDOW_HEIGHT = 700,
   SECTION_SPACING = 12,
   ITEM_SPACING = 6,
   BUTTON_HEIGHT = 32,
@@ -23,9 +23,15 @@ local UI = {
   COMPOSE_BTN_COLOR = 0x7D4D2DFF,
   COMPOSE_BTN_HOVER = 0x9D6D3AFF,
   COMPOSE_BTN_ACTIVE = 0x6D3D24FF,
+  ENHANCE_BTN_COLOR = 0x5D4D8DFF,
+  ENHANCE_BTN_HOVER = 0x7D6DADFF,
+  ENHANCE_BTN_ACTIVE = 0x4D3D7DFF,
   BAR_ALIGN_EPS = 1e-4,
   BAR_RULER_MAX_BARS = 64,
   BAR_RULER_CHAR = "▮",
+  PROMPT_MIN_HEIGHT = 60,
+  PROMPT_MAX_HEIGHT = 400,
+  PROMPT_LINE_HEIGHT = 18,
 }
 
 local KEY_ROOTS = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
@@ -183,6 +189,23 @@ local function draw_input(ctx, id, value, flags)
   local changed, new_val = reaper.ImGui_InputText(ctx, id, value or "", flags or 0)
   reaper.ImGui_PopItemWidth(ctx)
   return changed, new_val
+end
+
+local function count_lines(text)
+  if not text or text == "" then
+    return 1
+  end
+  local count = 1
+  for _ in text:gmatch("\n") do
+    count = count + 1
+  end
+  return count
+end
+
+local function calc_prompt_height(text)
+  local lines = count_lines(text)
+  local height = math.max(UI.PROMPT_MIN_HEIGHT, lines * UI.PROMPT_LINE_HEIGHT + 16)
+  return math.min(height, UI.PROMPT_MAX_HEIGHT)
 end
 
 local function is_near_zero(v)
@@ -406,7 +429,7 @@ local function draw_instrument_section(ctx, state, profile_list, profiles_by_id)
   end
 end
 
-local function draw_generation_section(ctx, state)
+local function draw_generation_section(ctx, state, callbacks, tracks_info)
   draw_section_header(ctx, "⚡ Generation")
 
   local changed_free, free_mode = reaper.ImGui_Checkbox(ctx, "Free Mode (AI chooses articulations, type & style)", state.free_mode or false)
@@ -435,9 +458,48 @@ local function draw_generation_section(ctx, state)
 
   reaper.ImGui_Spacing(ctx)
   draw_label(ctx, "Additional Instructions")
-  local changed, new_prompt = draw_input(ctx, "##prompt_input", state.prompt or "")
+  
+  local prompt_text = state.prompt or ""
+  local prompt_height = calc_prompt_height(prompt_text)
+  local avail_width = reaper.ImGui_GetContentRegionAvail(ctx)
+  
+  local flags = reaper.ImGui_InputTextFlags_AllowTabInput()
+  local changed, new_prompt = reaper.ImGui_InputTextMultiline(
+    ctx, 
+    "##prompt_input", 
+    prompt_text, 
+    avail_width, 
+    prompt_height, 
+    flags
+  )
   if changed then
     state.prompt = new_prompt
+  end
+  
+  local has_prompt = state.prompt and state.prompt:match("%S")
+  local can_enhance = has_prompt and callbacks and callbacks.on_enhance
+  
+  if state.enhance_in_progress then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), 0x555555FF)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x555555FF)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), 0x555555FF)
+    reaper.ImGui_Button(ctx, "⏳ Enhancing...", avail_width, 24)
+    reaper.ImGui_PopStyleColor(ctx, 3)
+  elseif can_enhance then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.ENHANCE_BTN_COLOR)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.ENHANCE_BTN_HOVER)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.ENHANCE_BTN_ACTIVE)
+    if reaper.ImGui_Button(ctx, "✨ Enhance Prompt", avail_width, 24) then
+      callbacks.on_enhance(state, tracks_info)
+    end
+    reaper.ImGui_PopStyleColor(ctx, 3)
+  else
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), 0x444444FF)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x444444FF)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), 0x444444FF)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x888888FF)
+    reaper.ImGui_Button(ctx, "✨ Enhance Prompt", avail_width, 24)
+    reaper.ImGui_PopStyleColor(ctx, 4)
   end
 
   reaper.ImGui_Spacing(ctx)
@@ -722,9 +784,9 @@ function M.run_imgui(state, profile_list, profiles_by_id, callbacks)
 
     if visible then
       draw_instrument_section(ctx, state, profile_list, profiles_by_id)
-      draw_generation_section(ctx, state)
-      draw_context_section(ctx, state)
       local tracks_info = draw_multi_track_section(ctx, state, profile_list, profiles_by_id)
+      draw_generation_section(ctx, state, callbacks, tracks_info)
+      draw_context_section(ctx, state)
       draw_api_section(ctx, state)
       draw_generate_button(ctx, callbacks, state, tracks_info)
     end

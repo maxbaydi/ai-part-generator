@@ -102,3 +102,22 @@ class GenerateRequest(BaseModel):
     allow_tempo_changes: bool = False
     user_prompt: str = ""
     model: Optional[ModelInfo] = None
+
+
+class EnhanceInstrument(BaseModel):
+    track_name: str = ""
+    profile_name: str = ""
+    family: str = ""
+    role: str = ""
+
+
+class EnhanceRequest(BaseModel):
+    user_prompt: str
+    instruments: List[EnhanceInstrument] = Field(default_factory=list)
+    key: str = "unknown"
+    bpm: float = 120.0
+    time_sig: str = "4/4"
+    length_bars: Optional[int] = None
+    length_q: Optional[float] = None
+    context_notes: Optional[str] = None
+    model: Optional[ModelInfo] = None

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 
@@ -8,20 +8,22 @@ from fastapi.responses import JSONResponse
 try:
     from constants import APP_NAME, BRIDGE_HOST, BRIDGE_PORT, MAX_REPAIR_ATTEMPTS, SECONDS_PER_MINUTE
     from logger_config import logger
-    from models import GenerateRequest
+    from models import EnhanceRequest, GenerateRequest
     from profile_utils import deep_merge, load_profile, resolve_preset
     from prompt_builder import build_chat_messages, build_plan_prompt, build_prompt
     from llm_client import call_llm, parse_llm_json, resolve_model
+    from prompt_enhancer import ENHANCER_SYSTEM_PROMPT, build_enhancer_prompt, extract_enhanced_prompt
     from promts import REPAIR_SYSTEM_PROMPT
     from response_builder import build_response
     from utils import summarize_text
 except ImportError:
     from .constants import APP_NAME, BRIDGE_HOST, BRIDGE_PORT, MAX_REPAIR_ATTEMPTS, SECONDS_PER_MINUTE
     from .logger_config import logger
-    from .models import GenerateRequest
+    from .models import EnhanceRequest, GenerateRequest
     from .profile_utils import deep_merge, load_profile, resolve_preset
     from .prompt_builder import build_chat_messages, build_plan_prompt, build_prompt
     from .llm_client import call_llm, parse_llm_json, resolve_model
+    from .prompt_enhancer import ENHANCER_SYSTEM_PROMPT, build_enhancer_prompt, extract_enhanced_prompt
     from .promts import REPAIR_SYSTEM_PROMPT
     from .response_builder import build_response
     from .utils import summarize_text
@@ -174,6 +176,84 @@ def plan(request: GenerateRequest) -> JSONResponse:
         "plan": parsed,
     }
     return JSONResponse(content=response)
+
+
+@app.post("/enhance")
+def enhance(request: EnhanceRequest) -> JSONResponse:
+    if not request.user_prompt or not request.user_prompt.strip():
+        raise HTTPException(status_code=400, detail="User prompt is required")
+
+    instruments_data = [
+        {
+            "track_name": inst.track_name,
+            "profile_name": inst.profile_name,
+            "family": inst.family,
+            "role": inst.role,
+        }
+        for inst in request.instruments
+    ]
+
+    context_data = None
+    if request.context_notes:
+        context_data = {"context_notes": request.context_notes}
+
+    user_prompt = build_enhancer_prompt(
+        user_prompt=request.user_prompt,
+        instruments=instruments_data,
+        key=request.key,
+        bpm=request.bpm,
+        time_sig=request.time_sig,
+        length_bars=request.length_bars,
+        length_q=request.length_q,
+        context=context_data,
+    )
+
+    messages = [
+        {"role": "system", "content": ENHANCER_SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    model_info = request.model
+    provider = model_info.provider if model_info else "lmstudio"
+    model_name = model_info.model_name if model_info and model_info.model_name else None
+    base_url = model_info.base_url if model_info else None
+    temperature = model_info.temperature if model_info and model_info.temperature else 0.7
+    api_key = model_info.api_key if model_info else None
+
+    if not base_url:
+        if provider == "openrouter":
+            from constants import DEFAULT_OPENROUTER_BASE_URL
+            base_url = DEFAULT_OPENROUTER_BASE_URL
+        elif provider == "ollama":
+            from constants import DEFAULT_OLLAMA_BASE_URL
+            base_url = DEFAULT_OLLAMA_BASE_URL
+        else:
+            from constants import DEFAULT_LMSTUDIO_BASE_URL
+            base_url = DEFAULT_LMSTUDIO_BASE_URL
+
+    if provider == "openrouter" and not model_name:
+        from constants import DEFAULT_OPENROUTER_MODEL
+        model_name = DEFAULT_OPENROUTER_MODEL
+
+    if not model_name:
+        from constants import DEFAULT_MODEL_NAME
+        model_name = DEFAULT_MODEL_NAME
+
+    logger.info(
+        "Enhance: provider=%s model=%s instruments=%d",
+        provider,
+        model_name,
+        len(instruments_data),
+    )
+    logger.info("Enhance user prompt: %s", summarize_text(request.user_prompt))
+
+    content = call_llm(provider, model_name, base_url, float(temperature), messages, api_key)
+    logger.info("Enhance response received: %d chars", len(content))
+
+    enhanced_prompt = extract_enhanced_prompt(content)
+    logger.info("Enhanced prompt: %s", summarize_text(enhanced_prompt))
+
+    return JSONResponse(content={"enhanced_prompt": enhanced_prompt})
 
 
 if __name__ == "__main__":

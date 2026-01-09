@@ -59,9 +59,8 @@ $ErrorActionPreference = 'Stop'
 try {
   $body = [System.IO.File]::ReadAllText('%s', [System.Text.Encoding]::UTF8)
   $headers = @{ 'Content-Type' = 'application/json; charset=utf-8' }
-  $resp = Invoke-RestMethod -Uri '%s' -Method Post -Headers $headers -Body $body -TimeoutSec %d
-  $json = $resp | ConvertTo-Json -Depth 100 -Compress
-  [System.IO.File]::WriteAllText('%s', $json, (New-Object System.Text.UTF8Encoding $false))
+  $resp = Invoke-WebRequest -Uri '%s' -Method Post -Headers $headers -Body $body -TimeoutSec %d -UseBasicParsing
+  [System.IO.File]::WriteAllText('%s', $resp.Content, (New-Object System.Text.UTF8Encoding $false))
   exit 0
 } catch {
   $err = @{ detail = $_.Exception.Message } | ConvertTo-Json -Compress
@@ -200,9 +199,8 @@ $ErrorActionPreference = 'Stop'
 try {
   $body = [System.IO.File]::ReadAllText('%s', [System.Text.Encoding]::UTF8)
   $headers = @{ 'Content-Type' = 'application/json; charset=utf-8' }
-  $resp = Invoke-RestMethod -Uri '%s' -Method Post -Headers $headers -Body $body -TimeoutSec %d
-  $json = $resp | ConvertTo-Json -Depth 100 -Compress
-  [System.IO.File]::WriteAllText('%s', $json, (New-Object System.Text.UTF8Encoding $false))
+  $resp = Invoke-WebRequest -Uri '%s' -Method Post -Headers $headers -Body $body -TimeoutSec %d -UseBasicParsing
+  [System.IO.File]::WriteAllText('%s', $resp.Content, (New-Object System.Text.UTF8Encoding $false))
 } catch {
   $err = @{ detail = $_.Exception.Message } | ConvertTo-Json -Compress
   [System.IO.File]::WriteAllText('%s', $err, (New-Object System.Text.UTF8Encoding $false))
