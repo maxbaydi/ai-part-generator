@@ -97,8 +97,8 @@ def normalize_channel(value: Optional[Any], default_chan: int) -> int:
         chan = int(value)
     except (TypeError, ValueError):
         return default_chan
-    if 0 <= chan <= MIDI_CHAN_ZERO_BASE_MAX:
-        return chan + 1
+    if chan == 0:
+        return 1
     if MIDI_CHAN_MIN <= chan <= MIDI_CHAN_MAX:
         return chan
     return default_chan

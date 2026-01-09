@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from typing import Any, Dict, List, Optional, Tuple
@@ -145,6 +145,8 @@ ARTICULATION_DURATION_HINTS = {
     "marcato": "dur_q: 0.5-1.0, marked accent",
 }
 
+DEFAULT_QUARTERS_PER_BAR = 4.0
+
 
 def build_articulation_list_for_prompt(profile: Dict[str, Any]) -> str:
     art_cfg = profile.get("articulations", {})
@@ -203,6 +205,21 @@ def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> Li
     if request.ensemble and request.ensemble.is_sequential:
         lines.append("IMPORTANT: Only output tempo_markers for the FIRST instrument in sequential generation.")
     return lines
+
+
+def build_selection_info(length_q: float, quarters_per_bar: float, bars: int) -> List[str]:
+    length_q = max(0.0, float(length_q or 0.0))
+    length_hint = round(length_q, 3)
+
+    return [
+        "### SELECTION (working area)",
+        f"- Available range: {bars} bars (start_q 0 to {length_hint} quarter notes)",
+        "- Time axis: notes use start_q, curves use time_q (quarter notes from selection start)",
+        "- How much of this range to fill is YOUR creative decision based on user request and context",
+        "- RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range",
+        "- Consider using the full selection for complete compositions; shorter portions for fragments or phrases",
+        "- Patterns/repeats can help keep JSON concise for repeating figures",
+    ]
 
 
 def build_prompt(
@@ -291,6 +308,7 @@ def build_prompt(
 
     quarters_per_bar = get_quarters_per_bar(request.music.time_sig)
     bars = max(1, int(length_q / quarters_per_bar))
+    selection_info = build_selection_info(length_q, quarters_per_bar, bars)
 
     scale_notes = get_scale_note_names(final_key)
     valid_pitches = get_scale_notes(final_key, pitch_low, pitch_high)
@@ -332,6 +350,8 @@ def build_prompt(
             f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
             f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
             f"",
+            *selection_info,
+            f"",
             f"### AVAILABLE ARTICULATIONS:",
             articulation_list_str,
         ])
@@ -349,6 +369,8 @@ def build_prompt(
             f"- Scale notes: {scale_notes}",
             f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
             f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
+            f"",
+            *selection_info,
         ]
 
     if context_summary:
@@ -433,6 +455,7 @@ def build_prompt(
             f"3. CC1 DYNAMICS (curves.dynamics): LOCAL note/phrase dynamics - internal movement",
             f"   - For sustained notes: adds swells and fades within each note",
             f"   - For phrases: adds breathing and local detail",
+            f"TIP: Choose a dynamic contour that fits the request - steady, gentle waves, build-climax, or any shape that serves the music.",
         ])
     else:
         short_articulations = profile.get("articulations", {}).get("short_articulations", [])
@@ -444,7 +467,7 @@ def build_prompt(
             f"### COMPOSITION RULES",
             f"- Style: {style_hint}",
             f"- ALLOWED PITCHES (use ONLY these): {valid_pitches_str}",
-            f"- Notes: {min_notes}-{max_notes}, evenly distributed across all {bars} bars",
+            f"- Suggested note range: {min_notes}-{max_notes} (adapt based on musical needs)",
             f"- Pitch range: MIDI {pitch_low}-{pitch_high}",
             f"- Channel: {midi_channel}",
             f"- Articulation: {articulation}",
@@ -454,6 +477,7 @@ def build_prompt(
             f"2. EXPRESSION + DYNAMICS: {dynamics_hint}",
             f"   - Expression (CC11): GLOBAL arc of the section",
             f"   - Dynamics (CC1): LOCAL swells/fades within notes and phrases",
+            f"   - TIP: Match dynamic shape to the requested mood and style.",
         ])
 
     tempo_guidance = build_tempo_change_guidance(request, length_q)
@@ -469,6 +493,7 @@ def build_prompt(
         user_prompt_parts.append(f"INTERPRET USER REQUEST:")
         user_prompt_parts.append(f"- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output")
         user_prompt_parts.append(f"- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail")
+        user_prompt_parts.append(f"- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)")
         user_prompt_parts.append(f"- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach")
         user_prompt_parts.append(f"- If user asks for chords/pads → use sustained notes, minimal articulation changes")
 

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import http.client
 import json
@@ -93,12 +93,16 @@ def post_json(url: str, payload: Dict[str, Any], timeout: float) -> Dict[str, An
         raise HTTPException(status_code=502, detail=f"LLM returned invalid JSON: {exc}") from exc
 
 
+DEFAULT_MAX_TOKENS = 16384
+
+
 def call_lmstudio(model_name: str, base_url: str, temperature: float, messages: List[Dict[str, str]]) -> str:
     url = build_url(base_url, "/chat/completions")
     payload = {
         "model": model_name,
         "messages": messages,
         "temperature": temperature,
+        "max_tokens": DEFAULT_MAX_TOKENS,
         "stream": False,
         "stop": ["```"],
     }
@@ -114,7 +118,7 @@ def call_ollama(model_name: str, base_url: str, temperature: float, messages: Li
     payload = {
         "model": model_name,
         "messages": messages,
-        "options": {"temperature": temperature},
+        "options": {"temperature": temperature, "num_predict": DEFAULT_MAX_TOKENS},
         "stream": False,
     }
     response = post_json(url, payload, HTTP_TIMEOUT_SEC)
@@ -131,6 +135,7 @@ def call_openrouter(model_name: str, base_url: str, temperature: float, messages
         "model": model_name,
         "messages": messages,
         "temperature": temperature,
+        "max_tokens": DEFAULT_MAX_TOKENS,
         "stream": False,
     }
     data = json.dumps(payload).encode("utf-8")

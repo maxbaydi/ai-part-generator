@@ -59,6 +59,6 @@
     }
   },
   "ai": {
-    "system_prompt_template": "Generate expressive viola parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any chords or double stops (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range C3-E6, preferred C3-C6."
+    "system_prompt_template": "Generate viola parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any chords or double stops (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range C3-E6, preferred C3-C6."
   }
 }

@@ -59,6 +59,6 @@
     }
   },
   "ai": {
-    "system_prompt_template": "Generate expressive cello parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any chords or double stops (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range C2-C6, preferred C2-G5."
+    "system_prompt_template": "Generate cello parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any chords or double stops (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range C2-C6, preferred C2-G5."
   }
 }
