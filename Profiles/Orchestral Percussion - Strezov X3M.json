@@ -1,0 +1,44 @@
+{
+  "id": "orchestral_percussion_strezov_x3m",
+  "name": "Orchestral Percussion - Strezov X3M",
+  "family": "percussion",
+  "vendor": "Strezov Sampling",
+  "description": "Strezov Sampling Orchestral Percussion X3M. Classic orchestral percussion ensemble featuring Bass Drum, Snare Drum, Piatti (crash cymbals), Gong, Tam-Tam, Cymbal, and Cymbal Crescendo articulations for dramatic transitions.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "poly",
+    "is_drum": true,
+    "drum_map": {
+      "bass_drum": 24,
+      "snare_drum": 30,
+      "piatti": 36,
+      "gong": 42,
+      "tam_tam": 48,
+      "cymbal": 54,
+      "cymbal_cresc_quarter": 60,
+      "cymbal_cresc_eighth": 61,
+      "cymbal_cresc_bar": 65
+    }
+  },
+  "range": {
+    "absolute": [24, 65],
+    "preferred": [24, 65]
+  },
+  "fix_policy": "clamp",
+  "articulations": {
+    "mode": "none",
+    "map": {}
+  },
+  "controllers": {
+    "semantic_to_cc": {},
+    "smoothing": {
+      "min_step": "1/32",
+      "interp": "linear",
+      "mode": "adaptive",
+      "write_every_step": false
+    }
+  },
+  "ai": {
+    "system_prompt_template": "Generate orchestral percussion parts for Strezov Sampling Orchestral Percussion X3M.\n\nINSTRUMENT MAP & CHARACTER:\n\n1. BASS DRUM (C1 / MIDI 24):\n   - Deep, resonant orchestral bass drum\n   - Provides powerful low-end foundation and rhythmic pulse\n   - Best for: downbeats, accents, building tension, climactic moments\n   - Use for strong structural markers and dramatic emphasis\n\n2. SNARE DRUM (F#1 / MIDI 30):\n   - Classic orchestral snare with crisp attack and rattle\n   - Cutting, military-style presence\n   - Best for: rhythmic drive, marches, building intensity, rolls\n   - Effective for syncopated patterns and accents\n\n3. PIATTI (C2 / MIDI 36):\n   - Crash cymbals struck together\n   - Bright, explosive accent with long sustain\n   - Best for: climactic crashes, forte accents, section endings\n   - Use sparingly for maximum dramatic impact\n\n4. GONG (F#2 / MIDI 42):\n   - Large orchestral gong with deep, resonant tone\n   - Rich overtones with slow decay\n   - Best for: dramatic moments, exotic color, ceremonial passages\n   - Creates atmosphere and weight, excellent for section transitions\n\n5. TAM-TAM (C3 / MIDI 48):\n   - Large flat gong with dark, ominous sustain\n   - Builds slowly with rich, complex overtones\n   - Best for: mysterious passages, dramatic builds, dark climaxes\n   - Let it ring - avoid rapid repeated hits\n\n6. CYMBAL (F#3 / MIDI 54):\n   - Suspended cymbal single hit\n   - Bright shimmer with gradual decay\n   - Best for: accents, color, lighter transitions\n   - More versatile than piatti for softer dynamics\n\n7. CYMBAL CRESCENDO - for section transitions:\n   - Quarter note crescendo (C4 / MIDI 60): 1/4 note duration swell\n   - Eighth note crescendo (C#4 / MIDI 61): 1/8 note duration swell\n   - Full bar crescendo (F4 / MIDI 65): 1 bar duration swell\n   - Use for: entering new sections, building to climax, transitions\n   - Choose duration based on tempo and desired build time\n\nDYNAMICS CONTROL:\nCRITICAL: VELOCITY is the ONLY dynamics controller!\nAll dynamics are shaped exclusively through velocity values.\nNo CC curves - build dynamics entirely through hit strength.\n\nVelocity Guidelines:\n- Soft/distant: 40-55\n- Medium: 60-80\n- Strong: 85-105\n- Powerful accents: 110-127\n- Crescendo articulations also use velocity to set peak intensity\n\nCRESCENDO USAGE (like rolls for transitions):\n- Use cymbal crescendos to prepare entrances into new sections\n- Use for exits from sections that need gradual release\n- Choose duration based on tempo:\n  * Fast tempo (>120 BPM): use 1/4 or 1/8 crescendo\n  * Medium tempo (80-120): use 1/4 or bar crescendo\n  * Slow tempo (<80): use bar crescendo for full effect\n- Place crescendo so it resolves ON the new section downbeat\n- Velocity controls the intensity of the crescendo peak\n\nARRANGEMENT GUIDELINES:\n- Bass Drum + Piatti: classic climactic combo on downbeats\n- Bass Drum + Tam-Tam: dark, ominous accents\n- Snare provides rhythmic backbone when needed\n- Gong for ceremonial/exotic moments\n- Reserve Piatti for strongest accents only\n- Use Cymbal for lighter touches where Piatti is too heavy\n- Cymbal crescendos mark structural transitions\n\nSPACING & RESTS:\n- Let sustaining instruments (Gong, Tam-Tam, Piatti) ring\n- Avoid cluttering - silence is powerful\n- Build from sparse to dense toward climax\n- One strong accent beats multiple weak ones"
+  }
+}
