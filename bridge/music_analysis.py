@@ -4,9 +4,9 @@ from collections import Counter
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
-    from music_theory import NOTE_NAMES, pitch_to_note
+    from music_theory import analyze_chord, NOTE_NAMES, pitch_to_note
 except ImportError:
-    from .music_theory import NOTE_NAMES, pitch_to_note
+    from .music_theory import analyze_chord, NOTE_NAMES, pitch_to_note
 
 
 def analyze_melodic_context(notes: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -240,22 +240,19 @@ def analyze_harmony_from_notes(
         bar_num = seg_idx + 1
         time_q = seg_idx * chord_unit
 
+        chord_name, root_pc = analyze_chord(pitches)
+        if root_pc is None:
+            continue
         pitch_classes = sorted(set(p % 12 for p in pitches))
-        if pitch_classes:
-            root_pc = pitch_classes[0]
-            root_name = NOTE_NAMES[root_pc]
-
-            intervals = frozenset((pc - root_pc) % 12 for pc in pitch_classes)
-
-            chord_type = _identify_chord_quality(intervals)
-
-            chord_changes.append({
+        chord_changes.append(
+            {
                 "bar": bar_num,
                 "time_q": time_q,
-                "chord": f"{root_name}{chord_type}",
-                "root": root_name,
+                "chord": chord_name,
+                "root": NOTE_NAMES[root_pc],
                 "pitch_classes": pitch_classes,
-            })
+            }
+        )
 
     harmonic_rhythm = "slow" if len(chord_changes) <= length_q / 4 else "fast"
 
@@ -264,38 +261,6 @@ def analyze_harmony_from_notes(
         "harmonic_rhythm": harmonic_rhythm,
         "chords_per_bar": len(chord_changes) / max(1, length_q / quarters_per_bar),
     }
-
-
-def _identify_chord_quality(intervals: frozenset) -> str:
-    chord_types = {
-        frozenset([0, 4, 7]): "",
-        frozenset([0, 3, 7]): "m",
-        frozenset([0, 4, 7, 11]): "maj7",
-        frozenset([0, 3, 7, 10]): "m7",
-        frozenset([0, 4, 7, 10]): "7",
-        frozenset([0, 3, 6]): "dim",
-        frozenset([0, 3, 6, 9]): "dim7",
-        frozenset([0, 4, 8]): "aug",
-        frozenset([0, 5, 7]): "sus4",
-        frozenset([0, 2, 7]): "sus2",
-        frozenset([0, 7]): "5",
-    }
-
-    if intervals in chord_types:
-        return chord_types[intervals]
-
-    has_major_third = 4 in intervals
-    has_minor_third = 3 in intervals
-    has_perfect_fifth = 7 in intervals
-
-    if has_major_third and has_perfect_fifth:
-        return ""
-    if has_minor_third and has_perfect_fifth:
-        return "m"
-    if has_perfect_fifth:
-        return "5"
-
-    return ""
 
 
 def build_melodic_context_prompt(analysis: Dict[str, Any], instrument_name: str = "") -> str:
@@ -488,6 +453,7 @@ def build_full_context_prompt(
     time_sig: str = "4/4",
     length_q: float = 16.0,
     current_role: str = "",
+    skip_auto_harmony: bool = False,
 ) -> str:
     analysis = analyze_previously_generated(previously_generated, time_sig, length_q)
     if not analysis:
@@ -513,11 +479,12 @@ def build_full_context_prompt(
     lines.append("")
 
     combined = analysis.get("combined", {})
-    harmony = combined.get("harmony", {})
-    harmony_prompt = build_harmony_context_prompt(harmony)
-    if harmony_prompt:
-        lines.append(harmony_prompt)
-        lines.append("")
+    if not skip_auto_harmony:
+        harmony = combined.get("harmony", {})
+        harmony_prompt = build_harmony_context_prompt(harmony)
+        if harmony_prompt:
+            lines.append(harmony_prompt)
+            lines.append("")
 
     rhythmic = combined.get("rhythmic", {})
     rhythmic_prompt = build_rhythmic_context_prompt(rhythmic)

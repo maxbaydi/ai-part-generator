@@ -13,6 +13,8 @@ local pending = nil
 local apply_state = nil
 local compose_state = nil
 local enhance_state = nil
+local arrange_state = nil
+local arrange_source = nil
 
 local ROLE_PRIORITY = {
   melody = 1,
@@ -368,7 +370,7 @@ local function get_key_tracks()
   return tracks
 end
 
-local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info)
+local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan)
   local provider = const.DEFAULT_MODEL_PROVIDER
   local model_name = const.DEFAULT_MODEL_NAME
   local base_url = const.DEFAULT_MODEL_BASE_URL
@@ -378,8 +380,11 @@ local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_i
     if api_settings.api_provider == const.API_PROVIDER_OPENROUTER then
       provider = "openrouter"
       api_key = api_settings.api_key
+      if is_plan then
+        model_name = const.DEFAULT_OPENROUTER_PLAN_MODEL
+      end
     end
-    if api_settings.model_name and api_settings.model_name ~= "" then
+    if not is_plan and api_settings.model_name and api_settings.model_name ~= "" then
       model_name = api_settings.model_name
     end
     if api_settings.api_base_url and api_settings.api_base_url ~= "" then
@@ -971,8 +976,11 @@ local function start_compose_plan()
     compose_state.api_settings,
     true,
     false,
-    ensemble_info
+    ensemble_info,
+    true
   )
+
+  utils.log(string.format("Compose: using plan model '%s'", request.model.model_name))
 
   local handle, err = http.begin_request(const.BRIDGE_PLAN_URL, request)
   if not handle then
@@ -1272,6 +1280,509 @@ local function run_enhance(state, tracks_info)
   reaper.defer(poll_enhance)
 end
 
+local function set_arrange_source(item)
+  if not item or not reaper.ValidatePtr(item, "MediaItem*") then
+    arrange_source = nil
+    return false
+  end
+
+  local take = reaper.GetActiveTake(item)
+  if not take or not reaper.TakeIsMIDI(take) then
+    utils.show_error("Selected item is not a MIDI item.")
+    arrange_source = nil
+    return false
+  end
+
+  local track = reaper.GetMediaItem_Track(item)
+  local track_name = utils.get_track_name(track)
+  local notes, cc_events = midi.read_item_notes(item, const.MAX_SKETCH_NOTES)
+
+  if #notes == 0 then
+    utils.show_error("No notes found in selected MIDI item.")
+    arrange_source = nil
+    return false
+  end
+
+  arrange_source = {
+    item = item,
+    track = track,
+    track_name = track_name,
+    notes = notes,
+    cc_events = cc_events,
+  }
+
+  utils.log(string.format("Arrange source set: '%s' with %d notes", track_name, #notes))
+  return true
+end
+
+local function clear_arrange_source()
+  arrange_source = nil
+  utils.log("Arrange source cleared")
+end
+
+local function get_arrange_source()
+  if arrange_source and arrange_source.item then
+    if not reaper.ValidatePtr(arrange_source.item, "MediaItem*") then
+      arrange_source = nil
+      return nil
+    end
+  end
+  return arrange_source
+end
+
+local function apply_arrange_result_and_continue()
+  if not arrange_state then
+    return
+  end
+  
+  if apply_state then
+    reaper.defer(apply_arrange_result_and_continue)
+    return
+  end
+  
+  local current = arrange_state.pending_apply
+  if current then
+    utils.log(string.format("Arrange: applying results for '%s' (%d/%d)",
+      current.track_name, arrange_state.current_index, arrange_state.total_tracks))
+    
+    begin_apply(current.response, current.profile_id, current.profile, current.articulation_name, current.target_track,
+      arrange_state.start_sec, arrange_state.end_sec, nil, nil)
+    
+    table.insert(arrange_state.generated_parts, {
+      track_name = current.track_name,
+      profile_name = current.profile_name,
+      role = current.role,
+      notes = current.response.notes or {},
+      cc_events = current.response.cc_events or {},
+    })
+    
+    arrange_state.pending_apply = nil
+    reaper.defer(apply_arrange_result_and_continue)
+    return
+  end
+  
+  arrange_state.current_index = arrange_state.current_index + 1
+  if arrange_state.current_index > arrange_state.total_tracks then
+    utils.log("Arrange: ALL COMPLETE!")
+    arrange_state = nil
+    return
+  end
+  
+  reaper.defer(start_next_arrange_generation)
+end
+
+local function poll_arrange_generation()
+  if not arrange_state or not arrange_state.current_handle then
+    return
+  end
+  
+  local done, data, err = http.poll_response(arrange_state.current_handle)
+  if not done then
+    reaper.defer(poll_arrange_generation)
+    return
+  end
+  
+  http.cleanup(arrange_state.current_handle)
+  arrange_state.current_handle = nil
+  
+  local current_track = arrange_state.tracks[arrange_state.current_index]
+  
+  if err then
+    utils.log(string.format("Arrange ERROR for '%s': %s", current_track.name, tostring(err)))
+    arrange_state.current_index = arrange_state.current_index + 1
+    if arrange_state.current_index <= arrange_state.total_tracks then
+      reaper.defer(start_next_arrange_generation)
+    else
+      arrange_state = nil
+    end
+    return
+  end
+  
+  if data then
+    utils.log(string.format("Arrange: response for '%s' - notes=%d, cc=%d",
+      current_track.name,
+      data.notes and #data.notes or 0,
+      data.cc_events and #data.cc_events or 0))
+
+    arrange_state.pending_apply = {
+      response = data,
+      profile_id = current_track.profile.id,
+      profile_name = current_track.profile.name,
+      profile = current_track.profile,
+      target_track = current_track.track,
+      track_name = current_track.name,
+      role = current_track.role,
+      articulation_name = arrange_state.current_articulation_name or "",
+    }
+    
+    reaper.defer(apply_arrange_result_and_continue)
+  end
+end
+
+function start_next_arrange_generation()
+  if not arrange_state then
+    return
+  end
+  
+  if arrange_state.current_index > arrange_state.total_tracks then
+    utils.log("Arrange: generation complete!")
+    arrange_state = nil
+    return
+  end
+  
+  local current_track = arrange_state.tracks[arrange_state.current_index]
+  local profile = current_track.profile
+  
+  utils.log(string.format("Arrange: generating %d/%d '%s' (role: %s)",
+    arrange_state.current_index, arrange_state.total_tracks,
+    current_track.name, current_track.role or "unknown"))
+  
+  local articulation_name = profiles.get_default_articulation(profile)
+  arrange_state.current_articulation_name = articulation_name
+  local ctx = context.build_context(arrange_state.use_selected_tracks, current_track.track,
+    arrange_state.start_sec, arrange_state.end_sec)
+  
+  local assignment = nil
+  if arrange_state.arrangement_assignments then
+    local track_name_lower = (current_track.name or ""):lower()
+    local profile_name_lower = (profile.name or ""):lower()
+    local family_lower = (profile.family or ""):lower()
+    
+    local function normalize_name(name)
+      return name:gsub("[%-%_%.%s]+", " "):gsub("^%s+", ""):gsub("%s+$", ""):lower()
+    end
+    
+    local track_norm = normalize_name(track_name_lower)
+    local profile_norm = normalize_name(profile_name_lower)
+    
+    local function match_instrument(inst_name)
+      if inst_name == "" then return false end
+      local inst_norm = normalize_name(inst_name)
+      local inst_first_word = inst_norm:match("^(%w+)")
+      local track_first_word = track_norm:match("^(%w+)")
+      local profile_first_word = profile_norm:match("^(%w+)")
+      
+      if track_norm:find(inst_norm, 1, true) or inst_norm:find(track_norm, 1, true) then
+        return true
+      end
+      if profile_norm:find(inst_norm, 1, true) or inst_norm:find(profile_norm, 1, true) then
+        return true
+      end
+      if inst_first_word and (inst_first_word == track_first_word or inst_first_word == profile_first_word) then
+        return true
+      end
+      return false
+    end
+    
+    for _, a in ipairs(arrange_state.arrangement_assignments) do
+      local inst_name = (a.instrument or ""):lower()
+      if match_instrument(inst_name) then
+        assignment = a
+        utils.log(string.format("Arrange: matched assignment '%s' for track '%s'", a.instrument or "", current_track.name))
+        break
+      end
+    end
+    
+    if not assignment then
+      utils.log(string.format("Arrange: WARNING - no assignment found for '%s' (profile: '%s', family: '%s')", 
+        current_track.name, profile.name, family_lower))
+    end
+  end
+  
+  local ensemble_info = {
+    total_instruments = arrange_state.total_tracks,
+    instruments = arrange_state.ensemble_instruments,
+    shared_prompt = arrange_state.prompt,
+    plan_summary = arrange_state.plan_summary or "",
+    plan = arrange_state.plan,
+    current_instrument_index = arrange_state.current_index,
+    current_instrument = {
+      track_name = current_track.name,
+      profile_name = profile.name,
+      family = profile.family or "unknown",
+      role = current_track.role,
+    },
+    generation_order = arrange_state.current_index,
+    is_sequential = true,
+    previously_generated = arrange_state.generated_parts,
+    arrangement_mode = true,
+    source_sketch = {
+      track_name = arrange_state.source_sketch.track_name,
+      notes = arrange_state.source_sketch.notes,
+    },
+    arrangement_assignment = assignment,
+  }
+  
+  local request = build_request(
+    arrange_state.start_sec,
+    arrange_state.end_sec,
+    arrange_state.bpm,
+    arrange_state.num,
+    arrange_state.denom,
+    arrange_state.key,
+    profile.id,
+    articulation_name,
+    nil,
+    nil,
+    arrange_state.prompt,
+    ctx,
+    arrange_state.api_settings,
+    true,
+    false,
+    ensemble_info
+  )
+  
+  local handle, err = http.begin_request(const.DEFAULT_BRIDGE_URL, request)
+  if not handle then
+    utils.log(string.format("Arrange: failed to start request for '%s': %s", current_track.name, tostring(err)))
+    arrange_state.current_index = arrange_state.current_index + 1
+    reaper.defer(start_next_arrange_generation)
+    return
+  end
+  
+  arrange_state.current_handle = handle
+  reaper.defer(poll_arrange_generation)
+end
+
+local function poll_arrange_plan()
+  if not arrange_state or not arrange_state.plan_handle then
+    return
+  end
+
+  local done, data, err = http.poll_response(arrange_state.plan_handle)
+  if not done then
+    reaper.defer(poll_arrange_plan)
+    return
+  end
+
+  http.cleanup(arrange_state.plan_handle)
+  arrange_state.plan_handle = nil
+
+  if err then
+    utils.log("Arrange plan ERROR: " .. tostring(err))
+    arrange_state = nil
+    utils.show_error("Arrange planning failed: " .. tostring(err))
+    return
+  end
+
+  if data then
+    arrange_state.plan_summary = data.plan_summary or ""
+    arrange_state.plan = data.plan
+    arrange_state.arrangement_assignments = data.arrangement_assignments or {}
+    utils.log("Arrange: plan received with " .. #arrange_state.arrangement_assignments .. " assignments")
+    
+    for i, a in ipairs(arrange_state.arrangement_assignments) do
+      utils.log(string.format("  Assignment %d: instrument='%s', role='%s', verbatim='%s'",
+        i, a.instrument or "?", a.role or "?", a.verbatim_level or "?"))
+    end
+    
+    if arrange_state.plan_summary ~= "" then
+      utils.log("Arrange plan summary: " .. arrange_state.plan_summary)
+    end
+    
+    if arrange_state.arrangement_assignments and #arrange_state.arrangement_assignments > 0 then
+      for i, track_data in ipairs(arrange_state.tracks) do
+        for _, assignment in ipairs(arrange_state.arrangement_assignments) do
+          local inst_name = (assignment.instrument or ""):lower()
+          local track_name_lower = (track_data.name or ""):lower()
+          local profile_name_lower = (track_data.profile and track_data.profile.name or ""):lower()
+          if inst_name ~= "" and (track_name_lower:find(inst_name, 1, true) or profile_name_lower:find(inst_name, 1, true) or inst_name:find(track_name_lower, 1, true)) then
+            track_data.role = assignment.role or "unknown"
+            break
+          end
+        end
+      end
+    end
+  end
+
+  reaper.defer(start_next_arrange_generation)
+end
+
+local function start_arrange_plan()
+  if not arrange_state then
+    return
+  end
+
+  if arrange_state.plan_handle then
+    return
+  end
+
+  utils.log("Arrange: starting plan phase")
+
+  local target_instruments = {}
+  for i, track_data in ipairs(arrange_state.tracks) do
+    table.insert(target_instruments, {
+      index = i,
+      track_name = track_data.name,
+      profile_id = track_data.profile.id,
+      profile_name = track_data.profile.name,
+      family = track_data.profile.family or "unknown",
+      role = "unknown",
+      range = track_data.profile.range or {},
+    })
+  end
+
+  local provider = const.DEFAULT_MODEL_PROVIDER
+  local model_name = const.DEFAULT_MODEL_NAME
+  local base_url = const.DEFAULT_MODEL_BASE_URL
+  local api_key = nil
+
+  if arrange_state.api_settings then
+    if arrange_state.api_settings.api_provider == const.API_PROVIDER_OPENROUTER then
+      provider = "openrouter"
+      api_key = arrange_state.api_settings.api_key
+      model_name = const.DEFAULT_OPENROUTER_PLAN_MODEL
+      base_url = const.DEFAULT_OPENROUTER_BASE_URL
+    end
+    if arrange_state.api_settings.api_base_url and arrange_state.api_settings.api_base_url ~= "" then
+      base_url = arrange_state.api_settings.api_base_url
+    end
+  end
+
+  utils.log(string.format("Arrange: using plan model '%s'", model_name))
+
+  local request = {
+    time = { start_sec = arrange_state.start_sec, end_sec = arrange_state.end_sec },
+    music = { bpm = arrange_state.bpm, time_sig = string.format("%d/%d", arrange_state.num, arrange_state.denom), key = arrange_state.key },
+    source_sketch = {
+      track_name = arrange_state.source_sketch.track_name,
+      notes = arrange_state.source_sketch.notes,
+      cc_events = arrange_state.source_sketch.cc_events or {},
+    },
+    target_instruments = target_instruments,
+    user_prompt = arrange_state.prompt or "",
+    model = {
+      provider = provider,
+      model_name = model_name,
+      temperature = const.DEFAULT_MODEL_TEMPERATURE,
+      base_url = base_url,
+      api_key = api_key,
+    },
+  }
+
+  local handle, err = http.begin_request(const.BRIDGE_ARRANGE_PLAN_URL, request)
+  if not handle then
+    utils.log("Arrange: plan request failed: " .. tostring(err))
+    arrange_state = nil
+    utils.show_error("Arrange plan request failed: " .. tostring(err))
+    return
+  end
+
+  arrange_state.plan_handle = handle
+  reaper.defer(poll_arrange_plan)
+end
+
+local function run_arrange(state, profile_list, profiles_by_id)
+  local start_sec, end_sec = utils.get_time_selection()
+  if start_sec == end_sec then
+    utils.show_error("No time selection set.")
+    return
+  end
+
+  if pending or apply_state or compose_state or arrange_state then
+    utils.show_error("Generation already in progress.")
+    return
+  end
+
+  local source = get_arrange_source()
+  if not source or not source.notes or #source.notes == 0 then
+    utils.show_error("No arrange source set. Select a MIDI item and click 'Set as Source'.")
+    return
+  end
+
+  local tracks_with_profiles = profiles.get_selected_tracks_with_profiles(profile_list, profiles_by_id)
+  
+  if #tracks_with_profiles == 0 then
+    utils.show_error("No target tracks selected.")
+    return
+  end
+
+  local valid_tracks = {}
+  local skipped = {}
+  for _, track_data in ipairs(tracks_with_profiles) do
+    if track_data.profile_id and track_data.profile then
+      if track_data.track ~= source.track then
+        table.insert(valid_tracks, track_data)
+      end
+    else
+      table.insert(skipped, track_data.name)
+    end
+  end
+
+  if #valid_tracks == 0 then
+    local msg = "No valid target tracks found (excluding source track)."
+    if #skipped > 0 then
+      msg = msg .. "\nUnmatched: " .. table.concat(skipped, ", ")
+    end
+    utils.show_error(msg)
+    return
+  end
+
+  for _, track_data in ipairs(valid_tracks) do
+    track_data.role = "unknown"
+  end
+  
+  utils.log(string.format("Arrange: source='%s' (%d notes), %d target tracks",
+    source.track_name, #source.notes, #valid_tracks))
+  for i, td in ipairs(valid_tracks) do
+    utils.log(string.format("  %d. '%s' -> '%s'", i, td.name, td.profile.name))
+  end
+
+  local bpm, num, denom = get_bpm_and_timesig(start_sec)
+  
+  local key = state.key or const.DEFAULT_KEY
+  if state.key_mode == "Auto" then
+    local key_tracks = get_key_tracks()
+    key = key_detect.detect_key(key_tracks, start_sec, end_sec) or const.DEFAULT_KEY
+  elseif state.key_mode == "Unknown" then
+    key = const.DEFAULT_KEY
+  end
+
+  local api_settings = {
+    api_provider = state.api_provider,
+    api_key = state.api_key,
+    api_base_url = state.api_base_url,
+    model_name = state.model_name,
+  }
+
+  local ensemble_instruments = build_ensemble_instruments_from_tracks(valid_tracks)
+
+  arrange_state = {
+    tracks = valid_tracks,
+    total_tracks = #valid_tracks,
+    current_index = 1,
+    current_handle = nil,
+    pending_apply = nil,
+    generated_parts = {},
+    plan_handle = nil,
+    plan_summary = "",
+    plan = nil,
+    arrangement_assignments = {},
+    source_sketch = {
+      track_name = source.track_name,
+      notes = source.notes,
+      cc_events = source.cc_events or {},
+    },
+    start_sec = start_sec,
+    end_sec = end_sec,
+    bpm = bpm,
+    num = num,
+    denom = denom,
+    key = key,
+    api_settings = api_settings,
+    ensemble_instruments = ensemble_instruments,
+    prompt = state.prompt or "",
+    use_selected_tracks = state.use_selected_tracks,
+  }
+
+  reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_PROVIDER, state.api_provider or const.API_PROVIDER_LOCAL, true)
+  reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_KEY, state.api_key or "", true)
+  reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_BASE_URL, state.api_base_url or "", true)
+  reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_MODEL_NAME, state.model_name or "", true)
+
+  start_arrange_plan()
+end
+
 local function run_compose(state, profile_list, profiles_by_id)
   local start_sec, end_sec = utils.get_time_selection()
   if start_sec == end_sec then
@@ -1412,6 +1923,8 @@ function M.main()
     key = const.DEFAULT_MANUAL_KEY
   end
 
+  local current_arrange_source = get_arrange_source()
+
   local state = {
     profile_id = profile_id,
     profile_name = profile and profile.name or "",
@@ -1432,6 +1945,7 @@ function M.main()
     api_base_url = api_base_url,
     model_name = model_name,
     active_track = active_track,
+    arrange_source = current_arrange_source,
   }
 
   local on_generate = function(current_state)
@@ -1446,10 +1960,29 @@ function M.main()
     run_enhance(current_state, tracks_info)
   end
 
+  local on_arrange = function(current_state)
+    run_arrange(current_state, profile_list, profiles_by_id)
+  end
+
+  local on_set_arrange_source = function(current_state)
+    local item = reaper.GetSelectedMediaItem(0, 0)
+    if set_arrange_source(item) then
+      current_state.arrange_source = get_arrange_source()
+    end
+  end
+
+  local on_clear_arrange_source = function(current_state)
+    clear_arrange_source()
+    current_state.arrange_source = nil
+  end
+
   local callbacks = {
     on_generate = on_generate,
     on_compose = on_compose,
     on_enhance = on_enhance,
+    on_arrange = on_arrange,
+    on_set_arrange_source = on_set_arrange_source,
+    on_clear_arrange_source = on_clear_arrange_source,
   }
 
   if reaper.ImGui_CreateContext ~= nil then
@@ -1461,7 +1994,7 @@ function M.main()
 end
 
 function M.is_generation_in_progress()
-  return pending ~= nil or apply_state ~= nil or compose_state ~= nil or enhance_state ~= nil
+  return pending ~= nil or apply_state ~= nil or compose_state ~= nil or enhance_state ~= nil or arrange_state ~= nil
 end
 
 function M.get_compose_progress()
@@ -1474,6 +2007,31 @@ function M.get_compose_progress()
     current_track = compose_state.tracks[compose_state.current_index] and 
                     compose_state.tracks[compose_state.current_index].name or "",
   }
+end
+
+function M.get_arrange_progress()
+  if not arrange_state then
+    return nil
+  end
+  return {
+    current = arrange_state.current_index,
+    total = arrange_state.total_tracks,
+    current_track = arrange_state.tracks[arrange_state.current_index] and 
+                    arrange_state.tracks[arrange_state.current_index].name or "",
+    source_track = arrange_state.source_sketch and arrange_state.source_sketch.track_name or "",
+  }
+end
+
+function M.set_arrange_source(item)
+  return set_arrange_source(item)
+end
+
+function M.clear_arrange_source()
+  clear_arrange_source()
+end
+
+function M.get_arrange_source()
+  return get_arrange_source()
 end
 
 return M

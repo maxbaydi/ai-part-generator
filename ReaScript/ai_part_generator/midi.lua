@@ -310,6 +310,59 @@ function M.apply_legato_overlap_by_articulation_changes(notes, overlap_q, change
   end
 end
 
+function M.read_item_notes(item, max_notes)
+  if not item then
+    return {}, {}
+  end
+
+  local take = reaper.GetActiveTake(item)
+  if not take or not reaper.TakeIsMIDI(take) then
+    return {}, {}
+  end
+
+  local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+  local item_start_qn = reaper.TimeMap_timeToQN(item_start)
+
+  local _, note_count, cc_count = reaper.MIDI_CountEvts(take)
+  local limit = max_notes or const.MAX_SKETCH_NOTES
+  local cc_limit = const.MAX_SKETCH_CC_EVENTS or 1000
+
+  local notes = {}
+  for i = 0, math.min(note_count - 1, limit - 1) do
+    local retval, selected, muted, startppq, endppq, chan, pitch, vel = reaper.MIDI_GetNote(take, i)
+    if retval and not muted then
+      local start_qn = reaper.MIDI_GetProjQNFromPPQPos(take, startppq)
+      local end_qn = reaper.MIDI_GetProjQNFromPPQPos(take, endppq)
+      local relative_start = start_qn - item_start_qn
+      local dur_q = end_qn - start_qn
+      table.insert(notes, {
+        start_q = math.max(0, relative_start),
+        dur_q = math.max(0.01, dur_q),
+        pitch = pitch,
+        vel = vel,
+        chan = chan + 1,
+      })
+    end
+  end
+
+  local cc_events = {}
+  for i = 0, math.min(cc_count - 1, cc_limit - 1) do
+    local retval, selected, muted, ppqpos, chanmsg, chan, msg2, msg3 = reaper.MIDI_GetCC(take, i)
+    if retval and not muted and chanmsg == const.MIDI_CC_STATUS then
+      local time_qn = reaper.MIDI_GetProjQNFromPPQPos(take, ppqpos)
+      local relative_time = time_qn - item_start_qn
+      table.insert(cc_events, {
+        time_q = math.max(0, relative_time),
+        cc = msg2,
+        value = msg3,
+        chan = chan + 1,
+      })
+    end
+  end
+
+  return notes, cc_events
+end
+
 function M.resolve_same_pitch_overlaps(notes, min_gap_q)
   if type(notes) ~= "table" then
     return notes

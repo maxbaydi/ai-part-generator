@@ -18,7 +18,14 @@ try:
         build_rhythmic_context_prompt,
         extract_motif_from_notes,
     )
-    from music_theory import analyze_chord, detect_key_from_chords, pitch_to_note, velocity_to_dynamic
+    from music_theory import (
+        analyze_chord,
+        detect_key_from_chords,
+        extract_chords_lilchord_style,
+        get_chord_degree_lilchord,
+        pitch_to_note,
+        velocity_to_dynamic,
+    )
     from profile_utils import load_profile
 except ImportError:
     from .constants import MIDI_MAX, MIDI_MIN
@@ -36,7 +43,14 @@ except ImportError:
         build_rhythmic_context_prompt,
         extract_motif_from_notes,
     )
-    from .music_theory import analyze_chord, detect_key_from_chords, pitch_to_note, velocity_to_dynamic
+    from .music_theory import (
+        analyze_chord,
+        detect_key_from_chords,
+        extract_chords_lilchord_style,
+        get_chord_degree_lilchord,
+        pitch_to_note,
+        velocity_to_dynamic,
+    )
     from .profile_utils import load_profile
 
 POSITION_DESCRIPTIONS = {
@@ -64,10 +78,10 @@ ROLE_HINTS = {
 CC_TREND_WINDOW_RATIO = 0.2
 CC_TREND_MIN_DELTA = 8
 CC_TREND_MIN_EVENTS = 4
-NOTE_CONTEXT_PREVIEW_LIMIT = 30
-ARTICULATION_CHANGE_PREVIEW_LIMIT = 6
-SIMPLIFIED_MIDI_MAP_LIMIT = 40
-HANDOFF_SUGGESTION_MAX_LEN = 150
+NOTE_CONTEXT_PREVIEW_LIMIT = 5000
+ARTICULATION_CHANGE_PREVIEW_LIMIT = 1000
+SIMPLIFIED_MIDI_MAP_LIMIT = 15000
+HANDOFF_SUGGESTION_MAX_LEN = 10000
 CC_LABELS = {
     1: "Dynamics",
     11: "Expression",
@@ -111,41 +125,152 @@ def analyze_harmony_progression(
         return "", "unknown"
 
     quarters_per_bar = get_quarters_per_bar(time_sig)
+    num, denom = parse_time_sig(time_sig)
+    beat_q = 4.0 / denom if denom else 1.0
 
-    chord_unit = quarters_per_bar / 2 if quarters_per_bar >= 2 else quarters_per_bar
+    chord_segments = extract_chords_lilchord_style(existing_notes)
 
-    segments: Dict[int, List[int]] = {}
-    for note in existing_notes:
-        start_q = note.get("start_q", 0)
-        pitch = note.get("pitch", 60)
-        dur_q = note.get("dur_q", 0.5)
+    progression: List[str] = []
+    chord_roots: List[int] = []
+    chord_items: List[Tuple[float, str, int, int, List[int]]] = []
 
-        seg_start = int(start_q // chord_unit)
-        seg_end = int((start_q + dur_q) // chord_unit)
+    for seg in chord_segments:
+        start_q = float(seg.get("start_q", 0.0) or 0.0)
+        pitches = seg.get("pitches") or []
+        if not isinstance(pitches, list) or len(pitches) < 2:
+            continue
 
-        for seg_idx in range(seg_start, seg_end + 1):
-            if seg_idx not in segments:
-                segments[seg_idx] = []
-            if pitch not in segments[seg_idx]:
-                segments[seg_idx].append(pitch)
+        chord_pitches = [int(p) for p in pitches]
+        chord_name, root = analyze_chord(chord_pitches)
+        if root is None:
+            continue
 
-    progression = []
-    chord_roots = []
-    segments_per_bar = max(1, int(quarters_per_bar / chord_unit))
-
-    for seg_idx in sorted(segments.keys()):
-        bar_num = (seg_idx // segments_per_bar) + 1
-        beat_in_bar = (seg_idx % segments_per_bar) + 1
-        chord_name, root = analyze_chord(segments[seg_idx])
-        if root is not None:
-            chord_roots.append(root)
-        if segments_per_bar > 1:
-            progression.append(f"B{bar_num}.{beat_in_bar}:{chord_name}")
-        else:
-            progression.append(f"B{bar_num}:{chord_name}")
+        # LilChord treats unison/octave-only clusters as "note".
+        # For harmony progression this is noise (pedal/octave doubling), so skip it.
+        if chord_name.endswith("note") and len({p % 12 for p in chord_pitches}) <= 1:
+            continue
+        bass_pc = int(min(chord_pitches)) % 12
+        chord_roots.append(root)
+        chord_items.append((start_q, chord_name, root, bass_pc, chord_pitches))
 
     detected_key = detect_key_from_chords(chord_roots)
+    last_chord_name: Optional[str] = None
+    for start_q, chord_name, root, bass_pc, chord_pitches in chord_items:
+        if chord_name == last_chord_name:
+            continue
+        last_chord_name = chord_name
+
+        degree = (
+            None
+            if detected_key == "unknown"
+            else get_chord_degree_lilchord(
+                chord_pitches=chord_pitches,
+                chord_root_pc=root,
+                key_str=detected_key,
+                bass_pc=bass_pc,
+            )
+        )
+
+        label = chord_name if not degree else f"{chord_name}({degree})"
+        if quarters_per_bar > 0 and beat_q > 0:
+            bar_num = int(start_q // quarters_per_bar) + 1
+            beat_in_bar = ((start_q % quarters_per_bar) / beat_q) + 1.0
+            if num:
+                beat_in_bar = max(1.0, min(float(num), beat_in_bar))
+            beat_str = f"{beat_in_bar:.2f}".rstrip("0").rstrip(".")
+            progression.append(f"B{bar_num}.{beat_str}:{label}")
+        else:
+            progression.append(f"@{start_q:.2f}:{label}")
     return " | ".join(progression), detected_key
+
+
+def build_chord_map_from_sketch(
+    notes: List[Dict[str, Any]],
+    time_sig: str = "4/4",
+    length_q: float = 16.0,
+) -> Tuple[str, str]:
+    if not notes:
+        return "", "unknown"
+
+    quarters_per_bar = get_quarters_per_bar(time_sig)
+    num, denom = parse_time_sig(time_sig)
+    beat_q = 4.0 / denom if denom else 1.0
+
+    chord_segments = extract_chords_lilchord_style(notes)
+
+    chord_entries: List[Dict[str, Any]] = []
+    chord_roots: List[int] = []
+
+    for seg in chord_segments:
+        start_q = float(seg.get("start_q", 0.0) or 0.0)
+        pitches = seg.get("pitches") or []
+        if not isinstance(pitches, list) or len(pitches) < 2:
+            continue
+
+        chord_pitches = [int(p) for p in pitches]
+        chord_name, root = analyze_chord(chord_pitches)
+        if root is None:
+            continue
+
+        if chord_name.endswith("note") and len({p % 12 for p in chord_pitches}) <= 1:
+            continue
+
+        bass_pc = int(min(chord_pitches)) % 12
+        chord_roots.append(root)
+        pitch_classes = sorted(set(p % 12 for p in chord_pitches))
+
+        chord_entries.append({
+            "start_q": start_q,
+            "chord_name": chord_name,
+            "root_pc": root,
+            "bass_pc": bass_pc,
+            "pitch_classes": pitch_classes,
+            "chord_pitches": chord_pitches,
+        })
+
+    detected_key = detect_key_from_chords(chord_roots)
+
+    lines = ["```"]
+    lines.append("time_q | bar.beat | chord | roman | chord_tones (pitch classes)")
+
+    last_chord_name: Optional[str] = None
+    for entry in chord_entries:
+        chord_name = entry["chord_name"]
+        if chord_name == last_chord_name:
+            continue
+        last_chord_name = chord_name
+
+        start_q = entry["start_q"]
+        root_pc = entry["root_pc"]
+        bass_pc = entry["bass_pc"]
+        pitch_classes = entry["pitch_classes"]
+        chord_pitches = entry["chord_pitches"]
+
+        degree = (
+            ""
+            if detected_key == "unknown"
+            else get_chord_degree_lilchord(
+                chord_pitches=chord_pitches,
+                chord_root_pc=root_pc,
+                key_str=detected_key,
+                bass_pc=bass_pc,
+            ) or ""
+        )
+
+        bar_num = int(start_q // quarters_per_bar) + 1 if quarters_per_bar > 0 else 1
+        beat_in_bar = 1.0
+        if quarters_per_bar > 0 and beat_q > 0:
+            beat_in_bar = ((start_q % quarters_per_bar) / beat_q) + 1.0
+            if num:
+                beat_in_bar = max(1.0, min(float(num), beat_in_bar))
+        beat_str = f"{beat_in_bar:.1f}".rstrip("0").rstrip(".")
+
+        pc_str = str(pitch_classes)
+        lines.append(f"{start_q:6.1f} | {bar_num}.{beat_str:<4} | {chord_name:<6} | {degree:<5} | {pc_str}")
+
+    lines.append("```")
+
+    return "\n".join(lines), detected_key
 
 
 def analyze_horizontal_notes(notes: List[Dict[str, Any]], label: str) -> str:
@@ -723,6 +848,7 @@ def build_ensemble_context(
     current_profile_name: str,
     time_sig: str = "4/4",
     length_q: float = 16.0,
+    has_plan_chord_map: bool = False,
 ) -> str:
     if not ensemble or ensemble.total_instruments <= 1:
         return ""
@@ -788,6 +914,7 @@ def build_ensemble_context(
             time_sig,
             length_q,
             current_role,
+            skip_auto_harmony=has_plan_chord_map,
         )
         if full_analysis_prompt:
             parts.append(full_analysis_prompt)

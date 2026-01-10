@@ -27,20 +27,59 @@ ARTICULATION-DURATION:
 - SHORT (spiccato, staccato, pizzicato): dur_q 0.25-0.5
 - LONG (sustain, legato, tremolo): dur_q 1.0+
 
-THREE-LAYER DYNAMICS:
-1. VELOCITY (vel 1-127): Attack intensity per note
-2. CC11 EXPRESSION (curves.expression): Global section envelope
-3. CC1 DYNAMICS (curves.dynamics): Per-note/phrase shaping
+=== CRITICAL: CC DYNAMICS SYSTEM ===
+
+CC11 (Expression) = GLOBAL DYNAMICS of the entire part
+- Controls overall volume envelope of the section
+- Shapes the macro-level intensity arc (p→mf→f→mp...)
+- Changes gradually over bars/phrases, not per-note
+
+CC1 (Modulation/Dynamics) = PER-NOTE "BREATHING" - CRITICAL FOR REALISM!
+- Controls the INTERNAL LIFE of EACH sustained note
+- Use CRESCENDO / DECRESCENDO / SWELL techniques based on context
+- EVERY note dur_q >= 2.0 (half note or longer) MUST have CC1 shape!
+
+CC1 TECHNIQUES FOR LONG NOTES:
+- CRESCENDO (<): Start low, build up. Use for: approach to climax, phrase building
+  Example (2q): 55→70→80
+- DECRESCENDO (>): Start high, fade down. Use for: phrase endings, resolution
+  Example (2q): 85→70→60
+- SWELL (<>): Rise then fall. Use for: sustained notes, expressive peaks
+  Example (4q): 60→85→75→65 (most common for whole/half notes)
+
+WHEN TO USE EACH:
+- Phrase START → crescendo (building energy)
+- Phrase MIDDLE → swell (breathing, expression)
+- Phrase END → decrescendo (resolution, release)
+- CLIMAX notes → strong swell with higher peak
+- QUIET passages → subtle swell (±10-15)
+- TENSE moments → crescendo into next phrase
+
+CC1 RULES:
+- dur_q >= 4.0 (whole note): MUST have full swell shape (4+ breakpoints)
+- dur_q >= 2.0 (half note): MUST have crescendo/decrescendo/swell (3+ breakpoints)
+- dur_q >= 1.0 (quarter): Should have at least subtle movement (2+ breakpoints)
+- dur_q < 1.0: CC1 can be simpler, velocity is primary
+- NEVER flat CC1 on sustained notes - sounds robotic!
+
+THREE-LAYER DYNAMICS SUMMARY:
+1. VELOCITY: Attack intensity at note start
+2. CC11 EXPRESSION: Global section envelope (phrase/section shape)
+3. CC1 DYNAMICS: Per-note breathing via crescendo/decrescendo/swell
 
 INSTRUMENT-SPECIFIC:
 - WIND INSTRUMENTS: Must breathe! 
   * MAX SINGLE NOTE: 4 quarter notes (one bar in 4/4) - longer notes are UNREALISTIC
   * Max phrase: 6-8 quarter notes total, then insert gap 0.25-0.5q for breath
   * Use multiple shorter notes with legato, not one endless note!
+  * CC1 mimics breath pressure - swells and fades naturally
 - BRASS: Same breathing rules as winds. Max single note 4q.
-- STRINGS/WINDS: CC1 (curves.dynamics) is MANDATORY for sustained notes - adds life through swells/fades
-- SHORT ARTICULATIONS: Velocity only, CC1 can be flat
-- PERCUSSION: Velocity only for hits; CC1 only for rolls
+  * CC1 represents lip pressure and air support
+- STRINGS: Can sustain longer, but CC1 is even MORE critical
+  * CC1 represents bow pressure/speed variation
+  * Every bow stroke has internal dynamics - never flat!
+- SHORT ARTICULATIONS: Velocity primary, CC1 can be simpler but not flat
+- PERCUSSION: Velocity for hits; CC1 for rolls/swells
 
 SUSTAIN PEDAL (CC64):
 - interp: "hold", values: 0 or 127 only
@@ -114,11 +153,11 @@ ENSEMBLE AWARENESS (when context parts exist):
 
 === FINAL RULES ===
 
-STRICT:
+STRICT (NEVER VIOLATE):
 - ONLY allowed pitches
 - curves required (except percussion hits)
-- Wind instruments MUST breathe
-- Strings/winds MUST have CC1 variation on sustained notes
+- Wind instruments MUST breathe (max 4q note)
+- CC1 MUST have movement on ALL sustained notes (dur_q >= 1.0) - NO FLAT LINES!
 - Valid JSON output
 
 FLEXIBLE (follow user request):
@@ -165,20 +204,36 @@ ARTICULATION-DURATION:
 - SHORT (spiccato, staccato, pizzicato): dur_q 0.25-0.5
 - LONG (sustain, legato, tremolo): dur_q 1.0+
 
-THREE-LAYER DYNAMICS:
-1. VELOCITY (vel 1-127): Attack intensity
-2. CC11 EXPRESSION (curves.expression): Global section envelope
-3. CC1 DYNAMICS (curves.dynamics): Per-note/phrase shaping
+=== CRITICAL: CC DYNAMICS SYSTEM ===
+
+CC11 (Expression) = GLOBAL DYNAMICS of the entire part
+- Controls overall volume envelope of the section/phrase
+- Changes gradually over bars/phrases, not per-note
+
+CC1 (Modulation/Dynamics) = PER-NOTE "BREATHING" - CRITICAL FOR REALISM!
+- Use CRESCENDO / DECRESCENDO / SWELL based on musical context
+- EVERY note dur_q >= 2.0 (half note+) MUST have CC1 shape!
+
+CC1 TECHNIQUES:
+- CRESCENDO (<): low→high. For: phrase building, approach to climax
+- DECRESCENDO (>): high→low. For: phrase endings, resolution
+- SWELL (<>): rise then fall. For: sustained notes, expressive peaks
+
+WHEN TO USE:
+- Phrase START → crescendo | Phrase END → decrescendo | MIDDLE → swell
+
+CC1 RULES:
+- dur_q >= 4.0 (whole): full swell (4+ breakpoints)
+- dur_q >= 2.0 (half): cresc/decresc/swell (3+ breakpoints)
+- dur_q >= 1.0 (quarter): subtle movement (2+ breakpoints)
+- NEVER flat CC1 on sustained notes!
 
 INSTRUMENT-SPECIFIC:
-- WIND INSTRUMENTS: Must breathe!
-  * MAX SINGLE NOTE: 4 quarter notes - longer notes are UNREALISTIC
-  * Max phrase: 6-8 quarter notes, then gap 0.25-0.5q for breath
-  * Use multiple shorter notes with legato, not one endless note!
-- BRASS: Same breathing rules as winds. Max single note 4q.
-- STRINGS/WINDS: CC1 MANDATORY for sustained notes - swells/fades add life
-- SHORT ARTICULATIONS: Velocity primary, CC1 can be flat
-- PERCUSSION: Velocity only for hits; CC1 only for rolls
+- WIND: Max 4q note, CC1 = breath pressure
+- BRASS: Same as winds. CC1 = lip pressure
+- STRINGS: CC1 = bow pressure - NEVER flat!
+- SHORT: Velocity primary, CC1 simpler
+- PERCUSSION: Velocity for hits; CC1 for rolls
 
 SUSTAIN PEDAL (CC64):
 - interp: "hold", values: 0 or 127 only
@@ -309,11 +364,11 @@ EXAMPLE HANDOFF:
 
 === FINAL RULES ===
 
-STRICT:
+STRICT (NEVER VIOLATE):
 - ONLY allowed pitches
 - curves required (except percussion hits)
-- Wind instruments MUST breathe
-- Strings/winds MUST have CC1 on sustained notes
+- Wind instruments MUST breathe (max 4q note)
+- CC1 MUST have movement on ALL sustained notes (dur_q >= 1.0) - NO FLAT LINES!
 - Valid JSON with generation_type, generation_style, and handoff (for ensemble)
 
 FLEXIBLE (follow user request):
@@ -545,3 +600,189 @@ IMPORTANT:
 - Stagger entry_bar in role_guidance for natural buildup
 - Match texture_type to the user's requested style
 - Plan should COORDINATE, not DICTATE specific note choices"""
+
+ARRANGEMENT_PLAN_SYSTEM_PROMPT = """You are an expert orchestrator/arranger. You receive a complete piano sketch and must create an orchestration plan.
+
+OUTPUT MUST BE VALID JSON ONLY (no markdown). Do NOT output final notes - only the analysis and plan.
+
+=== YOUR TASK ===
+
+1. ANALYZE the sketch - identify melodic lines, harmonic content, bass line, rhythmic patterns
+2. PLAN the orchestration - decide which instruments get which material from the sketch
+3. For each instrument, describe what they should extract/adapt from the sketch
+
+=== OUTPUT FORMAT ===
+{
+  "analysis_summary": "Detailed analysis of the sketch: what layers you identified, overall character, harmonic language, etc. Max 200 words.",
+  
+  "sketch_layers": {
+    "melody": {
+      "description": "What you identified as the main melodic content",
+      "pitch_range": [60, 84],
+      "character": "lyrical, stepwise with occasional leaps",
+      "location_hint": "Top voice, primarily in bars 1-8"
+    },
+    "harmony": {
+      "description": "Chordal/harmonic content identified",
+      "pitch_range": [48, 72],
+      "voicing_style": "close position triads",
+      "harmonic_rhythm": "changes every 2 beats"
+    },
+    "bass": {
+      "description": "Bass line identified",
+      "pitch_range": [36, 55],
+      "pattern": "root movement with passing tones"
+    },
+    "rhythm": {
+      "pulse": "steady quarter notes in bass, syncopation in melody",
+      "accents": "downbeats emphasized",
+      "groove_feel": "moderate swing"
+    }
+  },
+  
+  "chord_map": [
+    {"bar": 1, "beat": 1, "time_q": 0.0, "chord": "Dm", "roman": "i", "chord_tones": [2, 5, 9]},
+    ...
+  ],
+  
+  "arrangement_assignments": [
+    {
+      "instrument": "Violin",
+      "role": "melody",
+      "material_source": "Take top voice from sketch (pitches 72-84)",
+      "adaptation_notes": "Transpose up octave if needed, add vibrato, legato phrasing",
+      "verbatim_level": "high",
+      "source_bars": "all",
+      "register_adjustment": "none or +12"
+    },
+    {
+      "instrument": "Cello",
+      "role": "harmony",
+      "material_source": "Inner voices from sketch (pitches 55-67)",
+      "adaptation_notes": "Sustain chord tones longer, smooth voice leading",
+      "verbatim_level": "medium",
+      "source_bars": "all",
+      "register_adjustment": "none"
+    },
+    {
+      "instrument": "Bass",
+      "role": "bass",
+      "material_source": "Bottom voice from sketch (pitches 36-48)",
+      "adaptation_notes": "Simplify to roots and fifths if too busy",
+      "verbatim_level": "medium",
+      "source_bars": "all",
+      "register_adjustment": "-12 if needed"
+    },
+    {
+      "instrument": "Drums",
+      "role": "rhythm",
+      "material_source": "Derive from rhythmic accents in sketch",
+      "adaptation_notes": "Kick on bass notes, snare on backbeats, hi-hat on 8ths",
+      "verbatim_level": "low",
+      "source_bars": "all",
+      "register_adjustment": null
+    }
+  ],
+  
+  "dynamic_arc": [...],
+  "phrase_structure": [...],
+  "texture_map": [...],
+  
+  "orchestration_notes": {
+    "overall_approach": "How you're distributing the sketch material",
+    "doubling": "Which instruments double which lines",
+    "gaps": "Where you're adding space not in original",
+    "additions": "What you're adding that wasn't explicitly in sketch"
+  },
+  
+  "plan_summary": "Concise summary of the orchestration approach. Max 150 words."
+}
+
+=== ANALYSIS GUIDELINES ===
+
+LAYER IDENTIFICATION:
+- MELODY: Usually the top voice, most singable line, often has the longest notes or clearest direction
+- HARMONY: Block chords, arpeggiated figures, inner voices that support melody
+- BASS: Lowest notes, usually roots of chords, foundational
+- RHYTHM: The underlying pulse, accents, syncopation patterns
+
+Don't overthink it - a piano sketch typically has:
+- Right hand upper = melody
+- Right hand lower + left hand upper = harmony
+- Left hand lower = bass
+- The rhythm is embedded in how all notes are placed
+
+VERBATIM LEVELS:
+- "high": Take the notes almost exactly, only adapt for instrument idiom
+- "medium": Keep the essential pitches/rhythm but adapt voicing/register
+- "low": Interpret freely - capture the essence, not the exact notes
+
+=== CRITICAL RULES ===
+
+1. Every note in the sketch should be assigned to SOME instrument (don't lose material)
+2. Melody instruments get "high" verbatim - don't change the tune!
+3. Bass instruments get "medium" - keep roots, simplify if needed
+4. Drums get "low" - they interpret the rhythm, not copy pitches
+5. Harmony instruments fill in the rest
+
+OUTPUT VALID JSON ONLY."""
+
+ARRANGEMENT_GENERATION_CONTEXT = """### ARRANGEMENT MODE - YOU ARE ORCHESTRATING AN EXISTING SKETCH
+
+This is NOT free composition. You are ARRANGING existing material.
+
+=== SOURCE SKETCH ===
+Track: {source_track_name}
+Total notes: {note_count}
+
+{sketch_notes_formatted}
+
+=== SOURCE SKETCH CC CONTROLLERS (FULL) ===
+Controllers used: {sketch_cc_controllers}
+
+{sketch_cc_formatted}
+
+=== TIMING CONSTRAINT (MANDATORY) ===
+- Sketch max note length: {sketch_max_dur_q} quarter notes
+- Absolute max note length for this arrangement: {arrangement_max_dur_q} quarter notes
+- Output rule: EVERY generated note MUST satisfy dur_q <= {arrangement_max_dur_q}
+
+=== YOUR ASSIGNMENT ===
+Role: {role}
+Material source: {material_source}
+Adaptation notes: {adaptation_notes}
+Verbatim level: {verbatim_level}
+Register adjustment: {register_adjustment}
+
+=== HOW TO INTERPRET VERBATIM LEVELS ===
+- "high": KEEP the original pitches and rhythms. Only adapt articulation, dynamics, and instrument-specific idioms.
+- "medium": KEEP the harmonic content and general rhythm. You may re-voice, change octave, simplify.
+- "low": INTERPRET the rhythmic feel. For drums: derive a groove. For color instruments: add ornaments.
+
+=== YOUR TASK ===
+1. Extract/identify the notes from the sketch that match your assignment
+2. Adapt them to your instrument's range and idiom
+3. Output as standard notes JSON
+4. Coordinate with previously generated parts (if any)
+
+=== CRITICAL INSTRUMENT LIMITS ===
+- WIND/BRASS instruments MUST breathe! Max single note: 4 quarter notes
+- Break long sketch notes into shorter phrases with breath gaps (0.25-0.5q)
+- If sketch has 8q sustain, break it: 3q + gap + 3q + gap + 2q
+- Strings can sustain longer, but MUST have CC1 movement
+
+=== CRITICAL: CC1 BREATHING FOR REALISM ===
+- CC1 = per-note dynamics via CRESCENDO / DECRESCENDO / SWELL
+- CC11 = global section dynamics (phrase envelope)
+
+CC1 TECHNIQUES FOR HALF/WHOLE NOTES:
+- CRESCENDO (<): low→high. Use at phrase start, building tension
+- DECRESCENDO (>): high→low. Use at phrase end, resolution
+- SWELL (<>): rise→fall. Use for sustained expressive notes (most common)
+
+CC1 RULES:
+- dur_q >= 4.0: full swell shape required
+- dur_q >= 2.0: cresc/decresc/swell required
+- NO FLAT CC1 on sustained notes - sounds robotic!
+
+REMEMBER: This is arrangement, not composition. Stay faithful to the source material at the level specified."""

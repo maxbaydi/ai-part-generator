@@ -26,6 +26,13 @@ local UI = {
   ENHANCE_BTN_COLOR = 0x5D4D8DFF,
   ENHANCE_BTN_HOVER = 0x7D6DADFF,
   ENHANCE_BTN_ACTIVE = 0x4D3D7DFF,
+  ARRANGE_BTN_COLOR = 0x2D5D7DFF,
+  ARRANGE_BTN_HOVER = 0x3A7D9DFF,
+  ARRANGE_BTN_ACTIVE = 0x244D6DFF,
+  SOURCE_SET_BTN_COLOR = 0x4D6D4DFF,
+  SOURCE_SET_BTN_HOVER = 0x5D8D5DFF,
+  SOURCE_CLEAR_BTN_COLOR = 0x6D4D4DFF,
+  SOURCE_CLEAR_BTN_HOVER = 0x8D5D5DFF,
   BAR_ALIGN_EPS = 1e-4,
   BAR_RULER_MAX_BARS = 64,
   BAR_RULER_CHAR = "▮",
@@ -191,26 +198,16 @@ local function draw_input(ctx, id, value, flags)
   return changed, new_val
 end
 
-local function count_visual_lines(text, chars_per_line)
+local function count_visual_lines(text)
   if not text or text == "" then
     return 1
   end
-  local count = 0
-  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
-    local line_len = #line
-    if line_len == 0 then
-      count = count + 1
-    else
-      count = count + math.ceil(line_len / chars_per_line)
-    end
-  end
-  return math.max(1, count)
+  local _, count = text:gsub("\n", "\n")
+  return count + 1
 end
 
-local function calc_prompt_height(text, width)
-  local char_width = 7
-  local chars_per_line = math.max(20, math.floor((width or 400) / char_width))
-  local lines = count_visual_lines(text, chars_per_line)
+local function calc_prompt_height(text)
+  local lines = count_visual_lines(text)
   local height = math.max(UI.PROMPT_MIN_HEIGHT, lines * UI.PROMPT_LINE_HEIGHT + 16)
   return math.min(height, UI.PROMPT_MAX_HEIGHT)
 end
@@ -468,7 +465,7 @@ local function draw_generation_section(ctx, state, callbacks, tracks_info)
   
   local prompt_text = state.prompt or ""
   local avail_width = reaper.ImGui_GetContentRegionAvail(ctx)
-  local prompt_height = calc_prompt_height(prompt_text, avail_width)
+  local prompt_height = calc_prompt_height(prompt_text)
   
   local changed, new_prompt = reaper.ImGui_InputTextMultiline(
     ctx, 
@@ -725,6 +722,89 @@ local function draw_multi_track_section(ctx, state, profile_list, profiles_by_id
   return tracks_info
 end
 
+local function draw_arrange_source_section(ctx, state, callbacks)
+  draw_section_header(ctx, "🎹 Arrangement Source")
+  
+  local source = state.arrange_source
+  local avail_width = reaper.ImGui_GetContentRegionAvail(ctx)
+  
+  if not source then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x808080FF)
+    reaper.ImGui_TextWrapped(ctx, "No source sketch set. Select a MIDI item with your piano sketch and click 'Set as Source'.")
+    reaper.ImGui_PopStyleColor(ctx)
+    
+    reaper.ImGui_Spacing(ctx)
+    
+    local item = reaper.GetSelectedMediaItem(0, 0)
+    local can_set = item ~= nil
+    
+    if can_set then
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.SOURCE_SET_BTN_COLOR)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.SOURCE_SET_BTN_HOVER)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.SOURCE_SET_BTN_COLOR)
+      if reaper.ImGui_Button(ctx, "📌 Set Selected Item as Source", avail_width, 24) then
+        if callbacks.on_set_arrange_source then
+          callbacks.on_set_arrange_source(state)
+        end
+      end
+      reaper.ImGui_PopStyleColor(ctx, 3)
+    else
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), 0x444444FF)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x444444FF)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), 0x444444FF)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x888888FF)
+      reaper.ImGui_Button(ctx, "📌 Set Selected Item as Source", avail_width, 24)
+      reaper.ImGui_PopStyleColor(ctx, 4)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0xFFAA00FF)
+      reaper.ImGui_Text(ctx, "⚠ Select a MIDI item first")
+      reaper.ImGui_PopStyleColor(ctx)
+    end
+  else
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x80FF80FF)
+    reaper.ImGui_Text(ctx, string.format("✓ Source: %s", source.track_name or "Unknown"))
+    reaper.ImGui_PopStyleColor(ctx)
+    
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), UI.LABEL_COLOR)
+    reaper.ImGui_Text(ctx, string.format("Notes: %d", source.notes and #source.notes or 0))
+    reaper.ImGui_PopStyleColor(ctx)
+    
+    reaper.ImGui_Spacing(ctx)
+    
+    local half_width = (avail_width - 8) / 2
+    
+    local item = reaper.GetSelectedMediaItem(0, 0)
+    if item then
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.SOURCE_SET_BTN_COLOR)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.SOURCE_SET_BTN_HOVER)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.SOURCE_SET_BTN_COLOR)
+      if reaper.ImGui_Button(ctx, "📌 Change", half_width, 24) then
+        if callbacks.on_set_arrange_source then
+          callbacks.on_set_arrange_source(state)
+        end
+      end
+      reaper.ImGui_PopStyleColor(ctx, 3)
+    else
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), 0x444444FF)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), 0x444444FF)
+      reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), 0x444444FF)
+      reaper.ImGui_Button(ctx, "📌 Change", half_width, 24)
+      reaper.ImGui_PopStyleColor(ctx, 3)
+    end
+    
+    reaper.ImGui_SameLine(ctx)
+    
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.SOURCE_CLEAR_BTN_COLOR)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.SOURCE_CLEAR_BTN_HOVER)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.SOURCE_CLEAR_BTN_COLOR)
+    if reaper.ImGui_Button(ctx, "✖ Clear", half_width, 24) then
+      if callbacks.on_clear_arrange_source then
+        callbacks.on_clear_arrange_source(state)
+      end
+    end
+    reaper.ImGui_PopStyleColor(ctx, 3)
+  end
+end
+
 local function draw_generate_button(ctx, callbacks, state, tracks_info)
   reaper.ImGui_Spacing(ctx)
   reaper.ImGui_Spacing(ctx)
@@ -740,6 +820,26 @@ local function draw_generate_button(ctx, callbacks, state, tracks_info)
         matched_count = matched_count + 1
       end
     end
+  end
+
+  local has_arrange_source = state.arrange_source ~= nil
+  if callbacks.on_arrange and has_arrange_source and matched_count >= 1 then
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Button(), UI.ARRANGE_BTN_COLOR)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonHovered(), UI.ARRANGE_BTN_HOVER)
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_ButtonActive(), UI.ARRANGE_BTN_ACTIVE)
+
+    local btn_label = string.format("🎻  Arrange (%d Tracks)", matched_count)
+    if reaper.ImGui_Button(ctx, btn_label, avail_width, UI.BUTTON_HEIGHT) then
+      callbacks.on_arrange(state)
+    end
+
+    reaper.ImGui_PopStyleColor(ctx, 3)
+    
+    reaper.ImGui_PushStyleColor(ctx, reaper.ImGui_Col_Text(), 0x90A0B0FF)
+    reaper.ImGui_TextWrapped(ctx, "Orchestrates the source sketch across selected tracks. AI analyzes and distributes musical layers.")
+    reaper.ImGui_PopStyleColor(ctx)
+    
+    reaper.ImGui_Spacing(ctx)
   end
 
   if callbacks.on_compose and matched_count >= 2 then
@@ -791,6 +891,7 @@ function M.run_imgui(state, profile_list, profiles_by_id, callbacks)
     if visible then
       draw_instrument_section(ctx, state, profile_list, profiles_by_id)
       local tracks_info = draw_multi_track_section(ctx, state, profile_list, profiles_by_id)
+      draw_arrange_source_section(ctx, state, callbacks)
       draw_generation_section(ctx, state, callbacks, tracks_info)
       draw_context_section(ctx, state)
       draw_api_section(ctx, state)

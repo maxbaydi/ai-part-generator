@@ -3,6 +3,11 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
+    from logger_config import logger
+except ImportError:
+    from .logger_config import logger
+
+try:
     from constants import (
         ARTICULATION_MAX_DUR_Q,
         ARTICULATION_PRE_ROLL_Q,
@@ -13,6 +18,8 @@ try:
         MIDI_MAX,
         MIDI_MIN,
         MIDI_VEL_MIN,
+        MIN_NOTE_DUR_Q,
+        MIN_NOTE_GAP_Q,
         SHORT_ARTICULATION_FALLBACK_MAX_Q,
         TEMPO_MARKER_MAX_BPM,
         TEMPO_MARKER_MIN_BPM,
@@ -22,8 +29,12 @@ try:
         TIME_SIG_VALID_DENOM,
         WIND_BRASS_FAMILIES,
         WIND_BRASS_MAX_NOTE_DUR_Q,
+        STRINGS_MAX_NOTE_DUR_Q,
+        STRINGS_FAMILIES,
+        MAX_NOTE_DUR_Q_DEFAULT,
+        ARRANGEMENT_MAX_NOTE_DUR_BARS,
     )
-    from context_builder import generate_synthetic_handoff, validate_and_fix_handoff
+    from context_builder import generate_synthetic_handoff, get_quarters_per_bar, validate_and_fix_handoff
     from curve_utils import build_cc_events
     from midi_utils import (
         normalize_channel,
@@ -45,6 +56,8 @@ except ImportError:
         MIDI_MAX,
         MIDI_MIN,
         MIDI_VEL_MIN,
+        MIN_NOTE_DUR_Q,
+        MIN_NOTE_GAP_Q,
         SHORT_ARTICULATION_FALLBACK_MAX_Q,
         TEMPO_MARKER_MAX_BPM,
         TEMPO_MARKER_MIN_BPM,
@@ -54,8 +67,12 @@ except ImportError:
         TIME_SIG_VALID_DENOM,
         WIND_BRASS_FAMILIES,
         WIND_BRASS_MAX_NOTE_DUR_Q,
+        STRINGS_MAX_NOTE_DUR_Q,
+        STRINGS_FAMILIES,
+        MAX_NOTE_DUR_Q_DEFAULT,
+        ARRANGEMENT_MAX_NOTE_DUR_BARS,
     )
-    from .context_builder import generate_synthetic_handoff, validate_and_fix_handoff
+    from .context_builder import generate_synthetic_handoff, get_quarters_per_bar, validate_and_fix_handoff
     from .curve_utils import build_cc_events
     from .midi_utils import (
         normalize_channel,
@@ -66,6 +83,106 @@ except ImportError:
     )
     from .music_analysis import extract_motif_from_notes
     from .utils import clamp
+
+
+MIN_NOTE_DUR_FOR_DYNAMICS = 1.0
+SWELL_PEAK_RATIO = 0.35
+DYNAMICS_BASE_VALUE = 60
+DYNAMICS_SWELL_AMOUNT = 25
+
+
+def ensure_per_note_dynamics(
+    curves: Dict[str, Any],
+    notes: List[Dict[str, Any]],
+    length_q: float,
+) -> Dict[str, Any]:
+    if not notes:
+        return curves
+
+    curves = dict(curves) if curves else {}
+    dynamics_curve = curves.get("dynamics", {})
+    existing_breakpoints = dynamics_curve.get("breakpoints", [])
+
+    sustained_notes = [
+        n for n in notes
+        if isinstance(n, dict) and float(n.get("dur_q", 0)) >= MIN_NOTE_DUR_FOR_DYNAMICS
+    ]
+
+    if not sustained_notes:
+        return curves
+
+    def count_breakpoints_in_range(start: float, end: float) -> int:
+        count = 0
+        for bp in existing_breakpoints:
+            t = float(bp.get("time_q", 0))
+            if start <= t <= end:
+                count += 1
+        return count
+
+    def get_value_at_time(t: float) -> float:
+        if not existing_breakpoints:
+            return DYNAMICS_BASE_VALUE
+        sorted_bps = sorted(existing_breakpoints, key=lambda x: float(x.get("time_q", 0)))
+        for i, bp in enumerate(sorted_bps):
+            bp_time = float(bp.get("time_q", 0))
+            if bp_time >= t:
+                if i == 0:
+                    return float(bp.get("value", DYNAMICS_BASE_VALUE))
+                prev_bp = sorted_bps[i - 1]
+                prev_t = float(prev_bp.get("time_q", 0))
+                prev_v = float(prev_bp.get("value", DYNAMICS_BASE_VALUE))
+                curr_v = float(bp.get("value", DYNAMICS_BASE_VALUE))
+                if bp_time == prev_t:
+                    return curr_v
+                ratio = (t - prev_t) / (bp_time - prev_t)
+                return prev_v + (curr_v - prev_v) * ratio
+        if sorted_bps:
+            return float(sorted_bps[-1].get("value", DYNAMICS_BASE_VALUE))
+        return DYNAMICS_BASE_VALUE
+
+    new_breakpoints = list(existing_breakpoints)
+    
+    for note in sustained_notes:
+        start_q = float(note.get("start_q", 0))
+        dur_q = float(note.get("dur_q", 1))
+        end_q = min(start_q + dur_q, length_q)
+        vel = int(note.get("vel", 80))
+        
+        bp_count = count_breakpoints_in_range(start_q, end_q)
+        min_required = 2 if dur_q < 2.0 else (3 if dur_q < 4.0 else 4)
+        
+        if bp_count >= min_required:
+            continue
+        
+        base_value = get_value_at_time(start_q)
+        vel_factor = vel / 80.0
+        swell_amount = int(DYNAMICS_SWELL_AMOUNT * vel_factor)
+        
+        peak_time = start_q + dur_q * SWELL_PEAK_RATIO
+        settle_time = start_q + dur_q * 0.6
+        
+        start_value = int(clamp(base_value - 5, MIDI_MIN, MIDI_MAX))
+        peak_value = int(clamp(base_value + swell_amount, MIDI_MIN, MIDI_MAX))
+        settle_value = int(clamp(base_value + swell_amount * 0.6, MIDI_MIN, MIDI_MAX))
+        end_value = int(clamp(base_value - 2, MIDI_MIN, MIDI_MAX))
+        
+        new_breakpoints.append({"time_q": round(start_q, 4), "value": start_value})
+        new_breakpoints.append({"time_q": round(peak_time, 4), "value": peak_value})
+        
+        if dur_q >= 2.0:
+            new_breakpoints.append({"time_q": round(settle_time, 4), "value": settle_value})
+        
+        if dur_q >= 3.0:
+            new_breakpoints.append({"time_q": round(end_q - 0.1, 4), "value": end_value})
+
+    new_breakpoints.sort(key=lambda x: float(x.get("time_q", 0)))
+    
+    curves["dynamics"] = {
+        "interp": dynamics_curve.get("interp", "cubic"),
+        "breakpoints": new_breakpoints,
+    }
+    
+    return curves
 
 
 def get_keyswitch_pitch(data: Dict[str, Any], art_cfg: Dict[str, Any]) -> int:
@@ -318,6 +435,147 @@ def clamp_short_articulation_durations(
         max_dur = ARTICULATION_MAX_DUR_Q.get(art_lower, SHORT_ARTICULATION_FALLBACK_MAX_Q)
         if dur_q > max_dur:
             note["dur_q"] = max_dur
+
+
+def clamp_arrangement_note_durations(
+    notes: List[Dict[str, Any]],
+    time_sig: str,
+    source_sketch: Optional[Dict[str, Any]],
+) -> None:
+    if not notes:
+        return
+
+    quarters_per_bar = get_quarters_per_bar(time_sig)
+    max_dur_by_bars_q = quarters_per_bar * float(ARRANGEMENT_MAX_NOTE_DUR_BARS)
+
+    sketch_max_dur_q = 0.0
+    if source_sketch and isinstance(source_sketch, dict):
+        sketch_notes = source_sketch.get("notes", [])
+        if isinstance(sketch_notes, list) and sketch_notes:
+            for n in sketch_notes:
+                if not isinstance(n, dict):
+                    continue
+                try:
+                    dur_q = float(n.get("dur_q", 0.0))
+                except (TypeError, ValueError):
+                    continue
+                if dur_q > sketch_max_dur_q:
+                    sketch_max_dur_q = dur_q
+
+    max_allowed_q = min(max_dur_by_bars_q, sketch_max_dur_q) if sketch_max_dur_q > 0 else max_dur_by_bars_q
+    if max_allowed_q <= 0:
+        return
+
+    for note in notes:
+        if not isinstance(note, dict):
+            continue
+        try:
+            dur_q = float(note.get("dur_q", 0.0))
+        except (TypeError, ValueError):
+            continue
+        if dur_q > max_allowed_q:
+            note["dur_q"] = max_allowed_q
+
+
+def resolve_same_pitch_overlaps(notes: List[Dict[str, Any]]) -> None:
+    grouped: Dict[Tuple[int, int], List[Dict[str, Any]]] = {}
+    for n in notes:
+        if not isinstance(n, dict):
+            continue
+        try:
+            pitch = int(n.get("pitch", 60))
+            chan = int(n.get("chan", 1))
+            start_q = float(n.get("start_q", 0.0))
+            dur_q = float(n.get("dur_q", MIN_NOTE_DUR_Q))
+        except (TypeError, ValueError):
+            continue
+        if dur_q <= 0:
+            continue
+        n["_start_q"] = start_q
+        n["_end_q"] = start_q + dur_q
+        grouped.setdefault((chan, pitch), []).append(n)
+
+    for group in grouped.values():
+        group.sort(key=lambda x: (float(x.get("_start_q", 0.0)), float(x.get("_end_q", 0.0))))
+        for i in range(len(group) - 1):
+            curr = group[i]
+            nxt = group[i + 1]
+            curr_start = float(curr.get("_start_q", 0.0))
+            curr_end = float(curr.get("_end_q", curr_start))
+            next_start = float(nxt.get("_start_q", 0.0))
+            max_end = next_start - MIN_NOTE_GAP_Q
+            if curr_end > max_end:
+                new_dur = max_end - curr_start
+                if new_dur <= MIN_NOTE_DUR_Q:
+                    curr["dur_q"] = MIN_NOTE_DUR_Q
+                else:
+                    curr["dur_q"] = new_dur
+
+    for n in notes:
+        if isinstance(n, dict):
+            n.pop("_start_q", None)
+            n.pop("_end_q", None)
+
+
+def rearticulate_long_notes(
+    notes: List[Dict[str, Any]],
+    time_sig: str,
+    profile: Dict[str, Any],
+    length_q: float,
+) -> List[Dict[str, Any]]:
+    family = str(profile.get("family", "")).lower()
+    if family not in STRINGS_FAMILIES:
+        logger.info("rearticulate_long_notes: skipping, family=%s", family)
+        return notes
+
+    quarters_per_bar = get_quarters_per_bar(time_sig)
+    if quarters_per_bar <= 0:
+        logger.info("rearticulate_long_notes: skipping, quarters_per_bar=%s", quarters_per_bar)
+        return notes
+
+    max_bow_q = max(MIN_NOTE_DUR_Q, min(quarters_per_bar, quarters_per_bar * float(ARRANGEMENT_MAX_NOTE_DUR_BARS)))
+    logger.info("rearticulate_long_notes: processing %d notes, max_bow_q=%.2f", len(notes), max_bow_q)
+
+    out: List[Dict[str, Any]] = []
+    for n in notes:
+        if not isinstance(n, dict):
+            continue
+        try:
+            start_q = float(n.get("start_q", 0.0))
+            dur_q = float(n.get("dur_q", MIN_NOTE_DUR_Q))
+        except (TypeError, ValueError):
+            continue
+        if dur_q <= max_bow_q:
+            out.append(n)
+            continue
+
+        remaining = dur_q
+        curr_start = start_q
+        max_iterations = int(dur_q / MIN_NOTE_DUR_Q) + 10
+        iteration = 0
+        while remaining > MIN_NOTE_DUR_Q and iteration < max_iterations:
+            iteration += 1
+            seg = min(max_bow_q, remaining)
+            if seg <= 0:
+                break
+            add_gap = remaining > seg and seg > (MIN_NOTE_DUR_Q + MIN_NOTE_GAP_Q)
+            if add_gap:
+                seg_dur = max(MIN_NOTE_DUR_Q, seg - MIN_NOTE_GAP_Q)
+            else:
+                seg_dur = max(MIN_NOTE_DUR_Q, seg)
+
+            new_note = dict(n)
+            new_note["start_q"] = curr_start
+            new_note["dur_q"] = min(seg_dur, max(MIN_NOTE_DUR_Q, length_q - curr_start))
+            out.append(new_note)
+
+            curr_start = curr_start + seg
+            remaining = dur_q - (curr_start - start_q)
+            if curr_start >= length_q - MIN_NOTE_DUR_Q:
+                break
+
+    out.sort(key=lambda x: (float(x.get("start_q", 0.0)), int(x.get("pitch", 60))))
+    return out
 
 
 def expand_pattern_notes(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -616,6 +874,9 @@ def build_response(
     source_instrument: str = "",
     is_ensemble: bool = False,
     current_role: str = "",
+    time_sig: str = "4/4",
+    arrangement_mode: bool = False,
+    source_sketch: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     midi_cfg = profile.get("midi", {})
     default_chan = int(midi_cfg.get("channel", 1))
@@ -643,12 +904,22 @@ def build_response(
     if notes_raw:
         clamp_short_articulation_durations(notes_raw, profile, raw.get("articulation"))
         clamp_wind_brass_durations(notes_raw, profile)
+        if arrangement_mode:
+            clamp_arrangement_note_durations(notes_raw, time_sig, source_sketch)
 
     has_per_note_articulations = free_mode and any(
         isinstance(n, dict) and n.get("articulation") for n in notes_raw
     )
 
+    logger.info("build_response: normalizing %d notes", len(notes_raw))
     notes = normalize_notes(notes_raw, length_q, default_chan, abs_range, fix_policy, mono)
+    logger.info("build_response: normalized to %d notes", len(notes))
+    if arrangement_mode:
+        logger.info("build_response: resolve_same_pitch_overlaps")
+        resolve_same_pitch_overlaps(notes)
+        logger.info("build_response: rearticulate_long_notes")
+        notes = rearticulate_long_notes(notes, time_sig, profile, length_q)
+        logger.info("build_response: rearticulated to %d notes", len(notes))
 
     if is_drum:
         drums_raw = raw.get("drums", [])
@@ -656,6 +927,7 @@ def build_response(
         notes.extend(normalize_drums(drums_raw, drum_map, length_q, default_chan))
 
     curves_raw = raw.get("curves", {})
+    curves_raw = ensure_per_note_dynamics(curves_raw, notes, length_q)
     cc_events = build_cc_events(curves_raw, profile, length_q, default_chan)
 
     articulation_cc: List[Dict[str, Any]] = []

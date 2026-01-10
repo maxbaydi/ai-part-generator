@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
@@ -177,6 +177,267 @@ CHORD_TYPES = {
     frozenset([0, 2, 7, 11, 14]): "maj9sus2",
     frozenset([0]): "note",
 }
+
+_CHORD_COMPLEXITY_SHARP_FLAT_CHARS = {"#", "b"}
+_CHORD_COMPLEXITY_DEGREE_DIGITS = {"6", "7", "9", "11", "13"}
+LILCHORD_MIN_CHORD_DUR_Q = 0.25
+LILCHORD_MIN_ARP_CHORD_DUR_Q = 0.1875
+LILCHORD_GAP_TOL_Q = 0.0625
+LILCHORD_DEGREES = ["I", "II", "II", "III", "III", "IV", "V", "V", "VI", "VI", "VII", "VII"]
+
+
+def _build_lilchord_key_nums(root_pitch: int, pitches: List[int]) -> List[int]:
+    if not pitches:
+        return []
+    intervals: set[int] = set()
+    for p in pitches:
+        try:
+            diff = int(p) - int(root_pitch)
+        except (TypeError, ValueError):
+            continue
+        intervals.add((diff % 12) + 1)
+    nums = sorted(intervals)
+    if not nums or nums[0] != 1:
+        nums = [1] + [n for n in nums if n != 1]
+    return nums
+
+
+def segment_chords_by_overlaps(
+    notes: List[Dict[str, Any]],
+    length_q: Optional[float] = None,
+    min_notes: int = 2,
+    min_dur_q: float = LILCHORD_MIN_ARP_CHORD_DUR_Q,
+) -> List[Dict[str, Any]]:
+    if not notes:
+        return []
+
+    def round_t(t: float) -> float:
+        return round(float(t), 6)
+
+    events: Dict[float, Dict[str, List[int]]] = {}
+    for n in notes:
+        if not isinstance(n, dict):
+            continue
+        try:
+            start_q = float(n.get("start_q", n.get("time_q", 0.0)))
+            dur_q = float(n.get("dur_q", 0.0))
+            pitch = int(n.get("pitch", 60))
+        except (TypeError, ValueError):
+            continue
+        if dur_q <= 0:
+            continue
+        end_q = start_q + dur_q
+        s = round_t(max(0.0, start_q))
+        e = round_t(max(s, end_q))
+        if e == s:
+            continue
+        events.setdefault(s, {"start": [], "end": []})["start"].append(pitch)
+        events.setdefault(e, {"start": [], "end": []})["end"].append(pitch)
+
+    if not events:
+        return []
+
+    active: Dict[int, int] = {}
+    segments: List[Dict[str, Any]] = []
+
+    times = sorted(events.keys())
+    prev_t: Optional[float] = None
+
+    for t in times:
+        if prev_t is not None:
+            dur = t - prev_t
+            if dur > 0 and dur >= float(min_dur_q):
+                pitches = [p for p, cnt in active.items() if cnt > 0]
+                if len(pitches) >= int(min_notes):
+                    segments.append({"start_q": prev_t, "end_q": t, "pitches": sorted(pitches)})
+
+        bucket = events.get(t, {})
+        for p in bucket.get("end", []):
+            cnt = active.get(p, 0) - 1
+            if cnt <= 0:
+                active.pop(p, None)
+            else:
+                active[p] = cnt
+        for p in bucket.get("start", []):
+            active[p] = active.get(p, 0) + 1
+
+        prev_t = t
+
+    if length_q is not None and prev_t is not None:
+        end_t = round_t(max(prev_t, float(length_q)))
+        dur = end_t - prev_t
+        if dur > 0 and dur >= float(min_dur_q):
+            pitches = [p for p, cnt in active.items() if cnt > 0]
+            if len(pitches) >= int(min_notes):
+                segments.append({"start_q": prev_t, "end_q": end_t, "pitches": sorted(pitches)})
+
+    merged: List[Dict[str, Any]] = []
+    for seg in segments:
+        if not merged:
+            merged.append(seg)
+            continue
+        prev = merged[-1]
+        if (
+            prev.get("pitches") == seg.get("pitches")
+            and float(seg["start_q"]) - float(prev["end_q"]) <= float(LILCHORD_GAP_TOL_Q)
+        ):
+            prev["end_q"] = seg["end_q"]
+        else:
+            merged.append(seg)
+
+    return merged
+
+
+def extract_chords_lilchord_style(
+    notes: List[Dict[str, Any]],
+    *,
+    min_notes: int = 2,
+    min_chord_dur_q: float = LILCHORD_MIN_CHORD_DUR_Q,
+    min_arp_chord_dur_q: float = LILCHORD_MIN_ARP_CHORD_DUR_Q,
+    gap_tol_q: float = LILCHORD_GAP_TOL_Q,
+) -> List[Dict[str, Any]]:
+    if not notes:
+        return []
+
+    note_events: List[Dict[str, float | int]] = []
+    for n in notes:
+        if not isinstance(n, dict):
+            continue
+        try:
+            start_q = float(n.get("start_q", n.get("time_q", 0.0)))
+            dur_q = float(n.get("dur_q", 0.0))
+            pitch = int(n.get("pitch", 60))
+        except (TypeError, ValueError):
+            continue
+        if dur_q <= 0:
+            continue
+        end_q = start_q + dur_q
+        note_events.append(
+            {
+                "sppq": max(0.0, start_q),
+                "eppq": max(max(0.0, start_q), end_q),
+                "pitch": pitch,
+            }
+        )
+
+    if not note_events:
+        return []
+
+    note_events.sort(key=lambda x: (float(x["sppq"]), int(x["pitch"])))
+
+    def build_overlap_segment(buf: List[Dict[str, float | int]]) -> Optional[Dict[str, Any]]:
+        if len(buf) < int(min_notes):
+            return None
+        max_s = max(float(n["sppq"]) for n in buf)
+        min_e = min(float(n["eppq"]) for n in buf)
+        if min_e - max_s <= 0:
+            return None
+        return {
+            "start_q": max_s,
+            "end_q": min_e,
+            "pitches": sorted({int(n["pitch"]) for n in buf}),
+        }
+
+    chords: List[Dict[str, Any]] = []
+    buf: List[Dict[str, float | int]] = []
+    chord_min_eppq: Optional[float] = None
+
+    for curr in note_events:
+        sppq = float(curr["sppq"])
+        eppq = float(curr["eppq"])
+
+        if chord_min_eppq is None or eppq < chord_min_eppq:
+            chord_min_eppq = eppq
+
+        if chord_min_eppq is not None and sppq >= chord_min_eppq:
+            new_buf: List[Dict[str, float | int]] = []
+
+            chord = build_overlap_segment(buf)
+            if chord and float(chord["end_q"]) - float(chord["start_q"]) >= float(min_chord_dur_q):
+                chords.append(chord)
+
+            chord_min_eppq = eppq
+            for n in buf:
+                if float(n["eppq"]) > sppq:
+                    new_buf.append(n)
+                    if float(n["eppq"]) < chord_min_eppq:
+                        chord_min_eppq = float(n["eppq"])
+            buf = new_buf
+        else:
+            chord = build_overlap_segment(buf)
+            if chord:
+                chord["end_q"] = min(float(chord["end_q"]), sppq)
+                if float(chord["end_q"]) - float(chord["start_q"]) >= float(min_arp_chord_dur_q):
+                    chords.append(chord)
+
+        buf.append(curr)
+
+    final_chord = build_overlap_segment(buf)
+    if final_chord and float(final_chord["end_q"]) - float(final_chord["start_q"]) >= float(min_arp_chord_dur_q):
+        chords.append(final_chord)
+
+    merged: List[Dict[str, Any]] = []
+    for ch in chords:
+        if not merged:
+            merged.append(ch)
+            continue
+        prev = merged[-1]
+        if (
+            prev.get("pitches") == ch.get("pitches")
+            and float(ch["start_q"]) - float(prev["end_q"]) <= float(gap_tol_q)
+        ):
+            prev["end_q"] = max(float(prev["end_q"]), float(ch["end_q"]))
+        else:
+            merged.append(ch)
+
+    return merged
+
+
+def get_chord_degree_lilchord(
+    chord_pitches: List[int],
+    chord_root_pc: int,
+    key_str: str,
+    *,
+    bass_pc: Optional[int] = None,
+) -> Optional[str]:
+    if not chord_pitches:
+        return None
+
+    scale_pcs = get_scale_pitch_classes(key_str)
+    chord_pcs = {(int(p) % 12) for p in chord_pitches}
+    if not chord_pcs.issubset(scale_pcs):
+        return None
+
+    key_root_pc, _ = parse_key(key_str)
+    diff = (int(chord_root_pc) - int(key_root_pc)) % 12
+    degree = LILCHORD_DEGREES[diff]
+    if not degree:
+        return None
+
+    scale_note_cnt = 0
+    third: Optional[int] = None
+    fifth: Optional[int] = None
+    for i in range(0, 12):
+        if (int(chord_root_pc) + i) % 12 in scale_pcs:
+            scale_note_cnt += 1
+            if scale_note_cnt == 3:
+                third = i
+            if scale_note_cnt == 5:
+                fifth = i
+                break
+
+    if third == 3:
+        degree = degree.lower()
+    if fifth == 6:
+        degree = degree + "o"
+    if fifth == 8:
+        degree = degree + "+"
+
+    if bass_pc is not None and int(bass_pc) % 12 != int(chord_root_pc) % 12:
+        inv_delta = (int(chord_root_pc) - int(bass_pc)) % 12
+        degree = degree + ("6" if inv_delta >= 8 else "64")
+
+    return degree
 
 CHORD_TENSIONS = {
     "b9": 1, "9": 2, "#9": 3,
@@ -523,6 +784,8 @@ def parse_key(key_str: str) -> Tuple[int, str]:
         return 0, "major"
 
     key_str = key_str.strip()
+    if "(" in key_str:
+        key_str = key_str.split("(", 1)[0].strip()
     key_lower = key_str.lower()
 
     for scale_name in SCALE_INTERVALS.keys():
@@ -662,16 +925,51 @@ def analyze_chord(pitches: List[int]) -> Tuple[str, Optional[int]]:
         root = pitches[0] % 12
         return NOTE_NAMES[root], root
 
+    bass_pitch = min(pitches)
+    bass_pc = bass_pitch % 12
     pitch_classes = sorted(set(p % 12 for p in pitches))
-    bass_pc = min(pitches) % 12
 
-    for root_pc in pitch_classes:
+    key_nums = _build_lilchord_key_nums(bass_pitch, pitches)
+    diffs = [0] + [int(k) - 1 for k in key_nums[1:]]
+
+    def chord_complexity(suffix: str) -> int:
+        s = str(suffix or "")
+        score = 0
+        if any(ch in s for ch in _CHORD_COMPLEXITY_SHARP_FLAT_CHARS):
+            score += 6
+        if "aug" in s:
+            score += 5
+        if "dim" in s:
+            score += 4
+        if "sus" in s:
+            score += 3
+        if "add" in s:
+            score += 3
+        if "(no" in s:
+            score += 2
+        for d in _CHORD_COMPLEXITY_DEGREE_DIGITS:
+            if d in s:
+                score += 1
+        if s == "note":
+            score += 20
+        return score
+
+    candidates: List[Tuple[int, int, str, int]] = []
+    for diff in diffs:
+        root_pc = (bass_pc + diff) % 12
         intervals = frozenset((pc - root_pc) % 12 for pc in pitch_classes)
-        if intervals in CHORD_TYPES:
-            chord_name = NOTE_NAMES[root_pc] + CHORD_TYPES[intervals]
-            if root_pc != bass_pc:
-                chord_name += "/" + NOTE_NAMES[bass_pc]
-            return chord_name, root_pc
+        suffix = CHORD_TYPES.get(intervals)
+        if suffix is None:
+            continue
+        chord_name = NOTE_NAMES[root_pc] + suffix
+        if diff != 0 and root_pc != bass_pc:
+            chord_name += "/" + NOTE_NAMES[bass_pc]
+        candidates.append((chord_complexity(suffix), 0 if diff == 0 else 1, chord_name, root_pc))
+
+    if candidates:
+        candidates.sort(key=lambda x: (x[0], x[1], len(x[2])))
+        _, _, best_name, best_root_pc = candidates[0]
+        return best_name, best_root_pc
 
     best_match = _find_best_chord_match(pitch_classes, bass_pc)
     if best_match:

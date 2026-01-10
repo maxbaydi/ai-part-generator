@@ -13,13 +13,21 @@ try:
         PROMPT_PITCH_PREVIEW_LIMIT,
     )
     from context_builder import (
+        analyze_harmony_progression,
+        build_chord_map_from_sketch,
         build_context_summary,
         build_ensemble_context,
         get_quarters_per_bar,
     )
-    from models import GenerateRequest
-    from music_theory import get_scale_note_names, get_scale_notes
-    from promts import BASE_SYSTEM_PROMPT, COMPOSITION_PLAN_SYSTEM_PROMPT, FREE_MODE_SYSTEM_PROMPT
+    from models import ArrangeRequest, GenerateRequest
+    from music_theory import get_scale_note_names, get_scale_notes, pitch_to_note
+    from promts import (
+        ARRANGEMENT_GENERATION_CONTEXT,
+        ARRANGEMENT_PLAN_SYSTEM_PROMPT,
+        BASE_SYSTEM_PROMPT,
+        COMPOSITION_PLAN_SYSTEM_PROMPT,
+        FREE_MODE_SYSTEM_PROMPT,
+    )
     from style import DYNAMICS_HINTS, MOOD_HINTS
     from type import ARTICULATION_HINTS, TYPE_HINTS
     from utils import safe_format
@@ -33,13 +41,21 @@ except ImportError:
         PROMPT_PITCH_PREVIEW_LIMIT,
     )
     from .context_builder import (
+        analyze_harmony_progression,
+        build_chord_map_from_sketch,
         build_context_summary,
         build_ensemble_context,
         get_quarters_per_bar,
     )
-    from .models import GenerateRequest
-    from .music_theory import get_scale_note_names, get_scale_notes
-    from .promts import BASE_SYSTEM_PROMPT, COMPOSITION_PLAN_SYSTEM_PROMPT, FREE_MODE_SYSTEM_PROMPT
+    from .models import ArrangeRequest, GenerateRequest
+    from .music_theory import get_scale_note_names, get_scale_notes, pitch_to_note
+    from .promts import (
+        ARRANGEMENT_GENERATION_CONTEXT,
+        ARRANGEMENT_PLAN_SYSTEM_PROMPT,
+        BASE_SYSTEM_PROMPT,
+        COMPOSITION_PLAN_SYSTEM_PROMPT,
+        FREE_MODE_SYSTEM_PROMPT,
+    )
     from .style import DYNAMICS_HINTS, MOOD_HINTS
     from .type import ARTICULATION_HINTS, TYPE_HINTS
     from .utils import safe_format
@@ -517,33 +533,74 @@ def build_prompt(
         user_prompt_parts.append(f"")
         user_prompt_parts.append(context_summary)
 
+    plan_data = {}
+    plan_chord_map = None
+    if request.free_mode and request.ensemble:
+        plan_data = request.ensemble.plan if isinstance(request.ensemble.plan, dict) else {}
+        plan_chord_map = plan_data.get("chord_map") if isinstance(plan_data, dict) else None
+
+    has_plan_chord_map = isinstance(plan_chord_map, list) and len(plan_chord_map) > 0
+
     ensemble_context = build_ensemble_context(
         request.ensemble,
         profile.get("name", ""),
         request.music.time_sig,
         length_q,
+        has_plan_chord_map=has_plan_chord_map,
     )
     if ensemble_context:
         user_prompt_parts.append(f"")
         user_prompt_parts.append(ensemble_context)
+
+    if request.ensemble and request.ensemble.arrangement_mode:
+        arrangement_context = build_arrangement_context(
+            request.ensemble,
+            profile.get("name", ""),
+            request.music.time_sig,
+            length_q,
+        )
+        if arrangement_context:
+            user_prompt_parts.append(f"")
+            user_prompt_parts.append(arrangement_context)
+
+    is_arrangement_mode = request.ensemble and request.ensemble.arrangement_mode
+    sketch_chord_map_str = ""
+    if is_arrangement_mode and request.ensemble.source_sketch:
+        sketch_notes = request.ensemble.source_sketch.get("notes", [])
+        if sketch_notes:
+            sketch_chord_map_str, _ = build_chord_map_from_sketch(
+                sketch_notes,
+                request.music.time_sig,
+                length_q,
+            )
+
     if request.free_mode and request.ensemble:
         plan_summary = (request.ensemble.plan_summary or "").strip()
-        plan_data = request.ensemble.plan if isinstance(request.ensemble.plan, dict) else {}
         section_overview = plan_data.get("section_overview") if isinstance(plan_data, dict) else None
         role_guidance = plan_data.get("role_guidance") if isinstance(plan_data, dict) else None
-        chord_map = plan_data.get("chord_map") if isinstance(plan_data, dict) else None
+        chord_map = plan_chord_map
         phrase_structure = plan_data.get("phrase_structure") if isinstance(plan_data, dict) else None
         accent_map = plan_data.get("accent_map") if isinstance(plan_data, dict) else None
         motif_blueprint = plan_data.get("motif_blueprint") if isinstance(plan_data, dict) else None
 
-        has_plan_content = plan_summary or section_overview or role_guidance or chord_map or phrase_structure
-        if has_plan_content:
+        has_plan_content = plan_summary or section_overview or role_guidance or phrase_structure
+        if has_plan_content or sketch_chord_map_str:
             user_prompt_parts.append(f"")
             user_prompt_parts.append("### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)")
             if plan_summary:
                 user_prompt_parts.append(plan_summary)
 
-            if isinstance(chord_map, list) and chord_map:
+            if is_arrangement_mode and sketch_chord_map_str:
+                user_prompt_parts.append("")
+                user_prompt_parts.append("**CHORD MAP (AUTO-DETECTED FROM SKETCH - MANDATORY):**")
+                user_prompt_parts.append(sketch_chord_map_str)
+                user_prompt_parts.append("CHORD MAP RULES:")
+                user_prompt_parts.append("- This CHORD MAP is auto-detected from the source sketch - follow it EXACTLY")
+                user_prompt_parts.append("- BASS: Play ROOT on beat 1 of each chord change")
+                user_prompt_parts.append("- HARMONY: Voice-lead smoothly, prioritize chord_tones on strong beats")
+                user_prompt_parts.append("- MELODY: Chord tones on downbeats, passing tones resolve to chord tones")
+                user_prompt_parts.append("- ALL: Switch to new chord tones at EXACTLY the time_q specified")
+            elif isinstance(chord_map, list) and chord_map:
                 user_prompt_parts.append("")
                 user_prompt_parts.append("**CHORD MAP (MANDATORY - ALL INSTRUMENTS MUST FOLLOW):**")
                 user_prompt_parts.append("```")
@@ -817,12 +874,19 @@ def build_prompt(
             f"",
             f"### THREE-LAYER DYNAMICS",
             f"1. VELOCITY (vel): Note attack intensity. Accent: 100-127, normal: 70-90, soft: 40-60",
-            f"2. CC11 EXPRESSION (curves.expression): GLOBAL section dynamics - overall arc of the passage",
-            f"   - Sets the macro-level: how loud is this section overall",
-            f"3. CC1 DYNAMICS (curves.dynamics): LOCAL note/phrase dynamics - internal movement",
-            f"   - For sustained notes: adds swells and fades within each note",
-            f"   - For phrases: adds breathing and local detail",
-            f"TIP: Choose a dynamic contour that fits the request - steady, gentle waves, build-climax, or any shape that serves the music.",
+            f"2. CC11 EXPRESSION (curves.expression): GLOBAL section dynamics - phrase/section envelope",
+            f"3. CC1 DYNAMICS (curves.dynamics): PER-NOTE breathing - CRITICAL for realism!",
+            f"",
+            f"CC1 TECHNIQUES FOR SUSTAINED NOTES (dur_q >= 1.0):",
+            f"- CRESCENDO (<): low→high - for phrase starts, building tension",
+            f"- DECRESCENDO (>): high→low - for phrase ends, resolution",
+            f"- SWELL (<>): rise→fall - most common for whole/half notes",
+            f"",
+            f"CC1 BREAKPOINTS - add for EACH sustained note:",
+            f"- dur_q >= 4.0 (whole): 4+ breakpoints with full swell",
+            f"- dur_q >= 2.0 (half): 3+ breakpoints",
+            f"- dur_q >= 1.0 (quarter): 2+ breakpoints",
+            f"- NEVER flat CC1 on sustained notes - sounds robotic!",
         ])
     else:
         short_articulations = profile.get("articulations", {}).get("short_articulations", [])
@@ -841,10 +905,9 @@ def build_prompt(
             f"",
             f"### THREE-LAYER DYNAMICS",
             f"1. VELOCITY: {velocity_hint}",
-            f"2. EXPRESSION + DYNAMICS: {dynamics_hint}",
-            f"   - Expression (CC11): GLOBAL arc of the section",
-            f"   - Dynamics (CC1): LOCAL swells/fades within notes and phrases",
-            f"   - TIP: Match dynamic shape to the requested mood and style.",
+            f"2. CC11 EXPRESSION: GLOBAL section envelope",
+            f"3. CC1 DYNAMICS: PER-NOTE breathing (cresc/decresc/swell for each sustained note)",
+            f"   - {dynamics_hint}",
         ])
 
     tempo_guidance = build_tempo_change_guidance(request, length_q)
@@ -986,3 +1049,284 @@ def build_chat_messages(system_prompt: str, user_prompt: str) -> List[Dict[str, 
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
+
+
+SKETCH_NOTES_LIMIT = 5000
+SKETCH_NOTES_PREVIEW = 1000
+SKETCH_CC_EVENTS_LIMIT = 3000
+
+
+def format_sketch_notes(notes: List[Dict[str, Any]], time_sig: str = "4/4", limit: int = SKETCH_NOTES_LIMIT) -> str:
+    if not notes:
+        return "(no notes)"
+
+    sorted_notes = sorted(notes, key=lambda n: (n.get("start_q", 0), -n.get("pitch", 60)))
+    limited = sorted_notes[:limit]
+
+    quarters_per_bar = get_quarters_per_bar(time_sig)
+
+    lines = ["```"]
+    lines.append("time_q | bar.beat | pitch | note | dur_q | vel | chan")
+    lines.append("-------|----------|-------|------|-------|-----|-----")
+
+    for note in limited:
+        start_q = note.get("start_q", 0)
+        pitch = note.get("pitch", 60)
+        dur_q = note.get("dur_q", 1.0)
+        vel = note.get("vel", 80)
+        chan = note.get("chan", 1)
+        note_name = pitch_to_note(pitch)
+        bar = int(float(start_q) // quarters_per_bar) + 1 if quarters_per_bar > 0 else 1
+        beat_q = (float(start_q) % quarters_per_bar) + 1.0 if quarters_per_bar > 0 else 1.0
+        bar_beat = f"{bar}.{beat_q:.2f}"
+        lines.append(f"{float(start_q):6.2f} | {bar_beat:8} | {int(pitch):5} | {note_name:4} | {float(dur_q):5.2f} | {int(vel):3} | {int(chan):3}")
+
+    lines.append("```")
+
+    if len(sorted_notes) > limit:
+        lines.append(f"... and {len(sorted_notes) - limit} more notes")
+
+    return "\n".join(lines)
+
+
+def format_sketch_notes_compact(notes: List[Dict[str, Any]], limit: int = SKETCH_NOTES_PREVIEW) -> str:
+    if not notes:
+        return "(no notes)"
+
+    sorted_notes = sorted(notes, key=lambda n: n.get("start_q", 0))
+    limited = sorted_notes[:limit]
+
+    entries = []
+    for note in limited:
+        start_q = note.get("start_q", 0)
+        pitch = note.get("pitch", 60)
+        note_name = pitch_to_note(pitch)
+        entries.append(f"{start_q:.1f}:{note_name}")
+
+    result = ", ".join(entries)
+    if len(sorted_notes) > limit:
+        result += f" ...({len(sorted_notes)} total)"
+
+    return result
+
+
+def format_sketch_cc_segments(
+    cc_events: List[Dict[str, Any]],
+    length_q: float,
+    limit: int = SKETCH_CC_EVENTS_LIMIT,
+) -> Tuple[str, str]:
+    if not cc_events:
+        return "(no cc events)", "(none)"
+
+    events: List[Dict[str, Any]] = []
+    controllers: set[int] = set()
+
+    for evt in cc_events[:limit]:
+        if not isinstance(evt, dict):
+            continue
+        try:
+            time_q = float(evt.get("time_q", evt.get("start_q", 0.0)))
+            cc = int(evt.get("cc", evt.get("controller", -1)))
+            value = int(evt.get("value", evt.get("val", 0)))
+            chan = int(evt.get("chan", 1))
+        except (TypeError, ValueError):
+            continue
+        if cc < 0 or cc > 127:
+            continue
+        controllers.add(cc)
+        events.append(
+            {
+                "time_q": max(0.0, time_q),
+                "cc": cc,
+                "value": max(0, min(127, value)),
+                "chan": max(1, min(16, chan)),
+            }
+        )
+
+    if not events:
+        return "(no cc events)", "(none)"
+
+    events.sort(key=lambda e: (e["cc"], e["chan"], e["time_q"], e["value"]))
+
+    by_key: Dict[Tuple[int, int], List[Dict[str, Any]]] = {}
+    for e in events:
+        by_key.setdefault((e["cc"], e["chan"]), []).append(e)
+
+    lines = ["```"]
+    for (cc, chan) in sorted(by_key.keys()):
+        group = sorted(by_key[(cc, chan)], key=lambda e: e["time_q"])
+        lines.append(f"CC{cc} ch{chan}")
+        lines.append("start_q | end_q | dur_q | value")
+        lines.append("--------|-------|-------|------")
+        for idx, e in enumerate(group):
+            start_q = float(e["time_q"])
+            if idx + 1 < len(group):
+                end_q = float(group[idx + 1]["time_q"])
+            else:
+                end_q = float(length_q)
+            if end_q < start_q:
+                end_q = start_q
+            dur_q = end_q - start_q
+            lines.append(f"{start_q:7.3f} | {end_q:5.3f} | {dur_q:5.3f} | {int(e['value']):4}")
+        lines.append("")
+    lines.append("```")
+
+    controllers_str = ", ".join(f"CC{cc}" for cc in sorted(controllers))
+    return "\n".join(lines), controllers_str
+
+
+def build_arrange_plan_prompt(request: ArrangeRequest, length_q: float) -> Tuple[str, str]:
+    system_prompt = ARRANGEMENT_PLAN_SYSTEM_PROMPT
+
+    quarters_per_bar = get_quarters_per_bar(request.music.time_sig)
+    bars = max(1, int(length_q / quarters_per_bar))
+
+    sketch_notes = request.source_sketch.notes if request.source_sketch else []
+    sketch_track_name = request.source_sketch.track_name if request.source_sketch else "Unknown"
+    sketch_cc_events = request.source_sketch.cc_events if request.source_sketch else []
+    cc_formatted, cc_controllers = format_sketch_cc_segments(sketch_cc_events or [], length_q)
+
+    pitches = [n.get("pitch", 60) for n in sketch_notes] if sketch_notes else [60]
+    min_pitch = min(pitches)
+    max_pitch = max(pitches)
+
+    harmony_progression, detected_key = analyze_harmony_progression(
+        sketch_notes,
+        request.music.time_sig,
+        length_q,
+    )
+    if not harmony_progression:
+        harmony_progression = "(no chord changes detected)"
+
+    user_prompt_parts = [
+        "## ARRANGEMENT PLAN",
+        "Analyze this piano sketch and create an orchestration plan.",
+        "",
+        "### SOURCE SKETCH",
+        f"Track: {sketch_track_name}",
+        f"Total notes: {len(sketch_notes)}",
+        f"Pitch range: {pitch_to_note(min_pitch)} to {pitch_to_note(max_pitch)} (MIDI {min_pitch}-{max_pitch})",
+        "",
+        "**Full sketch content:**",
+        format_sketch_notes(sketch_notes, request.music.time_sig),
+        "",
+        f"**Full sketch CC controllers:** {cc_controllers}",
+        cc_formatted,
+        "",
+        "### DETECTED HARMONY (from sketch analysis)",
+        f"Detected key: {detected_key}",
+        f"Chord progression: {harmony_progression}",
+        "",
+        "**NOTE**: CHORD_MAP will be auto-generated from this harmony. You do NOT need to create chord_map.",
+        "",
+        "### MUSICAL CONTEXT",
+        f"- Key: {request.music.key} (project setting) / {detected_key} (detected from sketch)",
+        f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
+        f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
+    ]
+
+    if request.target_instruments:
+        user_prompt_parts.append("")
+        user_prompt_parts.append("### TARGET INSTRUMENTS (to arrange for)")
+        user_prompt_parts.append("Decide how to distribute the sketch material among these instruments:")
+        user_prompt_parts.append("")
+
+        for inst in request.target_instruments:
+            track = inst.track_name or ""
+            profile_name = inst.profile_name or ""
+            if track and profile_name and track != profile_name:
+                name = f"{track} ({profile_name})"
+            else:
+                name = track or profile_name or "Unknown"
+            family = inst.family or "unknown"
+            range_info = inst.range or {}
+            preferred_range = range_info.get("preferred", [])
+
+            detail_parts = [f"family: {family}"]
+            if preferred_range:
+                detail_parts.append(f"range: {preferred_range[0]}-{preferred_range[1]}")
+            detail = ", ".join(detail_parts)
+
+            user_prompt_parts.append(f"- {inst.index}. **{name}** ({detail})")
+
+    user_prompt_parts.append("")
+    user_prompt_parts.append("### ARRANGEMENT TASKS")
+    user_prompt_parts.append("1. ANALYZE the sketch - identify melody, harmony, bass, rhythm layers")
+    user_prompt_parts.append("2. ASSIGN each layer to appropriate instrument(s)")
+    user_prompt_parts.append("3. Specify VERBATIM LEVEL: how closely each instrument follows the original")
+    user_prompt_parts.append("4. Order instruments for GENERATION (melody first, then bass, then harmony...)")
+
+    if request.user_prompt and request.user_prompt.strip():
+        user_prompt_parts.append("")
+        user_prompt_parts.append("### USER REQUEST (style guidance for the arrangement)")
+        user_prompt_parts.append(request.user_prompt.strip())
+
+    user_prompt_parts.extend([
+        "",
+        "### OUTPUT (valid JSON only):",
+    ])
+
+    user_prompt = "\n".join(user_prompt_parts)
+    return system_prompt, user_prompt
+
+
+def build_arrangement_context(
+    ensemble: Any,
+    current_profile_name: str,
+    time_sig: str = "4/4",
+    length_q: float = 16.0,
+) -> str:
+    if not ensemble or not ensemble.arrangement_mode:
+        return ""
+
+    source_sketch = ensemble.source_sketch
+    if not source_sketch or not isinstance(source_sketch, dict):
+        return ""
+
+    sketch_notes = source_sketch.get("notes", [])
+    sketch_track_name = source_sketch.get("track_name", "Sketch")
+    sketch_cc_events = source_sketch.get("cc_events", [])
+    assignment = ensemble.arrangement_assignment or {}
+
+    role = assignment.get("role", "unknown")
+    material_source = assignment.get("material_source", "Extract appropriate material from sketch")
+    adaptation_notes = assignment.get("adaptation_notes", "Adapt to instrument idiom")
+    verbatim_level = assignment.get("verbatim_level", "medium")
+    register_adjustment = assignment.get("register_adjustment", "none")
+
+    quarters_per_bar = get_quarters_per_bar(time_sig)
+    max_dur_by_bars_q = quarters_per_bar * 2.0
+    sketch_max_dur_q = 0.0
+    if isinstance(sketch_notes, list) and sketch_notes:
+        for n in sketch_notes:
+            if not isinstance(n, dict):
+                continue
+            try:
+                dur_q = float(n.get("dur_q", 0.0))
+            except (TypeError, ValueError):
+                continue
+            if dur_q > sketch_max_dur_q:
+                sketch_max_dur_q = dur_q
+    arrangement_max_dur_q = min(max_dur_by_bars_q, sketch_max_dur_q) if sketch_max_dur_q > 0 else max_dur_by_bars_q
+
+    cc_formatted, cc_controllers = format_sketch_cc_segments(
+        sketch_cc_events if isinstance(sketch_cc_events, list) else [],
+        length_q,
+    )
+
+    context = ARRANGEMENT_GENERATION_CONTEXT.format(
+        source_track_name=sketch_track_name,
+        note_count=len(sketch_notes),
+        sketch_notes_formatted=format_sketch_notes(sketch_notes, time_sig),
+        sketch_cc_formatted=cc_formatted,
+        sketch_cc_controllers=cc_controllers,
+        sketch_max_dur_q=round(sketch_max_dur_q, 3) if sketch_max_dur_q > 0 else "unknown",
+        arrangement_max_dur_q=round(arrangement_max_dur_q, 3),
+        role=role,
+        material_source=material_source,
+        adaptation_notes=adaptation_notes,
+        verbatim_level=verbatim_level,
+        register_adjustment=register_adjustment or "none",
+    )
+
+    return context

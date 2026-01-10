@@ -95,6 +95,21 @@ class GeneratedMotif(BaseModel):
     character: str = ""
 
 
+class SourceSketch(BaseModel):
+    track_name: str = ""
+    notes: List[Dict[str, Any]] = Field(default_factory=list)
+    cc_events: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class ArrangementAssignment(BaseModel):
+    instrument: str = ""
+    role: str = ""
+    material_description: str = ""
+    adaptation_notes: str = ""
+    source_pitch_range: Optional[List[int]] = None
+    verbatim_level: str = "medium"
+
+
 class EnsembleInfo(BaseModel):
     total_instruments: int = 1
     instruments: List[EnsembleInstrument] = Field(default_factory=list)
@@ -108,6 +123,9 @@ class EnsembleInfo(BaseModel):
     is_sequential: bool = False
     previously_generated: List[Dict[str, Any]] = Field(default_factory=list)
     generated_motif: Optional[Dict[str, Any]] = None
+    arrangement_mode: bool = False
+    source_sketch: Optional[Dict[str, Any]] = None
+    arrangement_assignment: Optional[Dict[str, Any]] = None
 
 
 class GenerateRequest(BaseModel):
@@ -120,6 +138,16 @@ class GenerateRequest(BaseModel):
     generation_style: Optional[str] = None
     free_mode: bool = False
     allow_tempo_changes: bool = False
+    user_prompt: str = ""
+    model: Optional[ModelInfo] = None
+
+
+class ArrangeRequest(BaseModel):
+    time: TimeWindow
+    music: MusicInfo
+    source_sketch: SourceSketch
+    target_instruments: List[EnsembleInstrument] = Field(default_factory=list)
+    context: Optional[ContextInfo] = None
     user_prompt: str = ""
     model: Optional[ModelInfo] = None
 
