@@ -68,12 +68,22 @@ class EnsembleInstrument(BaseModel):
     description: str = ""
 
 
+class PartHandoff(BaseModel):
+    musical_function: str = Field(default="", description="What role did this part play: rhythmic_foundation, harmonic_pad, melodic_lead, etc.")
+    occupied_range: str = Field(default="", description="Frequency range occupied: low, low_mid, mid, high_mid, high, wide")
+    rhythmic_feel: str = Field(default="", description="Rhythmic character: sustained, sparse, steady_pulse, syncopated, dense, arpeggiated")
+    intensity_curve: str = Field(default="", description="Dynamic trajectory: static, building, climax, fading, arc")
+    gaps_for_others: str = Field(default="", description="What space was left for other instruments")
+    suggestion_for_next: str = Field(default="", description="Advice for the next instrument to generate")
+
+
 class GeneratedPartInfo(BaseModel):
     track_name: str = ""
     profile_name: str = ""
     role: str = "unknown"
     notes: List[Dict[str, Any]] = Field(default_factory=list)
     cc_events: List[Dict[str, Any]] = Field(default_factory=list)
+    handoff: Optional[PartHandoff] = None
 
 
 class GeneratedMotif(BaseModel):

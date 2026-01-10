@@ -103,6 +103,8 @@ def generate(request: GenerateRequest) -> JSONResponse:
 
     should_extract_motif = False
     source_instrument = ""
+    current_role = ""
+    is_ensemble = bool(request.ensemble and request.ensemble.total_instruments > 1)
     if request.free_mode and request.ensemble:
         current_inst = request.ensemble.current_instrument or {}
         current_role = str(current_inst.get("role", "")).lower()
@@ -122,15 +124,18 @@ def generate(request: GenerateRequest) -> JSONResponse:
         request.user_prompt or "",
         extract_motif=should_extract_motif,
         source_instrument=source_instrument,
+        is_ensemble=is_ensemble,
+        current_role=current_role,
     )
     logger.info(
-        "Response built: notes=%d cc_events=%d keyswitches=%d program_changes=%d articulation=%s motif=%s",
+        "Response built: notes=%d cc_events=%d keyswitches=%d program_changes=%d articulation=%s motif=%s handoff=%s",
         len(response.get("notes", [])),
         len(response.get("cc_events", [])),
         len(response.get("keyswitches", [])),
         len(response.get("program_changes", [])),
         response.get("articulation"),
         "yes" if response.get("extracted_motif") else "no",
+        "yes" if response.get("handoff") else "no",
     )
     return JSONResponse(content=response)
 

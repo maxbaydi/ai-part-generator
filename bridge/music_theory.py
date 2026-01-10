@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -558,6 +558,11 @@ def get_scale_notes(key_str: str, pitch_low: int, pitch_high: int) -> List[int]:
 
     scale_pcs = set((root_pc + i) % 12 for i in intervals)
 
+    if scale_type in ("minor", "natural minor", "aeolian"):
+        harmonic_intervals = SCALE_INTERVALS.get("harmonic minor", [])
+        for i in harmonic_intervals:
+            scale_pcs.add((root_pc + i) % 12)
+
     valid_pitches = []
     for pitch in range(pitch_low, pitch_high + 1):
         if pitch % 12 in scale_pcs:
@@ -569,7 +574,14 @@ def get_scale_notes(key_str: str, pitch_low: int, pitch_high: int) -> List[int]:
 def get_scale_pitch_classes(key_str: str) -> Set[int]:
     root_pc, scale_type = parse_key(key_str)
     intervals = SCALE_INTERVALS.get(scale_type, SCALE_INTERVALS["major"])
-    return set((root_pc + i) % 12 for i in intervals)
+    scale_pcs = set((root_pc + i) % 12 for i in intervals)
+
+    if scale_type in ("minor", "natural minor", "aeolian"):
+        harmonic_intervals = SCALE_INTERVALS.get("harmonic minor", [])
+        for i in harmonic_intervals:
+            scale_pcs.add((root_pc + i) % 12)
+
+    return scale_pcs
 
 
 def get_scale_note_names(key_str: str) -> str:
@@ -580,6 +592,14 @@ def get_scale_note_names(key_str: str) -> str:
     for interval in intervals:
         pc = (root_pc + interval) % 12
         note_names.append(NOTE_NAMES[pc])
+
+    if scale_type in ("minor", "natural minor", "aeolian"):
+        raised_7th = (root_pc + 11) % 12
+        natural_7th_name = NOTE_NAMES[(root_pc + 10) % 12]
+        raised_7th_name = NOTE_NAMES[raised_7th]
+        if natural_7th_name in note_names:
+            idx = note_names.index(natural_7th_name)
+            note_names[idx] = f"{natural_7th_name}/{raised_7th_name}"
 
     return ", ".join(note_names)
 

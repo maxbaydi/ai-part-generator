@@ -216,6 +216,23 @@ local function get_time_signature_at_time(time_sec)
   return num, denom
 end
 
+local function validate_time_signature(num, denom)
+  local num_int = tonumber(num)
+  local denom_int = tonumber(denom)
+  if not num_int or not denom_int then
+    return nil, nil
+  end
+  num_int = math.floor(num_int)
+  denom_int = math.floor(denom_int)
+  if num_int < const.TIME_SIG_MIN_NUM or num_int > const.TIME_SIG_MAX_NUM then
+    return nil, nil
+  end
+  if not const.TIME_SIG_VALID_DENOM[denom_int] then
+    return nil, nil
+  end
+  return num_int, denom_int
+end
+
 local function normalize_tempo_markers(markers, length_q)
   if type(markers) ~= "table" then
     return {}
@@ -224,12 +241,28 @@ local function normalize_tempo_markers(markers, length_q)
   for _, marker in ipairs(markers) do
     if type(marker) == "table" then
       local time_q = tonumber(marker.time_q) or tonumber(marker.start_q) or tonumber(marker.time) or 0
+      time_q = math.max(0, math.min(length_q, time_q))
+
       local bpm = tonumber(marker.bpm) or tonumber(marker.tempo)
       if bpm then
-        time_q = math.max(0, math.min(length_q, time_q))
         bpm = math.max(const.TEMPO_MARKER_MIN_BPM, math.min(const.TEMPO_MARKER_MAX_BPM, bpm))
+      end
+
+      local num_raw = marker.num or marker.numerator or marker.time_sig_num
+      local denom_raw = marker.denom or marker.denominator or marker.time_sig_denom
+      local num, denom = validate_time_signature(num_raw, denom_raw)
+
+      if bpm or num then
         local linear = marker.linear == true or marker.ramp == true
-        table.insert(cleaned, { time_q = time_q, bpm = bpm, linear = linear })
+        local entry = { time_q = time_q, linear = linear }
+        if bpm then
+          entry.bpm = bpm
+        end
+        if num and denom then
+          entry.num = num
+          entry.denom = denom
+        end
+        table.insert(cleaned, entry)
       end
     end
   end
@@ -284,13 +317,18 @@ local function apply_tempo_markers(markers, start_sec, end_sec)
   for _, marker in ipairs(normalized) do
     local target_qn = selection_start_qn + marker.time_q
     local timepos = reaper.TimeMap2_QNToTime(0, target_qn)
-    local num, denom = get_time_signature_at_time(timepos)
+    local current_num, current_denom = get_time_signature_at_time(timepos)
+    local use_num = marker.num or current_num
+    local use_denom = marker.denom or current_denom
+    local use_bpm = marker.bpm or -1
     table.insert(prepared, {
       timepos = timepos,
-      bpm = marker.bpm,
-      num = num,
-      denom = denom,
+      bpm = use_bpm,
+      num = use_num,
+      denom = use_denom,
       linear = marker.linear,
+      has_bpm = marker.bpm ~= nil,
+      has_time_sig = marker.num ~= nil and marker.denom ~= nil,
     })
   end
 
@@ -298,8 +336,11 @@ local function apply_tempo_markers(markers, start_sec, end_sec)
   for _, p in ipairs(prepared) do
     local idx = find_tempo_marker_index(p.timepos)
     reaper.SetTempoTimeSigMarker(0, idx or -1, p.timepos, -1, -1, p.bpm, p.num, p.denom, p.linear and true or false)
-    if first_bpm == nil then
+    if first_bpm == nil and p.has_bpm then
       first_bpm = p.bpm
+    end
+    if p.has_time_sig then
+      utils.log(string.format("apply_tempo_markers: time_sig changed to %d/%d at %.2f", p.num, p.denom, p.timepos))
     end
   end
 

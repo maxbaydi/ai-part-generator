@@ -242,6 +242,51 @@ def build_articulation_list_for_prompt(profile: Dict[str, Any]) -> str:
     return "\n".join(result_parts)
 
 
+def build_pattern_guidance(profile: Dict[str, Any], generation_type: str, bars: int) -> List[str]:
+    is_drum = bool(profile.get("midi", {}).get("is_drum", False))
+    family = str(profile.get("family", "")).lower()
+    gen_lower = str(generation_type or "").lower()
+
+    is_percussion_family = family in ("drums", "percussion", "perc")
+    is_repetitive_type = any(t in gen_lower for t in ("ostinato", "rhythm", "accomp", "arpeggio", "bass"))
+
+    try:
+        bars_int = int(bars)
+    except (TypeError, ValueError):
+        bars_int = 0
+
+    if not (is_drum or is_percussion_family or is_repetitive_type or bars_int >= 4):
+        return []
+
+    lines = ["### PATTERN CLONING (use for repetitive content)"]
+
+    if is_drum or is_percussion_family:
+        lines.extend([
+            "⚠️ DRUMS/PERCUSSION: You MUST use patterns/repeats for grooves!",
+            "DO NOT duplicate the same notes bar after bar manually.",
+            "",
+            "EXAMPLE for drum groove:",
+            '  "patterns": [{"id": "groove", "length_q": 4, "notes": [...one bar of notes...]}],',
+            '  "repeats": [{"pattern": "groove", "start_q": 0, "times": N, "step_q": 4}],',
+            '  "notes": []  // empty - all notes come from patterns',
+        ])
+    elif is_repetitive_type:
+        lines.extend([
+            "For repetitive figures (ostinatos, arpeggios, bass lines) - USE patterns/repeats!",
+            "Define the pattern once, then repeat it. Much more efficient than duplicating notes.",
+            "",
+            'EXAMPLE: "patterns": [{"id": "ost", "length_q": 2, "notes": [...]}],',
+            '         "repeats": [{"pattern": "ost", "start_q": 0, "times": 16, "step_q": 2}]',
+        ])
+    else:
+        lines.extend([
+            f"For {bars_int} bars - consider using patterns/repeats if your figure repeats.",
+            "This keeps JSON compact and ensures consistent timing.",
+        ])
+
+    return lines
+
+
 def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> List[str]:
     if not request.allow_tempo_changes:
         return []
@@ -250,21 +295,39 @@ def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> Li
         generation_order = int(request.ensemble.generation_order or 0)
         if generation_order > 1:
             return [
-                "### TEMPO CHANGES",
-                "Tempo changes are already defined by an earlier part.",
+                "### TEMPO/TIME SIGNATURE CHANGES",
+                "Tempo and time signature changes are already defined by an earlier part.",
                 "DO NOT output tempo_markers for this response.",
             ]
 
     length_hint = round(float(length_q or 0.0), 2)
+    current_bpm = request.music.bpm
+    current_time_sig = request.music.time_sig
     lines = [
-        "### TEMPO CHANGES (optional)",
-        "You may include tempo changes across the selection.",
-        "Use top-level tempo_markers: [{\"time_q\": 0, \"bpm\": 120, \"linear\": false}, ...].",
-        f"time_q is in quarter notes from the selection start (0..{length_hint}).",
-        "Keep markers in ascending order, 1-4 markers max.",
-        "linear=true means a smooth ramp to the next marker; false means an immediate change.",
+        "### TEMPO & TIME SIGNATURE CHANGES (optional but encouraged)",
+        f"Current tempo: {current_bpm} BPM, time signature: {current_time_sig}",
+        "You MAY change both tempo AND time signature if it serves the music.",
+        "",
+        "FORMAT: tempo_markers: [{\"time_q\": 0, \"bpm\": 120, \"num\": 4, \"denom\": 4, \"linear\": false}, ...]",
+        "",
+        "FIELDS:",
+        f"- time_q: position in quarter notes (0..{length_hint})",
+        "- bpm: tempo (optional, omit to keep current tempo at that point)",
+        "- num/denom: time signature numerator/denominator (optional, e.g. num:3, denom:4 for 3/4)",
+        "- linear: true for gradual tempo ramp, false for instant change (default: false)",
+        "",
+        "EXAMPLES:",
+        "- Change tempo at start: [{\"time_q\": 0, \"bpm\": 90}]",
+        "- Change time signature: [{\"time_q\": 0, \"num\": 3, \"denom\": 4}]",
+        "- Change both: [{\"time_q\": 0, \"bpm\": 90, \"num\": 6, \"denom\": 8}]",
+        "- Multiple changes: [{\"time_q\": 0, \"bpm\": 80}, {\"time_q\": 16, \"bpm\": 100, \"linear\": true}]",
+        "",
+        "COMMON TIME SIGNATURES: 4/4, 3/4, 6/8, 12/8, 2/4, 5/4, 7/8",
+        "Use time signature changes for: waltz feel (3/4), compound meter (6/8, 12/8), mixed meter sections.",
+        "Keep markers in ascending order by time_q. Max 4-6 markers.",
     ]
     if request.ensemble and request.ensemble.is_sequential:
+        lines.append("")
         lines.append("IMPORTANT: Only output tempo_markers for the FIRST instrument in sequential generation.")
     return lines
 
@@ -789,6 +852,11 @@ def build_prompt(
         user_prompt_parts.append(f"")
         user_prompt_parts.extend(tempo_guidance)
 
+    pattern_guidance = build_pattern_guidance(profile, generation_type, bars)
+    if pattern_guidance:
+        user_prompt_parts.append(f"")
+        user_prompt_parts.extend(pattern_guidance)
+
     if request.user_prompt and request.user_prompt.strip():
         user_prompt_parts.append(f"")
         user_prompt_parts.append(f"### USER REQUEST (PRIORITY - follow these instructions, they override defaults):")
@@ -815,6 +883,16 @@ def build_prompt(
                 f"### INSTRUMENT CURVES (use these curve names):",
                 f"{custom_curves_info}",
             ])
+
+    is_ensemble = request.ensemble and request.ensemble.total_instruments > 1
+    if request.free_mode and is_ensemble:
+        user_prompt_parts.extend([
+            f"",
+            f"### HANDOFF REQUIREMENT (MANDATORY for ensemble)",
+            f"You MUST include a 'handoff' object in your JSON response.",
+            f"This helps the next musician understand your contribution and find their place.",
+            f"Focus on: what space you occupied, what you left open, and advice for the next instrument.",
+        ])
 
     user_prompt_parts.extend([
         f"",

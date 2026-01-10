@@ -66,9 +66,26 @@ CC_TREND_MIN_DELTA = 8
 CC_TREND_MIN_EVENTS = 4
 NOTE_CONTEXT_PREVIEW_LIMIT = 30
 ARTICULATION_CHANGE_PREVIEW_LIMIT = 6
+SIMPLIFIED_MIDI_MAP_LIMIT = 40
+HANDOFF_SUGGESTION_MAX_LEN = 150
 CC_LABELS = {
     1: "Dynamics",
     11: "Expression",
+}
+
+FREQUENCY_RANGES = {
+    "low": (0, 48),
+    "low_mid": (48, 60),
+    "mid": (60, 72),
+    "high_mid": (72, 84),
+    "high": (84, 127),
+}
+
+RHYTHMIC_FEEL_THRESHOLDS = {
+    "sustained": 2.0,
+    "sparse": 0.5,
+    "steady_pulse": 1.0,
+    "dense": 4.0,
 }
 
 
@@ -464,6 +481,200 @@ def compress_changes(changes: List[Tuple[float, str]]) -> List[str]:
     return seq
 
 
+def build_simplified_midi_map(
+    notes: List[Dict[str, Any]],
+    max_notes: int = SIMPLIFIED_MIDI_MAP_LIMIT,
+    quantize_to: float = 0.25,
+) -> str:
+    if not notes:
+        return ""
+    sorted_notes = sorted(notes, key=lambda n: n.get("start_q", 0))
+    limited = sorted_notes[:max_notes]
+    entries = []
+    for note in limited:
+        start_q = note.get("start_q", 0)
+        pitch = note.get("pitch", 60)
+        quantized_start = round(start_q / quantize_to) * quantize_to
+        note_name = pitch_to_note(pitch)
+        entries.append(f"{quantized_start:.2f}:{note_name}")
+    result = ", ".join(entries)
+    if len(sorted_notes) > max_notes:
+        result += f" ...({len(sorted_notes) - max_notes} more)"
+    return result
+
+
+def detect_occupied_range(notes: List[Dict[str, Any]]) -> str:
+    if not notes:
+        return "unknown"
+    pitches = [n.get("pitch", 60) for n in notes]
+    min_pitch = min(pitches)
+    max_pitch = max(pitches)
+    avg_pitch = sum(pitches) / len(pitches)
+    pitch_span = max_pitch - min_pitch
+    if pitch_span > 24:
+        return "wide"
+    for range_name, (low, high) in FREQUENCY_RANGES.items():
+        if low <= avg_pitch < high:
+            return range_name
+    return "mid"
+
+
+def detect_rhythmic_feel(notes: List[Dict[str, Any]], length_q: float) -> str:
+    if not notes or length_q <= 0:
+        return "unknown"
+    note_count = len(notes)
+    notes_per_quarter = note_count / length_q
+    avg_dur = sum(n.get("dur_q", 1.0) for n in notes) / note_count if note_count else 1.0
+    if avg_dur >= RHYTHMIC_FEEL_THRESHOLDS["sustained"]:
+        return "sustained"
+    if notes_per_quarter <= RHYTHMIC_FEEL_THRESHOLDS["sparse"]:
+        return "sparse"
+    if notes_per_quarter >= RHYTHMIC_FEEL_THRESHOLDS["dense"]:
+        return "dense"
+    sorted_notes = sorted(notes, key=lambda n: n.get("start_q", 0))
+    starts = [n.get("start_q", 0) for n in sorted_notes]
+    if len(starts) >= 4:
+        intervals = [starts[i+1] - starts[i] for i in range(len(starts)-1)]
+        avg_interval = sum(intervals) / len(intervals) if intervals else 1.0
+        variance = sum((i - avg_interval) ** 2 for i in intervals) / len(intervals) if intervals else 0
+        if variance < 0.1:
+            return "steady_pulse"
+        if any(abs(i - round(i * 2) / 2) > 0.1 for i in starts[:8]):
+            return "syncopated"
+    return "moderate"
+
+
+def detect_intensity_curve(notes: List[Dict[str, Any]]) -> str:
+    if not notes or len(notes) < 4:
+        return "static"
+    sorted_notes = sorted(notes, key=lambda n: n.get("start_q", 0))
+    velocities = [n.get("vel", 80) for n in sorted_notes]
+    window = max(2, len(velocities) // 4)
+    start_avg = sum(velocities[:window]) / window
+    end_avg = sum(velocities[-window:]) / window
+    mid_start = len(velocities) // 3
+    mid_end = 2 * len(velocities) // 3
+    mid_avg = sum(velocities[mid_start:mid_end]) / max(1, mid_end - mid_start)
+    delta = end_avg - start_avg
+    if mid_avg > start_avg + 10 and mid_avg > end_avg + 10:
+        return "arc"
+    if abs(delta) < 10:
+        return "static"
+    if delta > 15:
+        return "building"
+    if delta < -15:
+        return "fading"
+    if mid_avg > max(start_avg, end_avg) + 15:
+        return "climax"
+    return "static"
+
+
+def generate_synthetic_handoff(
+    notes: List[Dict[str, Any]],
+    role: str = "",
+    length_q: float = 16.0,
+) -> Dict[str, Any]:
+    if not notes:
+        return {
+            "musical_function": role or "unknown",
+            "occupied_range": "unknown",
+            "rhythmic_feel": "unknown",
+            "intensity_curve": "static",
+            "gaps_for_others": "entire range available",
+            "suggestion_for_next": "Free to play any part",
+        }
+    pitches = [n.get("pitch", 60) for n in notes]
+    min_pitch = min(pitches)
+    max_pitch = max(pitches)
+    occupied_range = detect_occupied_range(notes)
+    rhythmic_feel = detect_rhythmic_feel(notes, length_q)
+    intensity_curve = detect_intensity_curve(notes)
+    musical_function = role.lower() if role and role.lower() != "unknown" else "harmonic_support"
+    if rhythmic_feel in ("dense", "steady_pulse", "syncopated"):
+        musical_function = "rhythmic_foundation"
+    elif rhythmic_feel == "sustained":
+        musical_function = "harmonic_pad"
+    elif max_pitch > 72 and len(notes) < length_q * 2:
+        musical_function = "melodic_lead"
+    gaps = []
+    if max_pitch < 72:
+        gaps.append("high register open")
+    if min_pitch > 48:
+        gaps.append("low register available")
+    if rhythmic_feel in ("sustained", "sparse"):
+        gaps.append("rhythmic space available")
+    elif rhythmic_feel in ("dense", "steady_pulse"):
+        gaps.append("sustained notes would complement")
+    gaps_str = ", ".join(gaps) if gaps else "limited space available"
+    suggestions = []
+    if occupied_range in ("low", "low_mid"):
+        suggestions.append("add melodic content in high register")
+    elif occupied_range in ("high", "high_mid"):
+        suggestions.append("add harmonic foundation in low register")
+    if rhythmic_feel in ("dense", "syncopated"):
+        suggestions.append("play sparser, longer notes")
+    elif rhythmic_feel == "sustained":
+        suggestions.append("add rhythmic motion")
+    suggestion = "; ".join(suggestions) if suggestions else "complement existing part"
+    return {
+        "musical_function": musical_function,
+        "occupied_range": occupied_range,
+        "rhythmic_feel": rhythmic_feel,
+        "intensity_curve": intensity_curve,
+        "gaps_for_others": gaps_str,
+        "suggestion_for_next": suggestion[:HANDOFF_SUGGESTION_MAX_LEN],
+    }
+
+
+def validate_and_fix_handoff(handoff: Optional[Dict[str, Any]], notes: List[Dict[str, Any]], length_q: float) -> Dict[str, Any]:
+    if not handoff or not isinstance(handoff, dict):
+        return generate_synthetic_handoff(notes, "", length_q)
+    required_fields = ["musical_function", "occupied_range", "rhythmic_feel", "intensity_curve", "gaps_for_others"]
+    for field in required_fields:
+        if field not in handoff or not handoff[field]:
+            synthetic = generate_synthetic_handoff(notes, "", length_q)
+            handoff[field] = synthetic.get(field, "unknown")
+    if notes:
+        actual_range = detect_occupied_range(notes)
+        actual_rhythmic = detect_rhythmic_feel(notes, length_q)
+        claimed_range = str(handoff.get("occupied_range", "")).lower()
+        claimed_rhythmic = str(handoff.get("rhythmic_feel", "")).lower()
+        range_mismatch = (
+            (actual_range in ("low", "low_mid") and claimed_range in ("high", "high_mid")) or
+            (actual_range in ("high", "high_mid") and claimed_range in ("low", "low_mid"))
+        )
+        rhythmic_mismatch = (
+            (actual_rhythmic == "dense" and claimed_rhythmic == "sparse") or
+            (actual_rhythmic == "sparse" and claimed_rhythmic == "dense") or
+            (actual_rhythmic == "sustained" and claimed_rhythmic in ("dense", "syncopated"))
+        )
+        if range_mismatch:
+            handoff["occupied_range"] = actual_range
+            handoff["_range_corrected"] = True
+        if rhythmic_mismatch:
+            handoff["rhythmic_feel"] = actual_rhythmic
+            handoff["_rhythmic_corrected"] = True
+    if "suggestion_for_next" in handoff:
+        handoff["suggestion_for_next"] = str(handoff["suggestion_for_next"])[:HANDOFF_SUGGESTION_MAX_LEN]
+    return handoff
+
+
+def format_handoff_for_prompt(handoff: Dict[str, Any], instrument_name: str) -> str:
+    lines = [f"**MESSAGE FROM {instrument_name.upper()}:**"]
+    function = handoff.get("musical_function", "unknown")
+    occupied = handoff.get("occupied_range", "unknown")
+    rhythmic = handoff.get("rhythmic_feel", "unknown")
+    intensity = handoff.get("intensity_curve", "static")
+    gaps = handoff.get("gaps_for_others", "")
+    suggestion = handoff.get("suggestion_for_next", "")
+    lines.append(f"  Function: {function} | Range: {occupied} | Rhythm: {rhythmic} | Dynamics: {intensity}")
+    if gaps:
+        lines.append(f"  Space left: {gaps}")
+    if suggestion:
+        lines.append(f"  → Suggestion: {suggestion}")
+    return "\n".join(lines)
+
+
 def summarize_articulation_context(context_tracks: Optional[List[Dict[str, Any]]]) -> List[str]:
     if not context_tracks:
         return []
@@ -582,8 +793,30 @@ def build_ensemble_context(
             parts.append(full_analysis_prompt)
             parts.append("")
 
-        parts.append("### RAW NOTE DATA FROM PREVIOUS PARTS")
-        parts.append("Study this data to understand exactly what has been played:")
+        has_handoffs = any(prev_part.get("handoff") for prev_part in ensemble.previously_generated)
+        if has_handoffs:
+            parts.append("### MESSAGES FROM PREVIOUS MUSICIANS (HANDOFF)")
+            parts.append("These musicians have already played. Read their guidance carefully:")
+            parts.append("")
+            for prev_part in ensemble.previously_generated:
+                part_name = prev_part.get("profile_name", prev_part.get("track_name", "Unknown"))
+                prev_notes = prev_part.get("notes", [])
+                handoff = prev_part.get("handoff")
+                if handoff:
+                    validated_handoff = validate_and_fix_handoff(handoff, prev_notes, length_q)
+                else:
+                    part_role = str(prev_part.get("role") or "").strip()
+                    validated_handoff = generate_synthetic_handoff(prev_notes, part_role, length_q)
+                parts.append(format_handoff_for_prompt(validated_handoff, part_name))
+                parts.append("")
+            parts.append("HANDOFF PRIORITY:")
+            parts.append("- Consult the GLOBAL PLAN for overall direction")
+            parts.append("- Use HANDOFFS to understand what space is available")
+            parts.append("- If handoff conflicts with plan, FOLLOW THE PLAN")
+            parts.append("")
+
+        parts.append("### HARMONIC-RHYTHMIC GRID (previous parts)")
+        parts.append("Simplified note map (time:pitch) - use for harmonic alignment:")
         parts.append("")
 
         for prev_part in ensemble.previously_generated:
@@ -592,20 +825,14 @@ def build_ensemble_context(
             if part_role.lower() == "unknown":
                 part_role = ""
             prev_notes = prev_part.get("notes", [])
-            role_suffix = f" (role: {part_role})" if part_role else ""
-            parts.append(f"**{part_name}**{role_suffix}:")
-
-            if prev_notes:
-                note_summary = format_notes_for_context(prev_notes, NOTE_CONTEXT_PREVIEW_LIMIT)
-                parts.append(f"  Notes (start_q, pitch, dur_q, vel, chan): {note_summary}")
-
+            role_suffix = f" [{part_role}]" if part_role else ""
+            midi_map = build_simplified_midi_map(prev_notes, SIMPLIFIED_MIDI_MAP_LIMIT)
+            if midi_map:
                 pitches = [n.get("pitch", 60) for n in prev_notes]
-                if pitches:
-                    parts.append(f"  Pitch range: {min(pitches)}-{max(pitches)} ({pitch_to_note(min(pitches))}-{pitch_to_note(max(pitches))})")
-
-                note_count = len(prev_notes)
-                parts.append(f"  Total notes: {note_count}")
-            parts.append("")
+                range_str = f"({pitch_to_note(min(pitches))}-{pitch_to_note(max(pitches))})" if pitches else ""
+                parts.append(f"**{part_name}**{role_suffix} {range_str}:")
+                parts.append(f"  {midi_map}")
+                parts.append("")
 
     parts.append("ENSEMBLE COORDINATION RULES:")
     parts.append("1. AVOID UNISON: Don't duplicate exact same notes as other instruments")

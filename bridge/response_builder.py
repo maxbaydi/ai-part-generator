@@ -17,7 +17,13 @@ try:
         TEMPO_MARKER_MAX_BPM,
         TEMPO_MARKER_MIN_BPM,
         TEMPO_MARKER_MIN_GAP_Q,
+        TIME_SIG_MAX_NUM,
+        TIME_SIG_MIN_NUM,
+        TIME_SIG_VALID_DENOM,
+        WIND_BRASS_FAMILIES,
+        WIND_BRASS_MAX_NOTE_DUR_Q,
     )
+    from context_builder import generate_synthetic_handoff, validate_and_fix_handoff
     from curve_utils import build_cc_events
     from midi_utils import (
         normalize_channel,
@@ -43,7 +49,13 @@ except ImportError:
         TEMPO_MARKER_MAX_BPM,
         TEMPO_MARKER_MIN_BPM,
         TEMPO_MARKER_MIN_GAP_Q,
+        TIME_SIG_MAX_NUM,
+        TIME_SIG_MIN_NUM,
+        TIME_SIG_VALID_DENOM,
+        WIND_BRASS_FAMILIES,
+        WIND_BRASS_MAX_NOTE_DUR_Q,
     )
+    from .context_builder import generate_synthetic_handoff, validate_and_fix_handoff
     from .curve_utils import build_cc_events
     from .midi_utils import (
         normalize_channel,
@@ -267,6 +279,21 @@ def get_short_articulations(profile: Dict[str, Any]) -> set[str]:
     }
 
 
+def clamp_wind_brass_durations(notes: List[Dict[str, Any]], profile: Dict[str, Any]) -> None:
+    family = str(profile.get("family", "")).lower()
+    if family not in WIND_BRASS_FAMILIES:
+        return
+    for note in notes:
+        if not isinstance(note, dict):
+            continue
+        try:
+            dur_q = float(note.get("dur_q", 0))
+        except (TypeError, ValueError):
+            continue
+        if dur_q > WIND_BRASS_MAX_NOTE_DUR_Q:
+            note["dur_q"] = WIND_BRASS_MAX_NOTE_DUR_Q
+
+
 def clamp_short_articulation_durations(
     notes: List[Dict[str, Any]],
     profile: Dict[str, Any],
@@ -379,6 +406,19 @@ def expand_pattern_notes(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
     return expanded
 
 
+def validate_time_signature(num: Any, denom: Any) -> Tuple[Optional[int], Optional[int]]:
+    try:
+        num_int = int(num)
+        denom_int = int(denom)
+    except (TypeError, ValueError):
+        return None, None
+    if num_int < TIME_SIG_MIN_NUM or num_int > TIME_SIG_MAX_NUM:
+        return None, None
+    if denom_int not in TIME_SIG_VALID_DENOM:
+        return None, None
+    return num_int, denom_int
+
+
 def normalize_tempo_markers(raw_markers: Any, length_q: float) -> List[Dict[str, Any]]:
     if not isinstance(raw_markers, list):
         return []
@@ -389,20 +429,39 @@ def normalize_tempo_markers(raw_markers: Any, length_q: float) -> List[Dict[str,
         if not isinstance(marker, dict):
             continue
         time_q = marker.get("time_q", marker.get("start_q", marker.get("time")))
-        bpm = marker.get("bpm", marker.get("tempo"))
         try:
             time_q = float(time_q)
-            bpm = float(bpm)
         except (TypeError, ValueError):
             continue
         time_q = clamp(time_q, 0.0, length_q)
-        bpm = clamp(bpm, TEMPO_MARKER_MIN_BPM, TEMPO_MARKER_MAX_BPM)
+
+        bpm_raw = marker.get("bpm", marker.get("tempo"))
+        bpm: Optional[float] = None
+        if bpm_raw is not None:
+            try:
+                bpm = float(bpm_raw)
+                bpm = clamp(bpm, TEMPO_MARKER_MIN_BPM, TEMPO_MARKER_MAX_BPM)
+            except (TypeError, ValueError):
+                pass
+
+        num_raw = marker.get("num", marker.get("numerator", marker.get("time_sig_num")))
+        denom_raw = marker.get("denom", marker.get("denominator", marker.get("time_sig_denom")))
+        num, denom = validate_time_signature(num_raw, denom_raw)
+
+        if bpm is None and num is None:
+            continue
+
         linear = bool(marker.get("linear") or marker.get("ramp"))
-        cleaned.append({
+        entry: Dict[str, Any] = {
             "time_q": round(time_q, 6),
-            "bpm": round(bpm, 3),
             "linear": linear,
-        })
+        }
+        if bpm is not None:
+            entry["bpm"] = round(bpm, 3)
+        if num is not None and denom is not None:
+            entry["num"] = num
+            entry["denom"] = denom
+        cleaned.append(entry)
 
     cleaned.sort(key=lambda m: m["time_q"])
 
@@ -533,6 +592,18 @@ def apply_per_note_articulations(
     return notes, keyswitches, program_changes, articulation_cc
 
 
+def extract_handoff(
+    raw: Dict[str, Any],
+    notes: List[Dict[str, Any]],
+    length_q: float,
+    role: str = "",
+) -> Optional[Dict[str, Any]]:
+    raw_handoff = raw.get("handoff")
+    if raw_handoff and isinstance(raw_handoff, dict):
+        return validate_and_fix_handoff(raw_handoff, notes, length_q)
+    return generate_synthetic_handoff(notes, role, length_q)
+
+
 def build_response(
     raw: Dict[str, Any],
     profile: Dict[str, Any],
@@ -543,6 +614,8 @@ def build_response(
     user_prompt: str = "",
     extract_motif: bool = False,
     source_instrument: str = "",
+    is_ensemble: bool = False,
+    current_role: str = "",
 ) -> Dict[str, Any]:
     midi_cfg = profile.get("midi", {})
     default_chan = int(midi_cfg.get("channel", 1))
@@ -569,6 +642,7 @@ def build_response(
 
     if notes_raw:
         clamp_short_articulation_durations(notes_raw, profile, raw.get("articulation"))
+        clamp_wind_brass_durations(notes_raw, profile)
 
     has_per_note_articulations = free_mode and any(
         isinstance(n, dict) and n.get("articulation") for n in notes_raw
@@ -623,5 +697,10 @@ def build_response(
         motif = extract_motif_from_notes(notes, max_notes=8, source_instrument=source_instrument)
         if motif:
             response["extracted_motif"] = motif
+
+    if is_ensemble and free_mode:
+        handoff = extract_handoff(raw, notes, length_q, current_role)
+        if handoff:
+            response["handoff"] = handoff
 
     return response

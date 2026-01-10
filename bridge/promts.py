@@ -33,7 +33,11 @@ THREE-LAYER DYNAMICS:
 3. CC1 DYNAMICS (curves.dynamics): Per-note/phrase shaping
 
 INSTRUMENT-SPECIFIC:
-- WIND INSTRUMENTS: Must breathe! Max phrase 6-8 quarter notes, then gap 0.25-0.5q
+- WIND INSTRUMENTS: Must breathe! 
+  * MAX SINGLE NOTE: 4 quarter notes (one bar in 4/4) - longer notes are UNREALISTIC
+  * Max phrase: 6-8 quarter notes total, then insert gap 0.25-0.5q for breath
+  * Use multiple shorter notes with legato, not one endless note!
+- BRASS: Same breathing rules as winds. Max single note 4q.
 - STRINGS/WINDS: CC1 (curves.dynamics) is MANDATORY for sustained notes - adds life through swells/fades
 - SHORT ARTICULATIONS: Velocity only, CC1 can be flat
 - PERCUSSION: Velocity only for hits; CC1 only for rolls
@@ -42,10 +46,46 @@ SUSTAIN PEDAL (CC64):
 - interp: "hold", values: 0 or 127 only
 - Release before chord changes
 
-OPTIONAL:
-- "patterns": [{"id": "ost1", "length_q": 4, "notes": [...]}]
-- "repeats": [{"pattern": "ost1", "start_q": 8, "times": 12, "step_q": 4}]
-- "tempo_markers": [{"time_q": 0, "bpm": 120, "linear": false}, ...]
+=== PATTERN CLONING (MANDATORY for repetitive parts) ===
+
+For DRUMS, PERCUSSION, OSTINATOS, and any REPETITIVE patterns - you MUST use patterns/repeats instead of duplicating notes!
+
+FORMAT:
+{
+  "patterns": [{"id": "groove1", "length_q": 4, "notes": [...]}],
+  "repeats": [{"pattern": "groove1", "start_q": 0, "times": 8, "step_q": 4}],
+  "notes": []
+}
+
+WHEN TO USE (MANDATORY):
+- DRUMS/PERCUSSION: ALWAYS use patterns - drum grooves repeat!
+- OSTINATOS: Bass ostinatos, arpeggios, rhythmic figures
+- ACCOMPANIMENT: Repeating chord patterns, strumming
+- Any figure that repeats 2+ times with same rhythm
+
+FIELDS:
+- patterns[].id: unique identifier (e.g., "kick_pattern", "bass_ost")
+- patterns[].length_q: pattern length in quarter notes
+- patterns[].notes: notes within pattern (start_q relative to pattern start!)
+- repeats[].pattern: id of pattern to repeat
+- repeats[].start_q: where to start repeating (absolute position)
+- repeats[].times: how many times to repeat
+- repeats[].step_q: distance between repeats (usually = pattern length)
+
+EXAMPLE - 8 bars of drum groove (instead of 32 duplicate notes):
+{
+  "patterns": [{"id": "beat", "length_q": 4, "notes": [
+    {"start_q": 0, "pitch": 36, "vel": 100, "dur_q": 0.5, "chan": 10},
+    {"start_q": 1, "pitch": 38, "vel": 85, "dur_q": 0.5, "chan": 10},
+    {"start_q": 2, "pitch": 36, "vel": 95, "dur_q": 0.5, "chan": 10},
+    {"start_q": 3, "pitch": 38, "vel": 80, "dur_q": 0.5, "chan": 10}
+  ]}],
+  "repeats": [{"pattern": "beat", "start_q": 0, "times": 8, "step_q": 4}],
+  "notes": []
+}
+
+OPTIONAL (tempo/time signature):
+- "tempo_markers": [{"time_q": 0, "bpm": 120, "num": 4, "denom": 4, "linear": false}, ...]
 
 === MUSICALITY PRINCIPLES ===
 
@@ -102,7 +142,15 @@ OUTPUT FORMAT:
     "dynamics": {"interp": "cubic", "breakpoints": [{"time_q": X, "value": Y}, ...]}
   },
   "generation_type": "Melody",
-  "generation_style": "Romantic"
+  "generation_style": "Romantic",
+  "handoff": {
+    "musical_function": "melodic_lead",
+    "occupied_range": "high_mid",
+    "rhythmic_feel": "lyrical_phrases",
+    "intensity_curve": "building",
+    "gaps_for_others": "left low register open, rests on beats 2-3",
+    "suggestion_for_next": "Add harmonic support in low-mid range with sustained notes"
+  }
 }
 
 FIELDS:
@@ -123,7 +171,11 @@ THREE-LAYER DYNAMICS:
 3. CC1 DYNAMICS (curves.dynamics): Per-note/phrase shaping
 
 INSTRUMENT-SPECIFIC:
-- WIND INSTRUMENTS: Must breathe! Max phrase 6-8 quarter notes, then gap
+- WIND INSTRUMENTS: Must breathe!
+  * MAX SINGLE NOTE: 4 quarter notes - longer notes are UNREALISTIC
+  * Max phrase: 6-8 quarter notes, then gap 0.25-0.5q for breath
+  * Use multiple shorter notes with legato, not one endless note!
+- BRASS: Same breathing rules as winds. Max single note 4q.
 - STRINGS/WINDS: CC1 MANDATORY for sustained notes - swells/fades add life
 - SHORT ARTICULATIONS: Velocity primary, CC1 can be flat
 - PERCUSSION: Velocity only for hits; CC1 only for rolls
@@ -132,9 +184,46 @@ SUSTAIN PEDAL (CC64):
 - interp: "hold", values: 0 or 127 only
 - Release before chord changes
 
-OPTIONAL:
-- "patterns": [{"id": "ost1", "length_q": 4, "notes": [...]}]
-- "repeats": [{"pattern": "ost1", "start_q": 8, "times": 12, "step_q": 4}]
+=== PATTERN CLONING (MANDATORY for repetitive parts) ===
+
+For DRUMS, PERCUSSION, OSTINATOS, and any REPETITIVE patterns - you MUST use patterns/repeats instead of duplicating notes!
+
+FORMAT:
+{
+  "patterns": [{"id": "groove1", "length_q": 4, "notes": [...]}],
+  "repeats": [{"pattern": "groove1", "start_q": 0, "times": 8, "step_q": 4}],
+  "notes": []
+}
+
+WHEN TO USE (MANDATORY):
+- DRUMS/PERCUSSION: ALWAYS use patterns - drum grooves repeat!
+- OSTINATOS: Bass ostinatos, arpeggios, rhythmic figures
+- ACCOMPANIMENT: Repeating chord patterns, strumming
+- Any figure that repeats 2+ times with same rhythm
+
+FIELDS:
+- patterns[].id: unique identifier (e.g., "kick_pattern", "bass_ost")
+- patterns[].length_q: pattern length in quarter notes
+- patterns[].notes: notes within pattern (start_q relative to pattern start!)
+- repeats[].pattern: id of pattern to repeat
+- repeats[].start_q: where to start repeating (absolute position)
+- repeats[].times: how many times to repeat
+- repeats[].step_q: distance between repeats (usually = pattern length)
+
+EXAMPLE - 8 bars of drum groove (instead of 32 duplicate notes):
+{
+  "patterns": [{"id": "beat", "length_q": 4, "notes": [
+    {"start_q": 0, "pitch": 36, "vel": 100, "dur_q": 0.5, "chan": 10},
+    {"start_q": 1, "pitch": 38, "vel": 85, "dur_q": 0.5, "chan": 10},
+    {"start_q": 2, "pitch": 36, "vel": 95, "dur_q": 0.5, "chan": 10},
+    {"start_q": 3, "pitch": 38, "vel": 80, "dur_q": 0.5, "chan": 10}
+  ]}],
+  "repeats": [{"pattern": "beat", "start_q": 0, "times": 8, "step_q": 4}],
+  "notes": []
+}
+
+OPTIONAL (tempo/time signature):
+- "tempo_markers": [{"time_q": 0, "bpm": 120, "num": 4, "denom": 4, "linear": false}, ...]
 
 === MUSICALITY PRINCIPLES ===
 
@@ -190,6 +279,34 @@ ENSEMBLE AWARENESS (when other parts exist):
 - PAD: long notes, harmonic glue
 - RHYTHM: define pulse, consistent patterns
 
+=== HANDOFF PROTOCOL (for ensemble generation) ===
+
+You are collaborating with other musicians. After generating your notes, provide a "handoff" object to guide the next instrument.
+
+HANDOFF FIELDS (all required for ensemble):
+- musical_function: What role you played (rhythmic_foundation, harmonic_pad, melodic_lead, countermelody, color, fill)
+- occupied_range: Where you claimed space (low, low_mid, mid, high_mid, high, wide)
+- rhythmic_feel: Your rhythmic character (sustained, sparse, steady_pulse, syncopated, dense, arpeggiated)
+- intensity_curve: Your dynamic trajectory (static, building, climax, fading, arc)
+- gaps_for_others: CRITICAL - explicitly state what space you left (rhythmically and tonally)
+- suggestion_for_next: Direct advice for the next instrument (max 100 chars)
+
+HANDOFF PRINCIPLES:
+1. BE ANALYTICAL, NOT DESCRIPTIVE: Don't say "I played C, E, G". Say "I established C major harmonic bed in low register".
+2. FOCUS ON SPACE: Explicitly state where you left room for others.
+3. GUIDE THE ENSEMBLE: If you played busy rhythm, tell next to play sparse. If you played low, suggest high.
+4. REFERENCE THE PLAN: Your handoff should complement the global plan, not contradict it.
+
+EXAMPLE HANDOFF:
+"handoff": {
+  "musical_function": "rhythmic_foundation",
+  "occupied_range": "low",
+  "rhythmic_feel": "syncopated_8th",
+  "intensity_curve": "building",
+  "gaps_for_others": "strong beats open for melody, high register completely free",
+  "suggestion_for_next": "Add melodic content in high register, follow my syncopation"
+}
+
 === FINAL RULES ===
 
 STRICT:
@@ -197,7 +314,7 @@ STRICT:
 - curves required (except percussion hits)
 - Wind instruments MUST breathe
 - Strings/winds MUST have CC1 on sustained notes
-- Valid JSON with generation_type and generation_style
+- Valid JSON with generation_type, generation_style, and handoff (for ensemble)
 
 FLEXIBLE (follow user request):
 - Fill amount, density, structure
