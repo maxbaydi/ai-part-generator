@@ -55,6 +55,41 @@
       "write_every_step": true
     }
   },
+  "orchestration_hints": {
+    "typical_roles": ["harmony", "bass", "melody", "countermelody"],
+    "character": "Majestic, powerful, solemn. The backbone of brass harmony. Rich and resonant.",
+    "best_for": [
+      "Powerful harmonic support",
+      "Majestic chorale passages",
+      "Noble melodic statements",
+      "Dramatic bass lines in brass section",
+      "Glissandos for dramatic effect"
+    ],
+    "register_character": {
+      "low": "E2-Bb2: Powerful, dark, foundational. Great for bass lines.",
+      "mid": "Bb2-F4: Rich, noble, most versatile. Primary working range.",
+      "high": "F4-Bb4: Bright, intense, demanding. Use for climaxes."
+    },
+    "ensemble_tips": [
+      "Forms the middle voice in brass chorales",
+      "Can double bass/cello for power in low register",
+      "Excellent for sustained harmonic pads",
+      "Trombone section (2-3) creates massive sound",
+      "Balance carefully - can easily overpower other instruments"
+    ],
+    "texture_options": [
+      "Sustained harmonic chords",
+      "Noble melodic passages",
+      "Powerful bass lines",
+      "Rhythmic accents and stabs",
+      "Chorale-style writing"
+    ],
+    "avoid": [
+      "Fast passages in extreme registers",
+      "Soft, exposed high notes",
+      "Competing with horn in mid-register melodic passages"
+    ]
+  },
   "ai": {
     "system_prompt_template": "Generate trombone parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range E2-Bb4, preferred G2-F4."
   }

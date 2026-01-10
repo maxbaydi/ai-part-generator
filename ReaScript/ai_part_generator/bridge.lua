@@ -38,25 +38,25 @@ end
 local function start_bridge_process()
   local py = resolve_python_command()
   if not py then
-    return false, "Не найден Python (команды: py -3 / python)."
+    return false, "Python not found (commands: py -3 / python)."
   end
 
   local app_path = get_bridge_app_path()
   if not utils.file_exists(app_path) then
-    return false, "Не найден файл бриджа: " .. tostring(app_path)
+    return false, "Bridge file not found: " .. tostring(app_path)
   end
 
   local check_cmd = string.format('%s -c "import fastapi, uvicorn"', py)
   local check_retval = utils.exec_process(check_cmd, const.BRIDGE_PYTHON_DETECT_TIMEOUT_MS)
   if check_retval ~= 0 then
-    return false, "Не найдены зависимости bridge (fastapi/uvicorn). Установите зависимости из bridge/requirements.txt и попробуйте снова."
+    return false, "Bridge dependencies not found (fastapi/uvicorn). Install from bridge/requirements.txt and try again."
   end
 
   local cmd
   if utils.is_windows() then
-    cmd = string.format('cmd /c start "" /b %s "%s"', py, app_path)
+    cmd = string.format('cmd /c "set PYTHONIOENCODING=utf-8 && set PYTHONUTF8=1 && start "" /b %s "%s""', py, app_path)
   else
-    cmd = string.format('sh -c \'%s "%s" >/dev/null 2>&1 &\'', py, app_path)
+    cmd = string.format('sh -c \'PYTHONIOENCODING=utf-8 PYTHONUTF8=1 %s "%s" >/dev/null 2>&1 &\'', py, app_path)
   end
 
   utils.exec_process(cmd, 5000)
@@ -71,7 +71,7 @@ function M.ensure_running_async(on_ready)
 
   local started, start_err = start_bridge_process()
   if not started then
-    on_ready(false, start_err or "Не удалось запустить bridge-сервер.")
+    on_ready(false, start_err or "Failed to start bridge server.")
     return
   end
 
@@ -81,7 +81,7 @@ function M.ensure_running_async(on_ready)
   local function poll()
     local now = reaper.time_precise()
     if (now - start_time) > const.BRIDGE_STARTUP_TIMEOUT_SEC then
-      on_ready(false, "Bridge-сервер не стартовал (timeout). Запустите его вручную и попробуйте снова.")
+      on_ready(false, "Bridge server did not start (timeout). Start it manually and try again.")
       return
     end
 

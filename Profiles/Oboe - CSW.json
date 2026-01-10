@@ -52,6 +52,41 @@
       "write_every_step": true
     }
   },
+  "orchestration_hints": {
+    "typical_roles": ["melody", "countermelody", "color"],
+    "character": "Poignant, pastoral, penetrating. The emotional voice of woodwinds. Distinctively expressive.",
+    "best_for": [
+      "Lyrical, expressive solo melodies",
+      "Pastoral and nostalgic themes",
+      "Doubling violin melody for warmth",
+      "Sustained notes over strings",
+      "Plaintive, emotional passages"
+    ],
+    "register_character": {
+      "low": "Bb3-G4: Thick, dark, somewhat honky. Use cautiously.",
+      "mid": "G4-D6: Sweet, expressive, most characteristic. Primary range.",
+      "high": "D6-A6: Thin, intense, strained. Reserve for special effects."
+    },
+    "ensemble_tips": [
+      "Penetrating tone cuts through orchestra - be mindful of balance",
+      "Beautiful doubling with flute at octave",
+      "Pairs well with French horn for warmth",
+      "Can sustain while strings move for color",
+      "Limited breath capacity - plan phrases carefully"
+    ],
+    "texture_options": [
+      "Solo melodic lines (signature use)",
+      "Sustained harmonic notes",
+      "Ornamented passages",
+      "Doubling other woodwinds",
+      "Call and response with flute"
+    ],
+    "avoid": [
+      "Very loud passages in low register",
+      "Extremely long phrases (breath limitation)",
+      "Competing with brass in tutti sections"
+    ]
+  },
   "ai": {
     "system_prompt_template": "Generate oboe parts for Cinematic Studio Woodwinds. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range Bb3-A6, preferred C4-F6."
   }

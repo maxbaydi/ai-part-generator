@@ -213,8 +213,8 @@ OUTPUT FORMAT:
   "plan_summary": "Overall guidance: arc, texture, register spacing, role balance. Max 150 words.",
   
   "chord_map": [
-    {"bar": 1, "beat": 1, "time_q": 0.0, "chord": "C", "chord_tones": [0, 4, 7]},
-    {"bar": 2, "beat": 1, "time_q": 4.0, "chord": "Am", "chord_tones": [9, 0, 4]}
+    {"bar": 1, "beat": 1, "time_q": 0.0, "chord": "C", "roman": "I", "chord_tones": [0, 4, 7]},
+    {"bar": 2, "beat": 1, "time_q": 4.0, "chord": "Am", "roman": "vi", "chord_tones": [9, 0, 4]}
   ],
   
   "phrase_structure": [
@@ -229,9 +229,39 @@ OUTPUT FORMAT:
     }
   ],
   
+  "dynamic_arc": [
+    {"time_q": 0.0, "bar": 1, "level": "p", "target_velocity": 55, "trend": "stable"},
+    {"time_q": 8.0, "bar": 3, "level": "mp", "target_velocity": 70, "trend": "building"},
+    {"time_q": 16.0, "bar": 5, "level": "f", "target_velocity": 95, "trend": "climax"},
+    {"time_q": 24.0, "bar": 7, "level": "mf", "target_velocity": 80, "trend": "resolving"}
+  ],
+  
+  "texture_map": [
+    {
+      "bars": "1-4",
+      "start_q": 0.0,
+      "end_q": 16.0,
+      "density": "sparse",
+      "active_families": ["strings"],
+      "tacet_families": ["brass", "percussion"],
+      "texture_type": "pedal",
+      "notes_per_bar_hint": "1-2"
+    },
+    {
+      "bars": "5-8",
+      "start_q": 16.0,
+      "end_q": 32.0,
+      "density": "medium",
+      "active_families": ["strings", "woodwinds"],
+      "tacet_families": ["percussion"],
+      "texture_type": "melody+accompaniment",
+      "notes_per_bar_hint": "4-8"
+    }
+  ],
+  
   "accent_map": [
     {"time_q": 0.0, "bar": 1, "beat": 1, "strength": "strong", "all_instruments": true},
-    {"time_q": 4.0, "bar": 2, "beat": 1, "strength": "strong", "all_instruments": true}
+    {"time_q": 4.0, "bar": 2, "beat": 1, "strength": "medium", "all_instruments": false}
   ],
   
   "motif_blueprint": {
@@ -239,7 +269,8 @@ OUTPUT FORMAT:
     "character": "as fits user request",
     "intervals": [2, 2, -1, -2, 5],
     "rhythm_pattern": [1.0, 0.5, 0.5, 1.0, 1.0],
-    "suggested_start_pitch": 67
+    "suggested_start_pitch": 67,
+    "development_techniques": ["sequence", "inversion", "augmentation"]
   },
   
   "section_overview": [
@@ -260,24 +291,28 @@ OUTPUT FORMAT:
       "role": "melody/bass/harmony/rhythm/countermelody/pad",
       "register": "high/mid/low",
       "guidance": "specific instructions",
-      "relationship": "how it relates to other parts"
+      "relationship": "how it relates to other parts",
+      "entry_bar": 1,
+      "primary_articulation": "legato"
     }
   ],
   
   "orchestration_notes": {
     "avoid": ["register clashes", "competing for same space"],
-    "encourage": ["complementary motion", "clear roles"]
+    "encourage": ["complementary motion", "clear roles"],
+    "special_effects": []
   }
 }
 
 === CHORD_MAP ===
 
-Harmonic coordination for all instruments.
+Harmonic coordination for all instruments. CRITICAL for ensemble coherence.
 
 FIELDS:
 - bar, beat: Position in score
 - time_q: Position in quarter notes (REQUIRED for sync)
-- chord: Chord name
+- chord: Chord name (e.g., "C", "Am7", "F#dim")
+- roman: Roman numeral analysis (e.g., "I", "vi", "IV")
 - chord_tones: Pitch classes (0-11, C=0)
 
 Generate for every bar. Harmonic rhythm (chords per bar) based on user request/style.
@@ -295,48 +330,101 @@ FIELDS:
 
 Adapt phrase types to the requested style - not all music uses Western antecedent/consequent patterns.
 
+=== DYNAMIC_ARC ===
+
+Global dynamic coordination. Ensures all instruments follow the same intensity curve.
+
+FIELDS:
+- time_q: Position in quarter notes
+- bar: Bar number for reference
+- level: Dynamic marking (pp, p, mp, mf, f, ff)
+- target_velocity: Suggested MIDI velocity (1-127) for this level
+- trend: What happens after this point ("stable", "building", "climax", "fading", "resolving")
+
+LEVELS GUIDE:
+- pp (pianissimo): 30-45 velocity, whisper
+- p (piano): 45-60 velocity, soft
+- mp (mezzo-piano): 60-75 velocity, moderate soft
+- mf (mezzo-forte): 75-90 velocity, moderate loud
+- f (forte): 90-105 velocity, loud
+- ff (fortissimo): 105-120 velocity, very loud
+
+Place at least at: start, climax point, and resolution. More points for complex arcs.
+
+=== TEXTURE_MAP ===
+
+Controls orchestral density and layering. Prevents all instruments playing all the time.
+
+FIELDS:
+- bars: Bar range (e.g., "1-4")
+- start_q, end_q: Time boundaries in quarter notes
+- density: "sparse" (1-2 instruments), "light" (2-3), "medium" (3-5), "full" (all), "tutti" (all at forte+)
+- active_families: Which instrument families play ["strings", "brass", "woodwinds", "percussion", "keys"]
+- tacet_families: Which families rest
+- texture_type: Musical texture ("pedal", "melody+accompaniment", "homophonic", "polyphonic", "unison", "call-response")
+- notes_per_bar_hint: Guide for note density ("1-2", "4-8", "8-16")
+
+TEXTURE TYPES:
+- "pedal": Sustained notes, usually bass/low instruments
+- "melody+accompaniment": Clear melody line with harmonic support
+- "homophonic": All parts move in same rhythm (chordal)
+- "polyphonic": Independent melodic lines (counterpoint)
+- "unison": All instruments play same melody (octaves allowed)
+- "call-response": Alternating between instrument groups
+
 === ACCENT_MAP ===
 
 Rhythmic synchronization.
 
 STRENGTH:
-- "strong": All instruments emphasize
-- "medium": Some instruments emphasize
+- "strong": All instruments emphasize (velocity +15-25)
+- "medium": Some instruments emphasize (velocity +10-15)
 
-all_instruments: true = everyone, false = rhythm section only
+all_instruments: true = everyone participates, false = rhythm section only
 
 === MOTIF_BLUEPRINT ===
 
-Optional but recommended for musical unity.
+Optional but recommended for musical unity and coherence.
 
 FIELDS:
 - description, character: What the motif expresses
-- intervals: Semitone steps
+- intervals: Semitone steps (positive=up, negative=down)
 - rhythm_pattern: Durations in quarter notes
 - suggested_start_pitch: MIDI pitch
+- development_techniques: How to vary the motif ["sequence", "inversion", "retrograde", "augmentation", "diminution", "fragmentation"]
 
-Melody carries the motif, others respond/support.
+Melody carries the motif, others respond/support. Non-melody instruments can use motif rhythm or fragments.
 
 === ROLE_GUIDANCE ===
 
 Assign each instrument:
 - role: melody/bass/harmony/rhythm/countermelody/pad
-- register: high/mid/low (avoid clashes)
-- guidance: What to do
+- register: high/mid/low (avoid clashes between instruments)
+- guidance: What to do (specific to instrument character)
 - relationship: How to interact with others
+- entry_bar: When this instrument first plays (for staggered entries)
+- primary_articulation: Default articulation for this part
 
-Order by generation priority (typically: bass/rhythm → melody → harmony → color).
+Order by generation priority (typically: melody → bass → harmony → rhythm → color).
 
 === RULES ===
 
 REQUIRED:
 - plan_summary
-- chord_map (every bar)
+- chord_map (every bar, with roman numerals)
 - phrase_structure (at least one)
-- accent_map (at least downbeats)
-- role_guidance
+- dynamic_arc (at least 3 points: start, climax, end)
+- texture_map (at least one per major section)
+- role_guidance (every instrument)
+
+OPTIONAL:
+- accent_map (for rhythmic sync)
+- motif_blueprint (for thematic unity)
+- orchestration_notes (for special instructions)
 
 IMPORTANT:
-- Adapt structure to user's requested style/genre
-- Not all music follows Western classical patterns
-- Plan should coordinate, not dictate specific creative choices"""
+- dynamic_arc and texture_map are CRITICAL for preventing "wall of sound"
+- Use tacet_families to create contrast and breathing room
+- Stagger entry_bar in role_guidance for natural buildup
+- Match texture_type to the user's requested style
+- Plan should COORDINATE, not DICTATE specific note choices"""

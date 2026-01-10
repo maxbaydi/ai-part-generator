@@ -503,6 +503,65 @@ def build_prompt(
                 user_prompt_parts.append("- MELODY: Chord tones on downbeats, passing tones resolve to chord tones")
                 user_prompt_parts.append("- ALL: Switch to new chord tones at EXACTLY the time_q specified")
 
+            dynamic_arc = plan_data.get("dynamic_arc") if isinstance(plan_data, dict) else None
+            if isinstance(dynamic_arc, list) and dynamic_arc:
+                user_prompt_parts.append("")
+                user_prompt_parts.append("**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**")
+                user_prompt_parts.append("```")
+                user_prompt_parts.append("time_q | bar | level | velocity | trend")
+                for dyn_entry in dynamic_arc:
+                    if not isinstance(dyn_entry, dict):
+                        continue
+                    time_q = dyn_entry.get("time_q", 0)
+                    bar = dyn_entry.get("bar", 1)
+                    level = dyn_entry.get("level", "mf")
+                    target_vel = dyn_entry.get("target_velocity", 80)
+                    trend = dyn_entry.get("trend", "stable")
+                    user_prompt_parts.append(f"{time_q:6.1f} | {bar:3} | {level:4} | {target_vel:3}      | {trend}")
+                user_prompt_parts.append("```")
+                user_prompt_parts.append("DYNAMIC ARC RULES:")
+                user_prompt_parts.append("- Use target_velocity as BASE for notes at that time_q")
+                user_prompt_parts.append("- 'building': gradually increase velocity toward next point")
+                user_prompt_parts.append("- 'climax': peak intensity, full expression")
+                user_prompt_parts.append("- 'fading'/'resolving': decrease toward next point")
+                user_prompt_parts.append("- Expression curve (CC11) should follow this arc shape")
+
+            texture_map = plan_data.get("texture_map") if isinstance(plan_data, dict) else None
+            current_inst = request.ensemble.current_instrument if request.ensemble else None
+            current_family = (current_inst.get("family", "") if current_inst else "").lower()
+            if isinstance(texture_map, list) and texture_map:
+                user_prompt_parts.append("")
+                user_prompt_parts.append("**TEXTURE MAP (WHEN TO PLAY/REST):**")
+                for tex_entry in texture_map:
+                    if not isinstance(tex_entry, dict):
+                        continue
+                    tex_bars = tex_entry.get("bars", "")
+                    start_q = tex_entry.get("start_q", 0)
+                    end_q = tex_entry.get("end_q", 0)
+                    density = tex_entry.get("density", "medium")
+                    active_fam = tex_entry.get("active_families", [])
+                    tacet_fam = tex_entry.get("tacet_families", [])
+                    tex_type = tex_entry.get("texture_type", "")
+                    notes_hint = tex_entry.get("notes_per_bar_hint", "")
+
+                    is_active = not active_fam or current_family in [f.lower() for f in active_fam]
+                    is_tacet = current_family in [f.lower() for f in tacet_fam]
+
+                    status = "→ YOU PLAY" if is_active and not is_tacet else "→ TACET (rest)"
+                    user_prompt_parts.append(f"- Bars {tex_bars} (time_q {start_q}-{end_q}): {density} density {status}")
+                    if tex_type:
+                        user_prompt_parts.append(f"    Texture: {tex_type}")
+                    if notes_hint and is_active and not is_tacet:
+                        user_prompt_parts.append(f"    Notes per bar: ~{notes_hint}")
+                    if is_tacet:
+                        user_prompt_parts.append(f"    → Generate NO NOTES in this section!")
+
+                user_prompt_parts.append("")
+                user_prompt_parts.append("TEXTURE RULES:")
+                user_prompt_parts.append("- TACET sections: output empty notes array for that time range")
+                user_prompt_parts.append("- 'sparse': leave lots of space, few notes")
+                user_prompt_parts.append("- 'full'/'tutti': all instruments active, denser writing")
+
             if isinstance(phrase_structure, list) and phrase_structure:
                 user_prompt_parts.append("")
                 user_prompt_parts.append("**PHRASE STRUCTURE (BREATHING & CADENCES):**")

@@ -55,6 +55,41 @@
       "write_every_step": true
     }
   },
+  "orchestration_hints": {
+    "typical_roles": ["melody", "harmony", "countermelody", "pad"],
+    "character": "Warm, noble, heroic. The romantic voice of the brass section. Versatile from soft velvet to brilliant power.",
+    "best_for": [
+      "Noble, heroic themes and fanfares",
+      "Warm sustained harmonies",
+      "Romantic solo passages",
+      "Doubling strings for warmth",
+      "Hunting calls and horn fifths"
+    ],
+    "register_character": {
+      "low": "B1-F3: Dark, ominous, powerful. Difficult to play softly.",
+      "mid": "F3-C5: Sweet spot. Warm, noble, most expressive. Ideal for melodies.",
+      "high": "C5-F5: Brilliant, heroic, but demanding. Use for climaxes."
+    },
+    "ensemble_tips": [
+      "Blends beautifully with strings and woodwinds",
+      "Can double cello/viola melodies an octave higher",
+      "Horn fifths (parallel 5ths) are idiomatic and sound noble",
+      "In brass section, provides warmth between trumpets and trombones",
+      "Avoid competing with trumpet in same register during loud passages"
+    ],
+    "texture_options": [
+      "Solo noble melody (most iconic)",
+      "Sustained harmonic pads",
+      "Call and response with other brass",
+      "Doubling woodwinds for richness",
+      "Hunting horn calls (open fifths)"
+    ],
+    "avoid": [
+      "Very fast passages in low register",
+      "Competing with trumpets in high register fortissimo",
+      "Exposed high notes without preparation"
+    ]
+  },
   "ai": {
     "system_prompt_template": "Generate French horn parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range B1-F5, preferred F2-C5."
   }

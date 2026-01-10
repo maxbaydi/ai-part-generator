@@ -563,6 +563,10 @@ def build_ensemble_context(
         detail = family
         if role:
             detail = f"{detail}, role: {role}"
+        range_info = inst.range or {}
+        preferred = range_info.get("preferred", [])
+        if preferred and len(preferred) == 2:
+            detail = f"{detail}, range: {preferred[0]}-{preferred[1]}"
         parts.append(f"  {inst.index}. {label} ({detail}){marker}{done_marker}")
 
     parts.append("")

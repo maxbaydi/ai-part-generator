@@ -58,7 +58,42 @@
       "write_every_step": true
     }
   },
+  "orchestration_hints": {
+    "typical_roles": ["bass", "harmony"],
+    "character": "Deep, powerful, foundational. The anchor of the orchestra. Provides weight and gravity.",
+    "best_for": [
+      "Harmonic foundation - root notes",
+      "Powerful sustained bass lines",
+      "Doubling cellos at octave below",
+      "Pizzicato for rhythmic pulse",
+      "Dramatic low pedal tones"
+    ],
+    "register_character": {
+      "low": "E1-E2: Very deep, rumbling, felt more than heard. Use for impact.",
+      "mid": "E2-A3: Primary working range. Rich, clear, foundational.",
+      "high": "A3-G4: Tenor range. Unusual but expressive for solos."
+    },
+    "ensemble_tips": [
+      "Almost always doubles cello an octave below",
+      "Root notes on beat 1 anchor the harmony",
+      "Pizzicato provides rhythmic definition",
+      "Can play melody in unison with cello for power",
+      "In quiet passages, may rest to avoid muddiness"
+    ],
+    "texture_options": [
+      "Sustained root notes (most common)",
+      "Walking bass lines",
+      "Pizzicato rhythmic patterns",
+      "Tremolo for tension",
+      "Unison with cello for power"
+    ],
+    "avoid": [
+      "Fast melodic passages (use cello instead)",
+      "Exposed solo lines except for special effect",
+      "Cluttering the low end with too many notes"
+    ]
+  },
   "ai": {
-    "system_prompt_template": "Generate double bass parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any chords or double stops (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range E1-G4, preferred E1-D4."
+    "system_prompt_template": "Generate double bass parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any chords or double stops (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range E1-G4, preferred E2-D4."
   }
 }

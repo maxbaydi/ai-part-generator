@@ -37,7 +37,7 @@ end
 
 local function run_curl_sync(url, request_path, response_path)
   local cmd = string.format(
-    'curl -s -X POST -H "Content-Type: application/json" --max-time %d --data-binary "@%s" -o "%s" "%s"',
+    'curl -s -X POST -H "Content-Type: application/json; charset=utf-8" -H "Accept-Charset: utf-8" --max-time %d --data-binary "@%s" -o "%s" "%s"',
     const.HTTP_TIMEOUT_SEC,
     request_path,
     response_path,
@@ -54,13 +54,17 @@ end
 
 local function run_powershell_sync(url, request_path, response_path)
   local ps_code = string.format([[
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
 try {
   $body = [System.IO.File]::ReadAllText('%s', [System.Text.Encoding]::UTF8)
+  $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
   $headers = @{ 'Content-Type' = 'application/json; charset=utf-8' }
-  $resp = Invoke-WebRequest -Uri '%s' -Method Post -Headers $headers -Body $body -TimeoutSec %d -UseBasicParsing
-  [System.IO.File]::WriteAllText('%s', $resp.Content, (New-Object System.Text.UTF8Encoding $false))
+  $resp = Invoke-WebRequest -Uri '%s' -Method Post -Headers $headers -Body $bodyBytes -TimeoutSec %d -UseBasicParsing
+  $content = [System.Text.Encoding]::UTF8.GetString($resp.RawContentStream.ToArray())
+  [System.IO.File]::WriteAllText('%s', $content, (New-Object System.Text.UTF8Encoding $false))
   exit 0
 } catch {
   $err = @{ detail = $_.Exception.Message } | ConvertTo-Json -Compress
@@ -96,7 +100,7 @@ end
 
 local function run_powershell_get_ok(url, timeout_sec)
   local cmd = string.format(
-    'powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference=\'Stop\'; try { Invoke-RestMethod -Uri \'%s\' -Method Get -TimeoutSec %d | Out-Null; exit 0 } catch { exit 1 }"',
+    'powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $ErrorActionPreference=\'Stop\'; try { Invoke-RestMethod -Uri \'%s\' -Method Get -TimeoutSec %d | Out-Null; exit 0 } catch { exit 1 }"',
     url,
     timeout_sec
   )
@@ -186,7 +190,7 @@ function M.begin_request(url, payload)
 
   if utils.has_curl() then
     cmd = string.format(
-      'cmd /c start /b curl -s -X POST -H "Content-Type: application/json" --max-time %d --data-binary "@%s" -o "%s" "%s"',
+      'cmd /c start /b curl -s -X POST -H "Content-Type: application/json; charset=utf-8" -H "Accept-Charset: utf-8" --max-time %d --data-binary "@%s" -o "%s" "%s"',
       const.HTTP_TIMEOUT_SEC,
       paths.request,
       paths.response,
@@ -194,13 +198,17 @@ function M.begin_request(url, payload)
     )
   elseif utils.is_windows() then
     local ps_code = string.format([[
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
 try {
   $body = [System.IO.File]::ReadAllText('%s', [System.Text.Encoding]::UTF8)
+  $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
   $headers = @{ 'Content-Type' = 'application/json; charset=utf-8' }
-  $resp = Invoke-WebRequest -Uri '%s' -Method Post -Headers $headers -Body $body -TimeoutSec %d -UseBasicParsing
-  [System.IO.File]::WriteAllText('%s', $resp.Content, (New-Object System.Text.UTF8Encoding $false))
+  $resp = Invoke-WebRequest -Uri '%s' -Method Post -Headers $headers -Body $bodyBytes -TimeoutSec %d -UseBasicParsing
+  $content = [System.Text.Encoding]::UTF8.GetString($resp.RawContentStream.ToArray())
+  [System.IO.File]::WriteAllText('%s', $content, (New-Object System.Text.UTF8Encoding $false))
 } catch {
   $err = @{ detail = $_.Exception.Message } | ConvertTo-Json -Compress
   [System.IO.File]::WriteAllText('%s', $err, (New-Object System.Text.UTF8Encoding $false))

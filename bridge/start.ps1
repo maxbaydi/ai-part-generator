@@ -1,5 +1,13 @@
 $ErrorActionPreference = "Stop"
 
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+chcp 65001 | Out-Null
+
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
@@ -13,7 +21,7 @@ if ([string]::IsNullOrWhiteSpace($pythonExe)) {
   } elseif (Get-Command python -ErrorAction SilentlyContinue) {
     $pythonExe = "python"
   } else {
-    Write-Error "Python не найден. Установите Python или задайте переменную окружения AI_PART_GENERATOR_PYTHON"
+    Write-Error "Python not found. Install Python or set AI_PART_GENERATOR_PYTHON environment variable"
     exit 1
   }
 }
@@ -25,7 +33,7 @@ if ($LASTEXITCODE -ne 0) {
   if ($pythonArgs.Count -gt 0) {
     $pyDisplay = "$pyDisplay $($pythonArgs -join ' ')"
   }
-  Write-Error "Не найдены зависимости bridge (fastapi/uvicorn). Установите: $pyDisplay -m pip install -r `"$req`""
+  Write-Error "Bridge dependencies not found (fastapi/uvicorn). Install: $pyDisplay -m pip install -r `"$req`""
   exit 1
 }
 

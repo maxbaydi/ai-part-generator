@@ -55,6 +55,41 @@
       "write_every_step": true
     }
   },
+  "orchestration_hints": {
+    "typical_roles": ["bass", "harmony"],
+    "character": "Massive, deep, powerful. The foundation of brass section. Provides gravitas and weight.",
+    "best_for": [
+      "Bass foundation in brass chorales",
+      "Powerful sustained pedal tones",
+      "Doubling contrabass for extra weight",
+      "Comic or ominous low passages",
+      "Rhythmic punctuation in loud sections"
+    ],
+    "register_character": {
+      "low": "D2-G2: Very deep, rumbling. Use for pedal tones and impact.",
+      "mid": "G2-Bb3: Primary working range. Clear, powerful.",
+      "high": "Bb3-F5: Surprisingly agile, almost euphonium-like. Use sparingly."
+    },
+    "ensemble_tips": [
+      "Usually plays bass line, doubling bass trombone or contrabass",
+      "Can rest in quiet passages - its absence creates lightness",
+      "Essential for brass tutti power",
+      "Provides fundamental that other brass builds on",
+      "One note at climax can define the moment"
+    ],
+    "texture_options": [
+      "Sustained pedal tones",
+      "Root movement with harmony",
+      "Rhythmic bass patterns",
+      "Staccato punctuation",
+      "Doubling other bass instruments"
+    ],
+    "avoid": [
+      "Fast melodic passages",
+      "Exposed soft playing (projection issues)",
+      "Competing with melodic instruments"
+    ]
+  },
   "ai": {
     "system_prompt_template": "Generate tuba parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range D2-F5, preferred F2-Bb4."
   }

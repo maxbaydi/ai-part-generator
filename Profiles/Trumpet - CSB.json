@@ -55,6 +55,41 @@
       "write_every_step": true
     }
   },
+  "orchestration_hints": {
+    "typical_roles": ["melody", "countermelody", "fanfare"],
+    "character": "Brilliant, heroic, triumphant. The clarion voice of the orchestra. Commands attention.",
+    "best_for": [
+      "Heroic fanfares and proclamations",
+      "Triumphant melodic themes",
+      "Brilliant climactic moments",
+      "Military and ceremonial passages",
+      "Cutting through full orchestra"
+    ],
+    "register_character": {
+      "low": "E3-C4: Dark, covered, somewhat muted. Use sparingly.",
+      "mid": "C4-G5: Bright and noble. Primary melodic range.",
+      "high": "G5-C6: Brilliant, piercing, heroic. Reserve for climaxes."
+    },
+    "ensemble_tips": [
+      "Natural leader in brass section - often carries melody",
+      "Pairs well with horn for warmth",
+      "Can double violin melody an octave below for power",
+      "Use muted trumpet for jazz colors or softer passages",
+      "In quiet sections, prefer horn or woodwinds"
+    ],
+    "texture_options": [
+      "Heroic fanfare figures",
+      "Sustained melodic lines",
+      "Rhythmic punctuation",
+      "Call and response with other brass",
+      "Muted passages for color change"
+    ],
+    "avoid": [
+      "Sustained soft passages in low register (use horn instead)",
+      "Competing with strings in lyrical passages",
+      "Overuse in quiet, intimate sections"
+    ]
+  },
   "ai": {
     "system_prompt_template": "Generate trumpet parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range E3-C6, preferred G3-G5."
   }

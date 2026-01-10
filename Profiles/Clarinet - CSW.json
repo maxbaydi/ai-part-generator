@@ -52,6 +52,42 @@
       "write_every_step": true
     }
   },
+  "orchestration_hints": {
+    "typical_roles": ["melody", "harmony", "countermelody", "color"],
+    "character": "Warm, flexible, chameleon-like. The most versatile woodwind. Can be dark, bright, or silky.",
+    "best_for": [
+      "Lyrical melodic solos",
+      "Rapid virtuosic passages",
+      "Sustained harmonic notes in chalumeau register",
+      "Blending with strings for warmth",
+      "Quiet, intimate passages"
+    ],
+    "register_character": {
+      "low_chalumeau": "D3-G3: Dark, rich, mysterious. Very distinctive.",
+      "throat": "G3-Bb3: Weaker, transition zone. Use carefully.",
+      "clarion": "B3-C6: Bright, clear, brilliant. Primary melodic range.",
+      "altissimo": "C6-Bb6: Shrill, penetrating. Use sparingly."
+    },
+    "ensemble_tips": [
+      "Widest dynamic range of woodwinds - use it",
+      "Low register blends beautifully with bassoon",
+      "Clarion register doubles well with violins",
+      "Can play softer than any other wind instrument",
+      "Excellent for fast passages and arpeggios"
+    ],
+    "texture_options": [
+      "Solo melodic lines",
+      "Chalumeau register sustained notes (dark, mysterious)",
+      "Rapid arpeggios and scales",
+      "Doubling violin or flute",
+      "Quiet accompanying figures"
+    ],
+    "avoid": [
+      "Throat tones (G3-Bb3) for prominent passages",
+      "Extreme altissimo in soft dynamics",
+      "Heavy use when warmth is needed (use horn instead)"
+    ]
+  },
   "ai": {
     "system_prompt_template": "Generate clarinet parts for Cinematic Studio Woodwinds. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range D3-Bb6, preferred E3-G6."
   }
