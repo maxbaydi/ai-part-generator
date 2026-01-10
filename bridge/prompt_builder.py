@@ -417,24 +417,24 @@ def build_prompt(
 
     if request.free_mode:
         generation_style = ""
-        style_hint = ""
+        type_hint = ""
+        mood_hint = ""
         dynamics_hint = ""
     else:
         gen_lower = generation_type.lower()
-        type_hint = TYPE_HINTS.get(gen_lower, f"Generate a {generation_type} part.")
-        type_hint += " Result must be MUSICAL, easy to perceive, and memorable."
+        # Default if not found in dictionary
+        type_hint = TYPE_HINTS.get(gen_lower, f"ROLE: Generate a {generation_type} part. OBJECTIVE: Musical, memorable, fitting.")
+        
         generation_style = request.generation_style or DEFAULT_GENERATION_STYLE
         style_lower = generation_style.lower()
-        mood_hint = MOOD_HINTS.get(style_lower, f"Create in {generation_style} style.")
+        # Default if not found in dictionary
+        mood_hint = MOOD_HINTS.get(style_lower, f"STYLE: {generation_style}. CHARACTER: Create a part in this style.")
 
+        # Check if DYNAMICS_HINTS has specific entry, otherwise use default
         dynamics_hint = DYNAMICS_HINTS.get(
             style_lower,
-            "EXPRESSION: Match the overall section arc. DYNAMICS: Add local note/phrase breathing.",
+            DYNAMICS_HINTS.get("default", "EXPRESSION: Follow phrase shape. DYNAMICS: Natural breathing.")
         )
-
-        style_hint = f"{type_hint} {mood_hint}"
-        if articulation_hint:
-            style_hint = f"{style_hint} {articulation_hint}"
 
     if request.free_mode:
         system_parts = [
@@ -517,8 +517,19 @@ def build_prompt(
             user_prompt_parts.append(f"")
             user_prompt_parts.append(orchestration_hints_prompt)
     else:
+        # --- FIXED MODE (Basic Generation) ---
         user_prompt_parts = [
             f"## COMPOSE: {generation_style.upper()} {generation_type.upper()} for {profile.get('name', 'instrument')}",
+            f"",
+            f"### GENERATION TARGET (WHAT TO BUILD)",
+            f"1. PART TYPE ({generation_type}):",
+            f"{type_hint}",
+            f"",
+            f"2. STYLE ({generation_style}):",
+            f"{mood_hint}",
+            f"",
+            f"3. DYNAMICS GOAL:",
+            f"{dynamics_hint}",
             f"",
             f"### MUSICAL CONTEXT",
             f"- Key: {final_key}",
@@ -575,6 +586,7 @@ def build_prompt(
             )
 
     if request.free_mode and request.ensemble:
+        # ... (plan handling code remains same) ...
         plan_summary = (request.ensemble.plan_summary or "").strip()
         section_overview = plan_data.get("section_overview") if isinstance(plan_data, dict) else None
         role_guidance = plan_data.get("role_guidance") if isinstance(plan_data, dict) else None
@@ -601,6 +613,7 @@ def build_prompt(
                 user_prompt_parts.append("- MELODY: Chord tones on downbeats, passing tones resolve to chord tones")
                 user_prompt_parts.append("- ALL: Switch to new chord tones at EXACTLY the time_q specified")
             elif isinstance(chord_map, list) and chord_map:
+                # ... (rest of plan prompt construction) ...
                 user_prompt_parts.append("")
                 user_prompt_parts.append("**CHORD MAP (MANDATORY - ALL INSTRUMENTS MUST FOLLOW):**")
                 user_prompt_parts.append("```")
@@ -622,7 +635,8 @@ def build_prompt(
                 user_prompt_parts.append("- HARMONY: Voice-lead smoothly, prioritize chord_tones on strong beats")
                 user_prompt_parts.append("- MELODY: Chord tones on downbeats, passing tones resolve to chord tones")
                 user_prompt_parts.append("- ALL: Switch to new chord tones at EXACTLY the time_q specified")
-
+            
+            # ... (dynamic arc, texture map, etc) ...
             dynamic_arc = plan_data.get("dynamic_arc") if isinstance(plan_data, dict) else None
             if isinstance(dynamic_arc, list) and dynamic_arc:
                 user_prompt_parts.append("")
@@ -816,7 +830,7 @@ def build_prompt(
             user_prompt_parts.append("### ESTABLISHED MOTIF (from melody instrument - RESPOND TO THIS)")
             source = generated_motif.get("source_instrument", "melody")
             user_prompt_parts.append(f"**Source:** {source}")
-
+            # ... (motif display code) ...
             motif_notes = generated_motif.get("notes", [])
             if motif_notes:
                 user_prompt_parts.append("**Motif notes (relative to start):**")
@@ -896,7 +910,7 @@ def build_prompt(
         user_prompt_parts.extend([
             f"",
             f"### COMPOSITION RULES",
-            f"- Style: {style_hint}",
+            # removed style_hint here as it is now in GENERATION TARGET
             f"- ALLOWED PITCHES (use ONLY these): {valid_pitches_str}",
             f"- Suggested note range: {min_notes}-{max_notes} (adapt based on musical needs)",
             f"- Pitch range: MIDI {pitch_low}-{pitch_high}",
@@ -907,7 +921,6 @@ def build_prompt(
             f"1. VELOCITY: {velocity_hint}",
             f"2. CC11 EXPRESSION: GLOBAL section envelope",
             f"3. CC1 DYNAMICS: PER-NOTE breathing (cresc/decresc/swell for each sustained note)",
-            f"   - {dynamics_hint}",
         ])
 
     tempo_guidance = build_tempo_change_guidance(request, length_q)

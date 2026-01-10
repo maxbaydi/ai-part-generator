@@ -114,6 +114,10 @@ def generate(request: GenerateRequest) -> JSONResponse:
             should_extract_motif = True
             source_instrument = current_inst.get("profile_name") or current_inst.get("track_name") or "melody"
 
+    forced_articulation = None
+    if not request.free_mode:
+        forced_articulation = preset_settings.get("articulation")
+
     response = build_response(
         parsed,
         profile,
@@ -129,6 +133,7 @@ def generate(request: GenerateRequest) -> JSONResponse:
         time_sig=request.music.time_sig,
         arrangement_mode=bool(request.ensemble and request.ensemble.arrangement_mode),
         source_sketch=(request.ensemble.source_sketch if request.ensemble and request.ensemble.arrangement_mode else None),
+        forced_articulation=forced_articulation,
     )
     logger.info(
         "Response built: notes=%d cc_events=%d keyswitches=%d program_changes=%d articulation=%s motif=%s handoff=%s",

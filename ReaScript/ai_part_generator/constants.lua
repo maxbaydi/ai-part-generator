@@ -100,14 +100,15 @@ M.PROMPT_BUF_SIZE = 32768
 M.GENERATION_TYPES = {
   "Melody",
   "Arpeggio",
-  "Bass Line",
+  "Bass",
   "Chords",
-  "Pad/Sustained",
-  "Rhythmic",
-  "Counter-melody",
-  "Accompaniment",
+  "Pad",
+  "Counter-Melody",
   "Ostinato",
+  "Rhythm",
+  "Percussion",
   "Fill",
+  "Atmosphere"
 }
 
 M.DEFAULT_GENERATION_TYPE = "Melody"
@@ -115,6 +116,7 @@ M.DEFAULT_GENERATION_TYPE = "Melody"
 M.GENERATION_STYLES = {
   "Heroic",
   "Epic",
+  "Cinematic",
   "Triumphant",
   "Majestic",
   "Adventurous",
@@ -159,7 +161,7 @@ M.GENERATION_STYLES = {
   "Serene",
   "Foreboding",
   "Magical",
-  "Solemn",
+  "Solemn"
 }
 
 M.DEFAULT_GENERATION_STYLE = "Heroic"

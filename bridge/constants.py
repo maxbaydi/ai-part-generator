@@ -87,3 +87,21 @@ ARTICULATION_MAX_DUR_Q = {
 }
 
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+# Valid Part Types (Keys for UI and Logic)
+PART_TYPES = [
+    "Melody", "Arpeggio", "Bass", "Chords", "Pad", "Counter-Melody", 
+    "Ostinato", "Rhythm", "Percussion", "Fill", "Atmosphere"
+]
+
+# Valid Musical Styles (Keys for UI and Logic)
+MUSICAL_STYLES = [
+    "Heroic", "Epic", "Cinematic", "Triumphant", "Majestic", "Adventurous",
+    "Dramatic", "Intense", "Suspense", "Thriller", "Horror", "Dark", "Ominous",
+    "Romantic", "Melancholic", "Tender", "Nostalgic", "Passionate", "Longing",
+    "Hopeful", "Energetic", "Playful", "Action", "Aggressive", "Fierce",
+    "Peaceful", "Dreamy", "Ethereal", "Mysterious", "Meditative", "Ambient",
+    "Celtic", "Middle Eastern", "Asian", "Latin", "Nordic", "Slavic",
+    "Baroque", "Classical", "Impressionist", "Minimalist",
+    "Victorious", "Tragic", "Whimsical", "Serene", "Foreboding", "Magical", "Solemn"
+]

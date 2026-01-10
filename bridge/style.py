@@ -1,101 +1,237 @@
 from __future__ import annotations
 
+# Detailed instructions for each musical style.
+# These tell the model how to interpret the style musically (scales, rhythms, dynamics, orchestration).
+
 MOOD_HINTS = {
-    "heroic": "RISING melodic contours, strong intervals (4ths, 5ths, octaves). MAJOR tonality, bold dynamics (mf→ff). Emphasize downbeats. Confident, triumphant.",
-    "epic": "GRAND sweeping lines, slow build-up. Wide intervals, unison movements. Long phrases to dramatic peaks. Dynamic swells. Majestic, powerful.",
-    "triumphant": "FANFARE-like ascending motifs, bright major. Strong accents on beat 1. Celebratory, victorious. Peak dynamics at phrase ends.",
-    "majestic": "SLOW dignified lines. Wide spacing, noble character. Sustained notes with gradual swells. Royal, ceremonial.",
-    "adventurous": "ENERGETIC leaps, unexpected turns. Mix stepwise and wide intervals. Syncopation. Bright, forward-moving.",
-    "dramatic": "Strong DYNAMIC CONTRASTS (pp↔ff). Unexpected accents. Tension intervals (m2, tritone). Emotional peaks then resolution.",
-    "intense": "DRIVING ostinato, relentless motion. Crescendo passages. Dense activity. Urgent, pressing.",
-    "suspense": "CHROMATIC movement, unresolved phrases. Quiet with sudden accents. Tremolo effects. Hanging, unresolved endings.",
-    "thriller": "SYNCOPATED rhythms, unexpected rests. Dissonant intervals. Irregular phrase lengths. Nervous, unpredictable.",
-    "horror": "CHROMATIC clusters, LOW register. Tremolo, wide leaps. Dissonant m2/tritone. Eerie, unsettling. Sudden dynamic changes.",
-    "dark": "MINOR tonality, DESCENDING lines. Low-mid register. Heavy, oppressive. Slow harmonic rhythm.",
-    "ominous": "SLOW creeping motion. Pedal tones with dissonant upper notes. Growing intensity. Threatening.",
-    "romantic": "EXPRESSIVE rubato feel, sweeping arcs. Chromatic passing tones. Wide dynamics. Passionate, yearning.",
-    "melancholic": "MINOR tonality, descending tendency. Slower feel. Suspensions, appoggiaturas. Wistful, sad.",
-    "tender": "SOFT dynamics (pp-mp), close intervals (2nds, 3rds). Gentle flowing motion. Intimate, delicate.",
-    "nostalgic": "SIMPLE memorable melodies. Repetitive motifs. Minor inflections in major. Bittersweet, reflective.",
-    "passionate": "WIDE dynamic swings, expressive leaps. Building intensity. Emotional peaks. Heartfelt, fervent.",
-    "longing": "SUSTAINED notes, yearning intervals (6ths, 7ths). Unresolved phrases. Reaching upward then falling. Aching.",
-    "hopeful": "MAJOR tonality, RISING phrases. Gradual crescendo. Resolution on bright notes. Optimistic, uplifting.",
-    "energetic": "FAST rhythmic activity, accented staccato. Syncopation for drive. Loud dynamics. Vigorous, lively.",
-    "playful": "LIGHT staccato, melodic leaps. Major tonality. Dance-like rhythms. Cheerful, whimsical.",
-    "action": "DRIVING ostinato, rapid passages. Accents on weak beats. Relentless motion. Exciting, tense.",
-    "aggressive": "SHARP accents, marcato. Dissonant intervals. Strong dynamics. Forceful, attacking.",
-    "fierce": "RAPID aggressive motion. Wide leaps, sforzando accents. Intense dynamics. Wild, untamed.",
-    "peaceful": "SIMPLE consonant intervals (3rds, 6ths). Slow harmonic rhythm. Soft dynamics. Calm, serene.",
-    "dreamy": "FLOWING arpeggiated figures, blurred phrase boundaries. High register. Soft. Floating, ethereal.",
-    "ethereal": "HIGH register, sustained tones. Open intervals (4ths, 5ths). Sparse texture. Otherworldly, celestial.",
-    "mysterious": "UNUSUAL intervals, ambiguous tonality. Quiet dynamics. Unexpected melodic turns. Enigmatic.",
-    "meditative": "MINIMAL motion, repeated patterns. Consonant intervals. Very slow feel. Contemplative, zen.",
-    "ambient": "LONG sustained notes, slow evolution. Minimal melodic activity. Atmospheric, spatial.",
-    "celtic": "PENTATONIC scale, characteristic 4th/5th leaps. Ornamental grace notes. Dance-like. Folk, earthy.",
-    "middle eastern": "PHRYGIAN/harmonic minor. Ornamental melismas. Augmented 2nd intervals. Exotic, mystical.",
-    "asian": "PENTATONIC scale. Sparse texture. Contemplative pauses. Elegant, refined.",
-    "latin": "SYNCOPATED rhythms, major tonality. Dance patterns. Warm, rhythmic.",
-    "nordic": "OPEN 5ths, folk simplicity. Haunting minor melodies. Vast, cold, ancient.",
-    "slavic": "MINOR tonality, characteristic intervals. Melancholic yet powerful. Folk dance elements.",
-    "baroque": "SEQUENCES, ornaments (trills). Continuous motion. Contrapuntal. Elegant, formal.",
-    "classical": "BALANCED 4+4 bar phrases. Clear periodic structure. Symmetric melodic shapes. Elegant.",
-    "impressionist": "WHOLE-TONE and modal inflections. Blurred phrase boundaries. Coloristic, atmospheric.",
-    "minimalist": "REPETITIVE patterns with subtle variations. Phase shifting. Hypnotic, evolving.",
-    "victorious": "ASCENDING fanfare figures. Bright major. Strong downbeat accents. Celebrating, conquering.",
-    "tragic": "DESCENDING minor lines. Slow, heavy rhythm. Lamenting intervals. Sorrowful, devastating.",
-    "whimsical": "UNEXPECTED leaps, playful rhythms. Light articulation. Quirky, fantastical.",
-    "serene": "CONSONANT intervals, gentle motion. Soft throughout. Tranquil, undisturbed.",
-    "foreboding": "LOW register, slow chromatic motion. Building tension. Warning, threatening.",
-    "magical": "SPARKLING high notes, arpeggiated figures. Whole-tone touches. Enchanting, wondrous.",
-    "solemn": "SLOW hymn-like motion. Dignified intervals. Reverent, grave.",
+    # --- CINEMATIC / ORCHESTRAL ---
+    "heroic": (
+        "STYLE: HEROIC / ADVENTURE.\n"
+        "CHARACTER: Bold, confident, triumphant, rising.\n"
+        "MUSICAL TRAITS: Major tonality. Strong intervals (perfect 4ths, 5ths, octaves). "
+        "Fanfare-like rhythms (triplets, dotted 8th+16th). Emphasize the downbeat.\n"
+        "DYNAMICS: Loud and proud (mf to ff). Strong accents. Crescendos into new phrases."
+    ),
+    "epic": (
+        "STYLE: EPIC / TRAILER.\n"
+        "CHARACTER: Massive, grand, overwhelming, slow-burn to explosion.\n"
+        "MUSICAL TRAITS: Huge unison lines. Slow harmonic rhythm (long chords). "
+        "Ostinatos driving the rhythm. Wide orchestration (low lows, high highs).\n"
+        "DYNAMICS: Extreme dynamic range (pp to fff). Massive swells. Sforzando accents."
+    ),
+    "cinematic": (
+        "STYLE: MODERN CINEMATIC.\n"
+        "CHARACTER: Evolving, emotional, storytelling, visual.\n"
+        "MUSICAL TRAITS: Mix of organic and synthetic textures. Minimalist repetitive motifs that build over time. "
+        "Focus on texture and timbre over complex melody.\n"
+        "DYNAMICS: Constant evolution (CC1). Never static. Ebb and flow like waves."
+    ),
+    "dramatic": (
+        "STYLE: DRAMATIC / EMOTIONAL.\n"
+        "CHARACTER: Intense, conflicted, heavy, narrative.\n"
+        "MUSICAL TRAITS: Minor keys or modal interchanges. Unexpected chord changes. "
+        "Wide melodic leaps (6ths, 7ths). Tension and release.\n"
+        "DYNAMICS: Volatile. Sudden drops to whisper, sudden explosions to scream."
+    ),
+    "triumphant": (
+        "STYLE: TRIUMPHANT / VICTORY.\n"
+        "CHARACTER: Celebrating, winning, final resolution.\n"
+        "MUSICAL TRAITS: Pure Major key. Ascending lines. Bright harmony. "
+        "Rhythmic unison. Brass fanfares. Ending on the Tonic with power.\n"
+        "DYNAMICS: Sustained high energy (f to ff). Bright and punchy."
+    ),
+    "majestic": (
+        "STYLE: MAJESTIC / ROYAL.\n"
+        "CHARACTER: Dignified, slow, noble, spacious.\n"
+        "MUSICAL TRAITS: Slow tempos. Dotted rhythms. Rich harmony (suspensions). "
+        "Processional feel. Avoid rapid notes.\n"
+        "DYNAMICS: Controlled power. stately swells. Heavy weight."
+    ),
+    "adventurous": (
+        "STYLE: ADVENTUROUS / JOURNEY.\n"
+        "CHARACTER: Forward-moving, exciting, eager, exploring.\n"
+        "MUSICAL TRAITS: Fast 12/8 or triplet feel. Lydian mode (raised 4th) touches. "
+        "Running scales. Agile melodic movement.\n"
+        "DYNAMICS: Energetic. Accented syncopations."
+    ),
+    "suspense": (
+        "STYLE: SUSPENSE / TENSION.\n"
+        "CHARACTER: Waiting, dangerous, uncertain, holding breath.\n"
+        "MUSICAL TRAITS: Dissonant clusters (minor 2nds). Chromaticism. Tremolos. "
+        "Unresolved questions. High string pedals or low rumbles.\n"
+        "DYNAMICS: Mostly quiet (pp) with sudden scary spikes (sfz)."
+    ),
+    "thriller": (
+        "STYLE: THRILLER / CHASE.\n"
+        "CHARACTER: Urgent, nervous, panic, running.\n"
+        "MUSICAL TRAITS: Fast, irregular rhythms (5/8, 7/8). Staccato ostinatos. "
+        "Dissonant stabs. Rising pitch sequences (Shepard tone effect).\n"
+        "DYNAMICS: Nervous pulsing. Sudden silences."
+    ),
+    "horror": (
+        "STYLE: HORROR / SCARY.\n"
+        "CHARACTER: Terrifying, chaotic, nightmarish, dissonant.\n"
+        "MUSICAL TRAITS: Atonal or highly chromatic. Tritones. Extended techniques (screeches, scrapes). "
+        "Unpredictable rhythm. Low clusters.\n"
+        "DYNAMICS: Extreme shock. Silence vs. Noise."
+    ),
+
+    # --- EMOTIONAL / ATMOSPHERIC ---
+    "romantic": (
+        "STYLE: ROMANTIC / LOVE.\n"
+        "CHARACTER: Passionate, sweeping, rubato, warm.\n"
+        "MUSICAL TRAITS: Lush harmonies (7ths, 9ths). Long singing melodies. "
+        "Expressive leaps. Chromatic passing tones. Slow harmonic pace.\n"
+        "DYNAMICS: Deep, breathing expression. Large crescendos and decrescendos."
+    ),
+    "melancholic": (
+        "STYLE: MELANCHOLIC / SAD.\n"
+        "CHARACTER: Sorrowful, lonely, reflective, weeping.\n"
+        "MUSICAL TRAITS: Minor key. Falling melodic lines (sigh motif). "
+        "Slow tempo. Sparse accompaniment. Solo instruments featured.\n"
+        "DYNAMICS: Soft (mp to pp). Fading away. Gentle."
+    ),
+    "tender": (
+        "STYLE: TENDER / INTIMATE.\n"
+        "CHARACTER: Gentle, fragile, close, caring.\n"
+        "MUSICAL TRAITS: Simple melody. Consonant harmony. High register piano or strings. "
+        "Avoid harsh intervals. Lullaby quality.\n"
+        "DYNAMICS: Very soft (pp to p). Delicate touch. No sudden changes."
+    ),
+    "nostalgic": (
+        "STYLE: NOSTALGIC / MEMORY.\n"
+        "CHARACTER: Bittersweet, looking back, warm but sad.\n"
+        "MUSICAL TRAITS: Major key with borrowed minor chords (iv). Simple, folk-like melody. "
+        "Waltz time (3/4) often works well.\n"
+        "DYNAMICS: Warm and flowing. Moderate range."
+    ),
+    "hopeful": (
+        "STYLE: HOPEFUL / INSPIRING.\n"
+        "CHARACTER: Rising, brightening, dawn, optimism.\n"
+        "MUSICAL TRAITS: Starts sparse/low, builds up/high. Major key. "
+        "Ascending chord progressions. Steady, reassuring rhythm.\n"
+        "DYNAMICS: Gradual build from p to f over the whole section."
+    ),
+    "dreamy": (
+        "STYLE: DREAMY / FANTASY.\n"
+        "CHARACTER: Floating, blurred, magical, unreal.\n"
+        "MUSICAL TRAITS: Whole tone or Lydian scales. Arpeggiated harps/pianos. "
+        "Blurred harmony (pedal held down). Soft attacks.\n"
+        "DYNAMICS: Fluid, water-like. No hard edges."
+    ),
+    "ethereal": (
+        "STYLE: ETHEREAL / CELESTIAL.\n"
+        "CHARACTER: Angelic, weightless, holy, space.\n"
+        "MUSICAL TRAITS: Very high register. Open chords (no 3rds). Long reverb tails. "
+        "Slow motion. Choir-like textures.\n"
+        "DYNAMICS: Static, shimmering. Very constant."
+    ),
+    "mysterious": (
+        "STYLE: MYSTERIOUS / ENIGMATIC.\n"
+        "CHARACTER: Puzzling, searching, fog, shadows.\n"
+        "MUSICAL TRAITS: Dorian or Phrygian mode. Wandering melody without clear home. "
+        "Pizzicato bass. unexpected harmonic shifts.\n"
+        "DYNAMICS: Quiet, sneaking."
+    ),
+    "meditative": (
+        "STYLE: MEDITATIVE / ZEN.\n"
+        "CHARACTER: Still, inner peace, breath, timeless.\n"
+        "MUSICAL TRAITS: Drones. Pentatonic scales. Extrememly slow. "
+        "Repetitive minimal motifs. Silence is as important as sound.\n"
+        "DYNAMICS: Flat, steady, very gentle."
+    ),
+    "ambient": (
+        "STYLE: AMBIENT / DRONE.\n"
+        "CHARACTER: Background, texture, pad, vibe.\n"
+        "MUSICAL TRAITS: No distinct melody. Focus on timbre evolution. "
+        "Deep bass drones. High shimmers. Slow filter sweeps.\n"
+        "DYNAMICS: Very slow evolution over many bars."
+    ),
+
+    # --- ACTION / ENERGY ---
+    "energetic": (
+        "STYLE: ENERGETIC / UPBEAT.\n"
+        "CHARACTER: Active, busy, running, happy.\n"
+        "MUSICAL TRAITS: Fast tempo. Constant 8th or 16th note motion. "
+        "Staccato articulations. Syncopated pop/rock rhythms.\n"
+        "DYNAMICS: High energy (f). Punchy."
+    ),
+    "playful": (
+        "STYLE: PLAYFUL / COMEDY.\n"
+        "CHARACTER: Light, bouncy, mischievous, quirky.\n"
+        "MUSICAL TRAITS: Staccato woodwinds/strings. Pizzicato. Grace notes. "
+        "Unexpected pauses. Chromatic runs. Polka or march rhythms.\n"
+        "DYNAMICS: Light (mp). bouncy accents."
+    ),
+    "action": (
+        "STYLE: ACTION / BATTLE.\n"
+        "CHARACTER: Fighting, aggressive, danger, adrenaline.\n"
+        "MUSICAL TRAITS: Driving percussion. Brass stabs. Fast string ostinatos. "
+        "Minor or diminished scales. Heavy syncopation on weak beats.\n"
+        "DYNAMICS: Loud, aggressive, punchy."
+    ),
+    "aggressive": (
+        "STYLE: AGGRESSIVE / HEAVY.\n"
+        "CHARACTER: Angry, forceful, destructive, mean.\n"
+        "MUSICAL TRAITS: Distortion. Power chords. Low register riffs. "
+        "Chromatic palm-muted chugs. Hard-hitting drums.\n"
+        "DYNAMICS: Maximum volume (ff). Wall of sound."
+    ),
+
+    # --- GENRE SPECIFIC ---
+    "celtic": (
+        "STYLE: CELTIC / FOLK.\n"
+        "CHARACTER: Earthy, green, dance-like, ancient.\n"
+        "MUSICAL TRAITS: Dorian or Mixolydian modes. Triplets (jig/reel). "
+        "Drone bass. Grace notes/ornaments. Flutes, fiddles, bags.\n"
+        "DYNAMICS: Rhythmic pulsing."
+    ),
+    "middle eastern": (
+        "STYLE: MIDDLE EASTERN / DESERT.\n"
+        "CHARACTER: Exotic, heat, mystical, ancient.\n"
+        "MUSICAL TRAITS: Double Harmonic scale (Hijaz). Quarter tones (pitch bends). "
+        "Ornamental melismas (turns/trills). Percussion heavy.\n"
+        "DYNAMICS: Expressive melodic swells."
+    ),
+    "asian": (
+        "STYLE: EAST ASIAN / ZEN.\n"
+        "CHARACTER: Nature, refined, bamboo, silk.\n"
+        "MUSICAL TRAITS: Pentatonic scales. Pitch bending. Sparse texture. "
+        "Wood block percussion. Flute ornaments.\n"
+        "DYNAMICS: Sudden loud hits followed by decay."
+    ),
+    "latin": (
+        "STYLE: LATIN / TROPICAL.\n"
+        "CHARACTER: Hot, dancing, rhythmic, party.\n"
+        "MUSICAL TRAITS: Clave rhythms (3-2, 2-3). Montuno piano patterns. "
+        "Syncopated bass (tumbao). Brass punches.\n"
+        "DYNAMICS: Tight, rhythmic, sharp."
+    ),
+    "nordic": (
+        "STYLE: NORDIC / VIKING.\n"
+        "CHARACTER: Cold, ice, vast, ancient war.\n"
+        "MUSICAL TRAITS: Low drones. Throat singing style (deep rasp). "
+        "Simple minor melodies. heavy constant drums. Raw strings.\n"
+        "DYNAMICS: Raw, primal, building."
+    ),
+    "baroque": (
+        "STYLE: BAROQUE / CLASSICAL.\n"
+        "CHARACTER: Ornate, mathematical, busy, formal.\n"
+        "MUSICAL TRAITS: Counterpoint. Constant 16th note motion (motor rhythm). "
+        "Harpsichord/Strings. Trills and ornaments. Circle of 5ths.\n"
+        "DYNAMICS: Terraced (sudden changes between p and f)."
+    ),
+    "minimalist": (
+        "STYLE: MINIMALIST / MODERN.\n"
+        "CHARACTER: Repetitive, hypnotic, process-based, glass.\n"
+        "MUSICAL TRAITS: Short repeated cells. Phase shifting. Gradual changes. "
+        "Consonant harmony. Pulse is everything.\n"
+        "DYNAMICS: Very gradual, long-form changes."
+    ),
 }
 
+# Simplified dynamics hints to append to the main prompt if needed, 
+# though the MOOD_HINTS above now cover dynamics well.
 DYNAMICS_HINTS = {
-    "heroic": "EXPRESSION: Strong crescendo 70→110. DYNAMICS: Bold swells within phrases, accent peaks.",
-    "epic": "EXPRESSION: Grand build 50→120 to peak. DYNAMICS: Sweeping phrase arcs, dramatic swells.",
-    "triumphant": "EXPRESSION: High plateau 90-115. DYNAMICS: Fanfare-like accent swells on peaks.",
-    "majestic": "EXPRESSION: Steady 80-95. DYNAMICS: Slow dignified swells, no sudden changes.",
-    "adventurous": "EXPRESSION: Varied 70-100. DYNAMICS: Energetic note swells, sudden bursts.",
-    "dramatic": "EXPRESSION: Extreme contrasts 30↔110. DYNAMICS: Intense internal swells per phrase.",
-    "intense": "EXPRESSION: Relentless rise 70→120. DYNAMICS: Driving swells, no backing off.",
-    "suspense": "EXPRESSION: Quiet 25-50. DYNAMICS: Sudden sfz spikes 100+, return to quiet.",
-    "thriller": "EXPRESSION: Unpredictable 40-100. DYNAMICS: Nervous irregular accent swells.",
-    "horror": "EXPRESSION: Eerie quiet 20-35. DYNAMICS: Terrifying sfz spikes 110+, fast decay.",
-    "dark": "EXPRESSION: Heavy 70-90, descending. DYNAMICS: Oppressive, slow internal swells.",
-    "ominous": "EXPRESSION: Growing threat 15→80. DYNAMICS: Creeping swells, never resolve.",
-    "romantic": "EXPRESSION: Wave-like 50-100-50. DYNAMICS: Expressive phrase breathing.",
-    "melancholic": "EXPRESSION: Soft 35-60, fading. DYNAMICS: Gentle decrescendos within notes.",
-    "tender": "EXPRESSION: Intimate 25-50. DYNAMICS: Delicate, minimal internal movement.",
-    "nostalgic": "EXPRESSION: Bittersweet 55-75. DYNAMICS: Gentle swells always returning softer.",
-    "passionate": "EXPRESSION: Wide swings 50-110. DYNAMICS: Intense phrase swells, follow emotion.",
-    "longing": "EXPRESSION: Yearning rise 40→90→60. DYNAMICS: Reaching swells that fade unfulfilled.",
-    "hopeful": "EXPRESSION: Brightening 55→105. DYNAMICS: Uplifting phrase arcs.",
-    "energetic": "EXPRESSION: High constant 90-110. DYNAMICS: Punchy accent swells on beats.",
-    "playful": "EXPRESSION: Light 70-85. DYNAMICS: Bouncy, playful note swells.",
-    "action": "EXPRESSION: Driving 90-100. DYNAMICS: Sfz swells 110+ on action beats.",
-    "aggressive": "EXPRESSION: Forceful 100-115. DYNAMICS: Marcato attack swells 120+.",
-    "fierce": "EXPRESSION: Maximum 110-127. DYNAMICS: Wild explosive sfz swells.",
-    "peaceful": "EXPRESSION: Calm constant 30-50. DYNAMICS: Barely any variation, serene.",
-    "dreamy": "EXPRESSION: Floating 35-60. DYNAMICS: Slow breathing swells like waves.",
-    "ethereal": "EXPRESSION: Distant 15-35. DYNAMICS: Celestial whispers, subtle movement.",
-    "mysterious": "EXPRESSION: Quiet 40-55. DYNAMICS: Unexpected swells and drops.",
-    "meditative": "EXPRESSION: Still 30-40. DYNAMICS: Minimal movement, zen-like.",
-    "ambient": "EXPRESSION: Static 30-60. DYNAMICS: Imperceptible slow changes.",
-    "celtic": "EXPRESSION: Dance-like 70-85. DYNAMICS: Rhythmic accent swells.",
-    "middle eastern": "EXPRESSION: Ornamental 55-80. DYNAMICS: Melodic phrase swells.",
-    "asian": "EXPRESSION: Refined 40-75. DYNAMICS: Thoughtful phrase-end fades.",
-    "latin": "EXPRESSION: Warm 75-95. DYNAMICS: Syncopated accent punches.",
-    "nordic": "EXPRESSION: Vast 55-80. DYNAMICS: Sparse, austere swells.",
-    "slavic": "EXPRESSION: Emotional 50-95. DYNAMICS: Folk-like intense phrase arcs.",
-    "baroque": "EXPRESSION: Terraced jumps 45↔90. DYNAMICS: Ornamental swells within levels.",
-    "classical": "EXPRESSION: Balanced 55-80. DYNAMICS: Gradual phrase crescendo/decrescendo.",
-    "impressionist": "EXPRESSION: Coloristic 40-75. DYNAMICS: Blurred overlapping swells.",
-    "minimalist": "EXPRESSION: Constant 60-70. DYNAMICS: Hypnotic micro-shifts.",
-    "victorious": "EXPRESSION: Triumphant 95-115. DYNAMICS: Fanfare peak swells 120+.",
-    "tragic": "EXPRESSION: Descending 70→25. DYNAMICS: Lamenting phrase fades.",
-    "whimsical": "EXPRESSION: Quirky 70-85. DYNAMICS: Unexpected surprise swells.",
-    "serene": "EXPRESSION: Undisturbed 30-50. DYNAMICS: Flat, peaceful, minimal.",
-    "foreboding": "EXPRESSION: Creeping rise 15→70. DYNAMICS: Dread-building swells.",
-    "magical": "EXPRESSION: Base 45, sparkles 80-90. DYNAMICS: Bright accent swells.",
-    "solemn": "EXPRESSION: Reverent 55-80. DYNAMICS: Dignified steady swells.",
+    "default": "EXPRESSION: Follow the phrase shape. DYNAMICS: Natural breathing."
 }

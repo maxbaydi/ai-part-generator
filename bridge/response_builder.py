@@ -877,6 +877,7 @@ def build_response(
     time_sig: str = "4/4",
     arrangement_mode: bool = False,
     source_sketch: Optional[Dict[str, Any]] = None,
+    forced_articulation: Optional[str] = None,
 ) -> Dict[str, Any]:
     midi_cfg = profile.get("midi", {})
     default_chan = int(midi_cfg.get("channel", 1))
@@ -943,7 +944,7 @@ def build_response(
         )
         art_name = "mixed"
     else:
-        articulation = raw.get("articulation")
+        articulation = forced_articulation if forced_articulation else raw.get("articulation")
         notes, keyswitches, program_changes, articulation_cc, art_name = apply_articulation(
             articulation, profile, notes, default_chan
         )
