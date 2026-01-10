@@ -1064,9 +1064,9 @@ def build_chat_messages(system_prompt: str, user_prompt: str) -> List[Dict[str, 
     ]
 
 
-SKETCH_NOTES_LIMIT = 5000
-SKETCH_NOTES_PREVIEW = 1000
-SKETCH_CC_EVENTS_LIMIT = 3000
+SKETCH_NOTES_LIMIT = 1000
+SKETCH_NOTES_PREVIEW = 200
+SKETCH_CC_EVENTS_LIMIT = 200
 
 
 def format_sketch_notes(notes: List[Dict[str, Any]], time_sig: str = "4/4", limit: int = SKETCH_NOTES_LIMIT) -> str:

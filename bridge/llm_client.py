@@ -104,7 +104,6 @@ def call_lmstudio(model_name: str, base_url: str, temperature: float, messages: 
         "temperature": temperature,
         "max_tokens": DEFAULT_MAX_TOKENS,
         "stream": False,
-        "stop": ["```"],
     }
     response = post_json(url, payload, HTTP_TIMEOUT_SEC)
     try:
