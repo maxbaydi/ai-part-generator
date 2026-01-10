@@ -298,10 +298,14 @@ def build_prompt(
     abs_range = profile_range.get("absolute")
     pref_range = profile_range.get("preferred")
 
-    generation_type = request.generation_type or DEFAULT_GENERATION_TYPE
-    min_notes, max_notes, _ = estimate_note_count(
-        length_q, request.music.bpm, request.music.time_sig, generation_type
-    )
+    if request.free_mode:
+        generation_type = ""
+        min_notes, max_notes = 1, 999
+    else:
+        generation_type = request.generation_type or DEFAULT_GENERATION_TYPE
+        min_notes, max_notes, _ = estimate_note_count(
+            length_q, request.music.bpm, request.music.time_sig, generation_type
+        )
 
     values = {
         "profile_name": profile.get("name", ""),
@@ -329,24 +333,29 @@ def build_prompt(
     midi_channel = profile.get("midi", {}).get("channel", 1)
     pitch_low, pitch_high = resolve_prompt_pitch_range(pref_range)
 
-    gen_lower = generation_type.lower()
-    type_hint = TYPE_HINTS.get(gen_lower, f"Generate a {generation_type} part.")
-    type_hint += " Result must be MUSICAL, easy to perceive, and memorable."
-    generation_style = request.generation_style or DEFAULT_GENERATION_STYLE
-    style_lower = generation_style.lower()
-    mood_hint = MOOD_HINTS.get(style_lower, f"Create in {generation_style} style.")
-
     articulation = preset_settings.get("articulation", "legato")
     articulation_hint = ARTICULATION_HINTS.get(articulation.lower(), "") if articulation else ""
 
-    dynamics_hint = DYNAMICS_HINTS.get(
-        style_lower,
-        "EXPRESSION: Match the overall section arc. DYNAMICS: Add local note/phrase breathing.",
-    )
+    if request.free_mode:
+        generation_style = ""
+        style_hint = ""
+        dynamics_hint = ""
+    else:
+        gen_lower = generation_type.lower()
+        type_hint = TYPE_HINTS.get(gen_lower, f"Generate a {generation_type} part.")
+        type_hint += " Result must be MUSICAL, easy to perceive, and memorable."
+        generation_style = request.generation_style or DEFAULT_GENERATION_STYLE
+        style_lower = generation_style.lower()
+        mood_hint = MOOD_HINTS.get(style_lower, f"Create in {generation_style} style.")
 
-    style_hint = f"{type_hint} {mood_hint}"
-    if articulation_hint:
-        style_hint = f"{style_hint} {articulation_hint}"
+        dynamics_hint = DYNAMICS_HINTS.get(
+            style_lower,
+            "EXPRESSION: Match the overall section arc. DYNAMICS: Add local note/phrase breathing.",
+        )
+
+        style_hint = f"{type_hint} {mood_hint}"
+        if articulation_hint:
+            style_hint = f"{style_hint} {articulation_hint}"
 
     if request.free_mode:
         system_parts = [

@@ -5,9 +5,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 try:
-    from constants import DEFAULT_GENERATION_STYLE, DEFAULT_GENERATION_TYPE, DEFAULT_PROVIDER
+    from constants import DEFAULT_PROVIDER
 except ImportError:
-    from .constants import DEFAULT_GENERATION_STYLE, DEFAULT_GENERATION_TYPE, DEFAULT_PROVIDER
+    from .constants import DEFAULT_PROVIDER
 
 
 class TimeWindow(BaseModel):
@@ -88,7 +88,7 @@ class GeneratedMotif(BaseModel):
 class EnsembleInfo(BaseModel):
     total_instruments: int = 1
     instruments: List[EnsembleInstrument] = Field(default_factory=list)
-    generation_style: str = DEFAULT_GENERATION_STYLE
+    generation_style: Optional[str] = None
     shared_prompt: str = ""
     plan_summary: str = ""
     plan: Optional[Dict[str, Any]] = None
@@ -106,8 +106,8 @@ class GenerateRequest(BaseModel):
     target: TargetInfo
     context: Optional[ContextInfo] = None
     ensemble: Optional[EnsembleInfo] = None
-    generation_type: str = DEFAULT_GENERATION_TYPE
-    generation_style: str = DEFAULT_GENERATION_STYLE
+    generation_type: Optional[str] = None
+    generation_style: Optional[str] = None
     free_mode: bool = False
     allow_tempo_changes: bool = False
     user_prompt: str = ""

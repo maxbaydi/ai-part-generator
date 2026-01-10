@@ -266,30 +266,46 @@ end
 
 local function apply_tempo_markers(markers, start_sec, end_sec)
   if type(markers) ~= "table" or #markers == 0 then
-    return false
+    return false, nil
   end
   local selection_start_qn = reaper.TimeMap2_timeToQN(0, start_sec)
   local selection_end_qn = reaper.TimeMap2_timeToQN(0, end_sec)
   local length_q = selection_end_qn - selection_start_qn
   if length_q <= 0 then
-    return false
+    return false, nil
   end
 
   local normalized = normalize_tempo_markers(markers, length_q)
   if #normalized == 0 then
-    return false
+    return false, nil
   end
 
+  local prepared = {}
   for _, marker in ipairs(normalized) do
     local target_qn = selection_start_qn + marker.time_q
     local timepos = reaper.TimeMap2_QNToTime(0, target_qn)
     local num, denom = get_time_signature_at_time(timepos)
-    local idx = find_tempo_marker_index(timepos)
-    reaper.SetTempoTimeSigMarker(0, idx or -1, timepos, -1, -1, marker.bpm, num, denom, marker.linear and true or false)
+    table.insert(prepared, {
+      timepos = timepos,
+      bpm = marker.bpm,
+      num = num,
+      denom = denom,
+      linear = marker.linear,
+    })
   end
 
+  local first_bpm = nil
+  for _, p in ipairs(prepared) do
+    local idx = find_tempo_marker_index(p.timepos)
+    reaper.SetTempoTimeSigMarker(0, idx or -1, p.timepos, -1, -1, p.bpm, p.num, p.denom, p.linear and true or false)
+    if first_bpm == nil then
+      first_bpm = p.bpm
+    end
+  end
+
+  reaper.UpdateTimeline()
   reaper.UpdateArrange()
-  return true
+  return true, first_bpm
 end
 
 local function get_key_tracks()
@@ -330,12 +346,19 @@ local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_i
     end
   end
 
+  local effective_type = nil
+  local effective_style = nil
+  if not free_mode then
+    effective_type = generation_type or const.DEFAULT_GENERATION_TYPE
+    effective_style = generation_style or const.DEFAULT_GENERATION_STYLE
+  end
+
   local request = {
     time = { start_sec = start_sec, end_sec = end_sec },
     music = { bpm = bpm, time_sig = string.format("%d/%d", num, denom), key = key },
     target = { profile_id = profile_id, articulation = articulation_name },
-    generation_type = generation_type or const.DEFAULT_GENERATION_TYPE,
-    generation_style = generation_style or const.DEFAULT_GENERATION_STYLE,
+    generation_type = effective_type,
+    generation_style = effective_style,
     free_mode = free_mode or false,
     allow_tempo_changes = allow_tempo_changes or false,
     user_prompt = prompt,
@@ -357,7 +380,7 @@ local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_i
 end
 
 local function abort_apply(reason)
-  if apply_state and apply_state.undo_started then
+  if apply_state then
     reaper.Undo_EndBlock("AI Part Generator (aborted)", -1)
   end
   apply_state = nil
@@ -497,7 +520,7 @@ local function apply_step()
   utils.log("apply_step WARNING: unknown phase=" .. tostring(phase))
 end
 
-local function begin_apply(response, profile_id, profile, articulation_name, target_track, start_sec, end_sec, tempo_markers)
+local function begin_apply(response, profile_id, profile, articulation_name, target_track, start_sec, end_sec, tempo_markers, on_tempo_applied)
   utils.log("begin_apply: starting...")
 
   if not reaper.ValidatePtr(target_track, "MediaTrack*") then
@@ -506,19 +529,29 @@ local function begin_apply(response, profile_id, profile, articulation_name, tar
     return
   end
 
+  reaper.Undo_BeginBlock()
+
+  local applied_bpm = nil
+  if tempo_markers and type(tempo_markers) == "table" and #tempo_markers > 0 then
+    local success, first_bpm = apply_tempo_markers(tempo_markers, start_sec, end_sec)
+    if success and first_bpm then
+      applied_bpm = first_bpm
+      utils.log("begin_apply: tempo markers applied, first BPM=" .. tostring(first_bpm))
+    end
+  end
+
+  if on_tempo_applied and applied_bpm then
+    on_tempo_applied(applied_bpm)
+  end
+
   local item, take, created_new_take = midi.get_or_create_midi_item(target_track, start_sec, end_sec, true)
   if not take then
     utils.log("begin_apply ERROR: Failed to get MIDI take")
+    reaper.Undo_EndBlock("AI Part Generator (aborted)", -1)
     utils.show_error("Failed to get MIDI take.")
     return
   end
   utils.log("begin_apply: got MIDI item and take (new_take=" .. tostring(created_new_take) .. ")")
-
-  reaper.Undo_BeginBlock()
-
-  if tempo_markers and type(tempo_markers) == "table" and #tempo_markers > 0 then
-    apply_tempo_markers(tempo_markers, start_sec, end_sec)
-  end
 
   local start_qn = reaper.TimeMap_timeToQN(start_sec)
   local end_qn_val = reaper.TimeMap_timeToQN(end_sec)
@@ -578,7 +611,6 @@ local function begin_apply(response, profile_id, profile, articulation_name, tar
     program_changes = program_changes,
     target_track = target_track,
     profile_id = profile_id,
-    undo_started = true,
     pc_idx = 1,
     ks_idx = 1,
     cc_ins_idx = 1,
@@ -632,7 +664,7 @@ local function poll_generation()
     tempo_markers = data.tempo_markers
   end
 
-  begin_apply(data, profile_id, profile, articulation_name, target_track, start_sec, end_sec, tempo_markers)
+  begin_apply(data, profile_id, profile, articulation_name, target_track, start_sec, end_sec, tempo_markers, nil)
 end
 
 local function run_generation_after_bridge(state, profiles_by_id, start_sec, end_sec)
@@ -774,8 +806,15 @@ local function apply_compose_result_and_continue()
     utils.log(string.format("Compose: applying results for '%s' (%d/%d)",
       current.track_name, compose_state.current_index, compose_state.total_tracks))
     
+    local on_tempo_applied = function(new_bpm)
+      if compose_state and new_bpm then
+        compose_state.bpm = new_bpm
+        utils.log("Compose: BPM updated to " .. tostring(new_bpm))
+      end
+    end
+    
     begin_apply(current.response, current.profile_id, current.profile, current.articulation_name, current.target_track,
-      compose_state.start_sec, compose_state.end_sec, current.tempo_markers)
+      compose_state.start_sec, compose_state.end_sec, current.tempo_markers, on_tempo_applied)
     
     table.insert(compose_state.generated_parts, {
       track_name = current.track_name,
@@ -867,7 +906,6 @@ local function start_compose_plan()
   local ensemble_info = {
     total_instruments = compose_state.total_tracks,
     instruments = compose_state.ensemble_instruments,
-    generation_style = compose_state.generation_style,
     shared_prompt = compose_state.prompt,
     current_instrument_index = 0,
     current_instrument = nil,
@@ -885,8 +923,8 @@ local function start_compose_plan()
     compose_state.key,
     first_track.profile.id,
     "",
-    compose_state.generation_type,
-    compose_state.generation_style,
+    nil,
+    nil,
     compose_state.prompt,
     plan_ctx,
     compose_state.api_settings,
@@ -996,7 +1034,6 @@ function start_next_compose_generation()
   local ensemble_info = {
     total_instruments = compose_state.total_tracks,
     instruments = compose_state.ensemble_instruments,
-    generation_style = compose_state.generation_style,
     shared_prompt = compose_state.prompt,
     plan_summary = compose_state.plan_summary or "",
     plan = compose_state.plan,
@@ -1022,8 +1059,8 @@ function start_next_compose_generation()
     compose_state.key,
     profile.id,
     articulation_name,
-    compose_state.generation_type,
-    compose_state.generation_style,
+    nil,
+    nil,
     compose_state.prompt,
     ctx,
     compose_state.api_settings,
@@ -1281,8 +1318,6 @@ local function run_compose(state, profile_list, profiles_by_id)
     key = key,
     api_settings = api_settings,
     ensemble_instruments = ensemble_instruments,
-    generation_type = state.generation_type or const.DEFAULT_GENERATION_TYPE,
-    generation_style = state.generation_style or const.DEFAULT_GENERATION_STYLE,
     prompt = state.prompt or "",
     use_selected_tracks = state.use_selected_tracks,
     allow_tempo_changes = state.allow_tempo_changes or false,

@@ -55,16 +55,24 @@ def generate(request: GenerateRequest) -> JSONResponse:
 
     provider, model_name, base_url, temperature, api_key = resolve_model(request, profile)
 
-    logger.info(
-        "Generate: profile=%s preset=%s provider=%s model=%s type=%s style=%s free_mode=%s",
-        profile.get("id"),
-        preset_name,
-        provider,
-        model_name,
-        request.generation_type,
-        request.generation_style,
-        request.free_mode,
-    )
+    if request.free_mode:
+        logger.info(
+            "Generate: profile=%s preset=%s provider=%s model=%s free_mode=True",
+            profile.get("id"),
+            preset_name,
+            provider,
+            model_name,
+        )
+    else:
+        logger.info(
+            "Generate: profile=%s preset=%s provider=%s model=%s type=%s style=%s",
+            profile.get("id"),
+            preset_name,
+            provider,
+            model_name,
+            request.generation_type,
+            request.generation_style,
+        )
     logger.info("User prompt to LLM:\n%s", user_prompt)
 
     content = call_llm(provider, model_name, base_url, temperature, messages, api_key)
@@ -146,11 +154,10 @@ def plan(request: GenerateRequest) -> JSONResponse:
     provider, model_name, base_url, temperature, api_key = resolve_model(request, profile)
 
     logger.info(
-        "Plan: profile=%s provider=%s model=%s style=%s free_mode=%s",
+        "Plan: profile=%s provider=%s model=%s free_mode=%s",
         profile.get("id"),
         provider,
         model_name,
-        request.generation_style,
         request.free_mode,
     )
     logger.info("Plan prompt to LLM:\n%s", user_prompt)
@@ -229,7 +236,6 @@ def enhance(request: EnhanceRequest) -> JSONResponse:
 
     model_info = request.model
     provider = model_info.provider if model_info else "lmstudio"
-    model_name = model_info.model_name if model_info and model_info.model_name else None
     base_url = model_info.base_url if model_info else None
     temperature = model_info.temperature if model_info and model_info.temperature else 0.7
     api_key = model_info.api_key if model_info else None
@@ -245,11 +251,12 @@ def enhance(request: EnhanceRequest) -> JSONResponse:
             from constants import DEFAULT_LMSTUDIO_BASE_URL
             base_url = DEFAULT_LMSTUDIO_BASE_URL
 
-    if provider == "openrouter" and not model_name:
-        from constants import DEFAULT_OPENROUTER_MODEL
-        model_name = DEFAULT_OPENROUTER_MODEL
-
-    if not model_name:
+    if provider == "openrouter":
+        from constants import DEFAULT_ENHANCER_MODEL
+        model_name = DEFAULT_ENHANCER_MODEL
+    elif model_info and model_info.model_name:
+        model_name = model_info.model_name
+    else:
         from constants import DEFAULT_MODEL_NAME
         model_name = DEFAULT_MODEL_NAME
 

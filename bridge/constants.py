@@ -12,6 +12,7 @@ DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
 DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL_NAME = "local-model"
 DEFAULT_OPENROUTER_MODEL = "google/gemini-3-flash-preview"
+DEFAULT_ENHANCER_MODEL = "anthropic/claude-sonnet-4"
 DEFAULT_TEMPERATURE = 0.7
 HTTP_TIMEOUT_SEC = 300.0
 LLM_RETRY_ATTEMPTS = 3
