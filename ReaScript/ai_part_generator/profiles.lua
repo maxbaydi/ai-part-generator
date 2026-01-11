@@ -119,7 +119,8 @@ function M.save_track_settings(track, state)
 end
 
 local function normalize_name(s)
-  return tostring(s or ""):lower():gsub("[%-%_%s]+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+  -- Expanded normalization to include dots and keep alphanumerics clean
+  return tostring(s or ""):lower():gsub("[%-%_%.%s]+", " "):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
 local function extract_keywords(s)
@@ -133,38 +134,87 @@ local function extract_keywords(s)
 end
 
 local INSTRUMENT_ALIASES = {
-  violin = { "vln", "vl1", "vl2", "violin1", "violin2", "violins" },
-  viola = { "vla", "violas" },
-  cello = { "vlc", "vc", "cellos" },
-  bass = { "cb", "contrabass", "double bass", "dbass", "basses" },
-  ezbass = { "ez bass", "toontrack bass", "electric bass", "bass guitar" },
-  flute = { "fl", "flutes", "flauto" },
-  oboe = { "ob", "oboes" },
-  clarinet = { "cl", "clarinets", "clar" },
-  bassoon = { "bsn", "fg", "fagotto", "bassoons" },
-  piccolo = { "picc", "pc" },
-  horn = { "hn", "fr hn", "french horn", "horns", "cor" },
-  trumpet = { "tp", "trp", "tpt", "trumpets", "trompette" },
-  trombone = { "tb", "trb", "tbn", "trombones", "pos" },
-  tuba = { "tba", "tubas" },
-  drums = { "drum", "perc", "percussion", "kit" },
-  ad2 = { "addictive drums", "addictive", "xln drums", "xln audio" },
-  agpf = { "ample guitar", "ample pf", "ample sound guitar", "electric guitar" },
+  violin = { "violin", "violins", "vln", "vl", "fiddle" },
+  viola = { "viola", "violas", "vla", "alt", "alto" },
+  cello = { "cello", "cellos", "violoncello", "vlc", "vc" },
+  bass = { "double bass", "contrabass", "dbass", "string bass", "upright", "bass", "basses", "cb", "db" },
+  ezbass = { "ez bass", "toontrack bass", "electric bass", "bass guitar", "ebass" },
+  flute = { "flute", "flutes", "flauto", "fl", "flt" },
+  oboe = { "oboe", "oboes", "hautbois", "ob" },
+  clarinet = { "clarinet", "clarinets", "clar", "cla", "cl" },
+  bassoon = { "bassoon", "bassoons", "fagotto", "bsn", "fg" },
+  piccolo = { "piccolo", "picc", "pc" },
+  horn = { "french horn", "fr horn", "horns", "corno", "horn", "hn", "fh" },
+  trumpet = { "trumpet", "trumpets", "trompette", "tpt", "trp", "trmp", "tr" },
+  trombone = { "trombone", "trombones", "posaune", "trb", "tbn", "tb" },
+  tuba = { "tuba", "tubas", "tba" },
+  drums = { 
+    "drums", "drum", "kit", "drumkit", 
+    "snare", "sd", "snare drum", 
+    "kick", "bd", "bass drum", 
+    "hihat", "hh", "hats", "hi-hat", 
+    "tom", "toms", "floor tom", "rack tom",
+    "overhead", "oh", "room", "ambience"
+  },
+  percussion = { 
+    "percussion", "perc", 
+    "timpani", "timp", "kettle drum", 
+    "cymbals", "cym", "crash", "piatti", "ride", "splash", "china", 
+    "gong", "tam tam", 
+    "taiko", "surdo", "frame drum", "djembe", "conga", "bongo", "cajon",
+    "shaker", "tambourine", "tamb", 
+    "triangle", "woodblock", "cowbell", 
+    "glockenspiel", "glock", "xylophone", "xylo", "marimba", "vibraphone", "vibe", "tubular bells", "chimes"
+  },
+  ad2 = { "addictive drums", "addictive", "xln drums", "xln" },
+  agpf = { "ample guitar", "ample pf", "electric guitar", "guitar", "egt" },
+  piano = { "piano", "pno", "keys", "grand", "upright", "pianoforte" },
+  harp = { "harp", "arpa" },
+  celesta = { "celesta", "celeste" },
+  choir = { "choir", "chorus", "voices", "soprano", "alto", "tenor", "baritone" },
 }
 
 local function find_instrument_match(track_name)
   local name_lower = normalize_name(track_name)
+  local best_instrument = nil
+  local max_len = 0
+  
   for instrument, aliases in pairs(INSTRUMENT_ALIASES) do
-    if name_lower:find(instrument, 1, true) then
-      return instrument
-    end
     for _, alias in ipairs(aliases) do
-      if name_lower:find(alias, 1, true) then
-        return instrument
+      local pattern
+      if alias:find("%d") then
+        -- If alias contains digits, use word boundaries (alphanumeric)
+        pattern = "%f[%w]" .. alias .. "%f[%W]"
+      else
+        -- If alias is text only, use letter boundaries (allows "vln1" to match "vln")
+        pattern = "%f[%a]" .. alias .. "%f[%A]"
+      end
+      
+      if name_lower:find(pattern) then
+        if #alias > max_len then
+          max_len = #alias
+          best_instrument = instrument
+        end
       end
     end
   end
-  return nil
+  
+  -- Fallback to simple substring match if no strict match found (but prioritize strict matches above)
+  if not best_instrument then
+    for instrument, aliases in pairs(INSTRUMENT_ALIASES) do
+      for _, alias in ipairs(aliases) do
+        if #alias >= 3 and name_lower:find(alias, 1, true) then
+           -- Only accept substring if alias is long enough to be safe
+           if #alias > max_len then
+             max_len = #alias
+             best_instrument = instrument
+           end
+        end
+      end
+    end
+  end
+
+  return best_instrument
 end
 
 local function find_profile_by_family(profiles, family)

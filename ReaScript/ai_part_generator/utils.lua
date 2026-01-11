@@ -120,4 +120,58 @@ function M.get_time_selection()
   return start_sec, end_sec
 end
 
+local KEY_ROOTS = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }
+local scale_names_cache = nil
+local key_options_cache = nil
+
+function M.extract_scale_names()
+  if scale_names_cache then return scale_names_cache end
+
+  local script_dir = M.get_script_dir()
+  local path = M.path_join(script_dir, "..", "..", "bridge", "music_theory.py")
+  local content = M.read_file(path)
+  
+  if not content then
+    scale_names_cache = {}
+    return scale_names_cache
+  end
+
+  local start_pos = content:find("SCALE_INTERVALS%s*=%s*{")
+  if not start_pos then
+    scale_names_cache = {}
+    return scale_names_cache
+  end
+
+  local block = content:sub(start_pos)
+  local names = {}
+  for name in block:gmatch("[\"']([^\"']+)[\"']%s*:") do
+    if name ~= "" then table.insert(names, name) end
+  end
+
+  scale_names_cache = names
+  return names
+end
+
+function M.get_key_options()
+  if key_options_cache then return key_options_cache end
+
+  local scales = M.extract_scale_names()
+  if #scales == 0 then scales = { "major", "minor" } end
+
+  local options = {}
+  for _, root in ipairs(KEY_ROOTS) do
+    for _, scale in ipairs(scales) do
+      table.insert(options, root .. " " .. scale)
+    end
+  end
+
+  key_options_cache = options
+  return options
+end
+
+function M.is_empty_or_unknown_key(key)
+  local val = tostring(key or ""):lower()
+  return val == "" or val == "unknown" or val == "auto"
+end
+
 return M
