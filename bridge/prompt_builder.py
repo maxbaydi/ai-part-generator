@@ -20,7 +20,7 @@ try:
         get_quarters_per_bar,
     )
     from models import ArrangeRequest, GenerateRequest
-    from music_theory import get_scale_note_names, get_scale_notes, pitch_to_note
+    from music_theory import detect_key_from_chords, get_scale_note_names, get_scale_notes, pitch_to_note
     from promts import (
         ARRANGEMENT_GENERATION_CONTEXT,
         ARRANGEMENT_PLAN_SYSTEM_PROMPT,
@@ -48,7 +48,7 @@ except ImportError:
         get_quarters_per_bar,
     )
     from .models import ArrangeRequest, GenerateRequest
-    from .music_theory import get_scale_note_names, get_scale_notes, pitch_to_note
+    from .music_theory import detect_key_from_chords, get_scale_note_names, get_scale_notes, pitch_to_note
     from .promts import (
         ARRANGEMENT_GENERATION_CONTEXT,
         ARRANGEMENT_PLAN_SYSTEM_PROMPT,
@@ -162,6 +162,23 @@ ARTICULATION_DURATION_HINTS = {
 }
 
 DEFAULT_QUARTERS_PER_BAR = 4.0
+
+def infer_key_from_plan_chord_map(chord_map: Any) -> str:
+    if not isinstance(chord_map, list) or not chord_map:
+        return "unknown"
+    roots: List[int] = []
+    for entry in chord_map:
+        if not isinstance(entry, dict):
+            continue
+        tones = entry.get("chord_tones")
+        if not isinstance(tones, list) or not tones:
+            continue
+        try:
+            root_pc = int(tones[0]) % 12
+        except (TypeError, ValueError):
+            continue
+        roots.append(root_pc)
+    return detect_key_from_chords(roots)
 
 
 def build_orchestration_hints_prompt(profile: Dict[str, Any], is_ensemble: bool = False) -> str:
@@ -377,6 +394,17 @@ def build_prompt(
     abs_range = profile_range.get("absolute")
     pref_range = profile_range.get("preferred")
 
+    ensemble = request.ensemble
+    is_arrangement_mode = bool(ensemble and ensemble.arrangement_mode)
+    plan_data = ensemble.plan if (ensemble and isinstance(ensemble.plan, dict)) else {}
+    plan_chord_map = plan_data.get("chord_map") if isinstance(plan_data, dict) else None
+    has_plan_chord_map = isinstance(plan_chord_map, list) and len(plan_chord_map) > 0
+    is_compose_ensemble = bool(
+        ensemble
+        and not is_arrangement_mode
+        and ((ensemble.plan_summary or "").strip() or has_plan_chord_map)
+    )
+
     if request.free_mode:
         generation_type = ""
         min_notes, max_notes = 1, 999
@@ -421,10 +449,6 @@ def build_prompt(
         mood_hint = ""
         dynamics_hint = ""
     else:
-        gen_lower = generation_type.lower()
-        # Default if not found in dictionary
-        type_hint = TYPE_HINTS.get(gen_lower, f"ROLE: Generate a {generation_type} part. OBJECTIVE: Musical, memorable, fitting.")
-        
         generation_style = request.generation_style or DEFAULT_GENERATION_STYLE
         style_lower = generation_style.lower()
         # Default if not found in dictionary
@@ -448,17 +472,7 @@ def build_prompt(
         ]
     system_prompt = "\n\n".join([p for p in system_parts if p])
 
-    is_arrangement_mode = bool(request.ensemble and request.ensemble.arrangement_mode)
-    is_compose_mode = bool(request.free_mode and request.ensemble and not is_arrangement_mode)
-    
-    plan_data = {}
-    plan_chord_map = None
-    if request.free_mode and request.ensemble:
-        plan_data = request.ensemble.plan if isinstance(request.ensemble.plan, dict) else {}
-        plan_chord_map = plan_data.get("chord_map") if isinstance(plan_data, dict) else None
-    has_plan_chord_map = isinstance(plan_chord_map, list) and len(plan_chord_map) > 0
-    
-    skip_auto_harmony = is_arrangement_mode or (is_compose_mode and has_plan_chord_map)
+    skip_auto_harmony = is_arrangement_mode or has_plan_chord_map
 
     context_summary, detected_key, _position = build_context_summary(
         request.context, request.music.time_sig, length_q, request.music.key,
@@ -468,6 +482,10 @@ def build_prompt(
     final_key = request.music.key
     if final_key == "unknown" and detected_key != "unknown":
         final_key = detected_key
+    if final_key == "unknown" and has_plan_chord_map:
+        inferred_key = infer_key_from_plan_chord_map(plan_chord_map)
+        if inferred_key != "unknown":
+            final_key = inferred_key
 
     quarters_per_bar = get_quarters_per_bar(request.music.time_sig)
     bars = max(1, int(length_q / quarters_per_bar))
@@ -530,28 +548,85 @@ def build_prompt(
             user_prompt_parts.append(f"")
             user_prompt_parts.append(orchestration_hints_prompt)
     else:
-        # --- FIXED MODE (Basic Generation) ---
-        user_prompt_parts = [
-            f"## COMPOSE: {generation_style.upper()} {generation_type.upper()} for {profile.get('name', 'instrument')}",
-            f"",
-            f"### GENERATION TARGET (WHAT TO BUILD)",
-            f"1. PART TYPE ({generation_type}):",
-            f"{type_hint}",
-            f"",
-            f"2. STYLE ({generation_style}):",
-            f"{mood_hint}",
-            f"",
-            f"3. DYNAMICS GOAL:",
-            f"{dynamics_hint}",
-            f"",
-            f"### MUSICAL CONTEXT",
-            f"- Key: {final_key}",
-            f"- Scale notes: {scale_notes}",
-            f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
-            f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
-            f"",
-            *selection_info,
-        ]
+        is_compose_or_arrange = is_compose_ensemble or is_arrangement_mode
+
+        if is_compose_or_arrange and ensemble and isinstance(ensemble.current_instrument, dict):
+            current_role = str(ensemble.current_instrument.get("role") or "").strip().lower()
+            current_role_upper = current_role.upper() if current_role else "UNKNOWN"
+
+            role_as_type = current_role if current_role else "melody"
+            type_hint = TYPE_HINTS.get(role_as_type, TYPE_HINTS.get("melody", ""))
+
+            current_track = str(ensemble.current_instrument.get("track_name") or "").strip().lower()
+            current_profile_name = str(ensemble.current_instrument.get("profile_name") or "").strip().lower()
+            role_guidance_list = plan_data.get("role_guidance") if isinstance(plan_data, dict) else None
+            role_detail = ""
+            if isinstance(role_guidance_list, list) and role_guidance_list:
+                for entry in role_guidance_list:
+                    if not isinstance(entry, dict):
+                        continue
+                    inst_name = str(entry.get("instrument") or "").strip().lower()
+                    if not inst_name:
+                        continue
+                    if inst_name in (current_track, current_profile_name) or inst_name == profile.get("name", "").strip().lower():
+                        guidance = str(entry.get("guidance") or "").strip()
+                        relationship = str(entry.get("relationship") or "").strip()
+                        register = str(entry.get("register") or "").strip()
+                        details = []
+                        if register:
+                            details.append(f"Register: {register}")
+                        if guidance:
+                            details.append(guidance)
+                        if relationship:
+                            details.append(f"Relationship: {relationship}")
+                        role_detail = "\n".join(details).strip()
+                        break
+
+            user_prompt_parts = [
+                f"## COMPOSE: {current_role_upper} for {profile.get('name', 'instrument')}",
+                f"",
+                f"### GENERATION TARGET (WHAT TO BUILD)",
+                f"1. YOUR ROLE (from plan): {current_role_upper}",
+                f"{type_hint}",
+            ]
+            if role_detail:
+                user_prompt_parts.append(f"")
+                user_prompt_parts.append(f"2. ROLE GUIDANCE (from plan):")
+                user_prompt_parts.append(role_detail)
+            user_prompt_parts.extend([
+                f"",
+                f"### MUSICAL CONTEXT",
+                f"- Key: {final_key}",
+                f"- Scale notes: {scale_notes}",
+                f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
+                f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
+                f"",
+                *selection_info,
+            ])
+        else:
+            gen_lower = generation_type.lower()
+            type_hint = TYPE_HINTS.get(gen_lower, f"ROLE: Generate a {generation_type} part. OBJECTIVE: Musical, memorable, fitting.")
+            user_prompt_parts = [
+                f"## COMPOSE: {generation_style.upper()} {generation_type.upper()} for {profile.get('name', 'instrument')}",
+                f"",
+                f"### GENERATION TARGET (WHAT TO BUILD)",
+                f"1. PART TYPE ({generation_type}):",
+                f"{type_hint}",
+                f"",
+                f"2. STYLE ({generation_style}):",
+                f"{mood_hint}",
+                f"",
+                f"3. DYNAMICS GOAL:",
+                f"{dynamics_hint}",
+                f"",
+                f"### MUSICAL CONTEXT",
+                f"- Key: {final_key}",
+                f"- Scale notes: {scale_notes}",
+                f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
+                f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
+                f"",
+                *selection_info,
+            ]
 
     if context_summary:
         user_prompt_parts.append(f"")
@@ -562,7 +637,7 @@ def build_prompt(
         profile.get("name", ""),
         request.music.time_sig,
         length_q,
-        has_plan_chord_map=skip_auto_harmony,
+        has_plan_chord_map=has_plan_chord_map,
     )
     if ensemble_context:
         user_prompt_parts.append(f"")
@@ -589,7 +664,7 @@ def build_prompt(
                 length_q,
             )
 
-    if request.free_mode and request.ensemble:
+    if request.ensemble:
         # ... (plan handling code remains same) ...
         plan_summary = (request.ensemble.plan_summary or "").strip()
         section_overview = plan_data.get("section_overview") if isinstance(plan_data, dict) else None

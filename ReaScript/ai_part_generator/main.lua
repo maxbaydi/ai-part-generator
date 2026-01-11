@@ -173,7 +173,11 @@ local function apply_plan_order(plan, tracks)
   return ordered, #ordered > 0
 end
 
-local function get_enriched_style_prompt(musical_style, generation_mood)
+local function get_enriched_style_prompt(musical_style, generation_mood, use_style_mood)
+  if use_style_mood == false then
+    return ""
+  end
+  
   local prompt_parts = {}
   
   if musical_style and musical_style ~= "" then
@@ -995,7 +999,7 @@ local function start_compose_plan()
   if not compose_state.free_mode then
     combined_style = (compose_state.musical_style or "") .. ", " .. (compose_state.generation_mood or "")
     
-    local style_text = get_enriched_style_prompt(compose_state.musical_style, compose_state.generation_mood)
+    local style_text = get_enriched_style_prompt(compose_state.musical_style, compose_state.generation_mood, compose_state.use_style_mood)
     
     if style_text ~= "" then
       final_prompt = style_text .. final_prompt
@@ -1147,7 +1151,7 @@ function start_next_compose_generation()
   if not compose_state.free_mode then
     combined_style = (compose_state.musical_style or "") .. ", " .. (compose_state.generation_mood or "")
     
-    local style_text = get_enriched_style_prompt(compose_state.musical_style, compose_state.generation_mood)
+    local style_text = get_enriched_style_prompt(compose_state.musical_style, compose_state.generation_mood, compose_state.use_style_mood)
     
     if style_text ~= "" then
       final_prompt = style_text .. final_prompt
@@ -1574,7 +1578,7 @@ function start_next_arrange_generation()
   if not arrange_state.free_mode then
     combined_style = (arrange_state.musical_style or "") .. ", " .. (arrange_state.generation_mood or "")
     
-    local style_text = get_enriched_style_prompt(arrange_state.musical_style, arrange_state.generation_mood)
+    local style_text = get_enriched_style_prompt(arrange_state.musical_style, arrange_state.generation_mood, arrange_state.use_style_mood)
     
     if style_text ~= "" then
       final_prompt = style_text .. final_prompt
@@ -1712,7 +1716,7 @@ local function start_arrange_plan()
   local prompt_with_style = arrange_state.prompt or ""
   
   if not arrange_state.free_mode then
-    local style_text = get_enriched_style_prompt(arrange_state.musical_style, arrange_state.generation_mood)
+    local style_text = get_enriched_style_prompt(arrange_state.musical_style, arrange_state.generation_mood, arrange_state.use_style_mood)
     
     if style_text ~= "" then
       prompt_with_style = style_text .. prompt_with_style
@@ -1852,6 +1856,7 @@ local function run_arrange(state, profile_list, profiles_by_id)
     prompt = state.prompt or "",
     musical_style = state.musical_style,
     generation_mood = state.generation_mood,
+    use_style_mood = state.use_style_mood,
     free_mode = state.free_mode,
     use_selected_tracks = state.use_selected_tracks,
   }
@@ -1954,6 +1959,7 @@ local function run_compose(state, profile_list, profiles_by_id)
     prompt = state.prompt or "",
     musical_style = state.musical_style,
     generation_mood = state.generation_mood,
+    use_style_mood = state.use_style_mood,
     free_mode = state.free_mode,
     use_selected_tracks = state.use_selected_tracks,
     allow_tempo_changes = state.allow_tempo_changes or false,
@@ -2016,9 +2022,9 @@ function M.main()
     articulation_list = articulation_list,
     articulation_info = articulation_info,
     generation_type = track_settings.generation_type or const.DEFAULT_GENERATION_TYPE,
-    -- Backward compatibility for single style
     musical_style = track_settings.musical_style or track_settings.generation_style or const.DEFAULT_MUSICAL_STYLE,
     generation_mood = track_settings.generation_mood or const.DEFAULT_GENERATION_MOOD,
+    use_style_mood = true,
     
     free_mode = track_settings.free_mode or false,
     allow_tempo_changes = track_settings.allow_tempo_changes or false,

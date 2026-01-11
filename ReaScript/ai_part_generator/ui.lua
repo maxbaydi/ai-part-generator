@@ -273,11 +273,18 @@ local function draw_tab_arranger(ctx, state, profile_list, profiles_by_id, callb
   if not state.free_mode then
     draw_key_selector(ctx, state)
     
-    comp.label(ctx, "Musical Style")
-    comp.combo(ctx, "##mus_style_arr", state.musical_style, const.MUSICAL_STYLES, function(v) state.musical_style = v end)
+    local use_style_mood = state.use_style_mood ~= false
+    comp.checkbox(ctx, "Use Style & Mood", use_style_mood, function(v) state.use_style_mood = v end)
+    
+    if use_style_mood then
+      comp.label(ctx, "Musical Style")
+      comp.combo(ctx, "##mus_style_arr", state.musical_style, const.MUSICAL_STYLES, function(v) state.musical_style = v end)
 
-    comp.label(ctx, "Mood")
-    comp.combo(ctx, "##gen_mood_arr", state.generation_mood, const.GENERATION_MOODS, function(v) state.generation_mood = v end)
+      comp.label(ctx, "Mood")
+      comp.combo(ctx, "##gen_mood_arr", state.generation_mood, const.GENERATION_MOODS, function(v) state.generation_mood = v end)
+    else
+      comp.status_text(ctx, "Style & Mood disabled. Generation will follow only the prompt.", "dim")
+    end
   else
     comp.status_text(ctx, "In Free Mode, the AI decides style, mood and roles based on your prompt and context.", "dim")
     draw_key_selector(ctx, state)
