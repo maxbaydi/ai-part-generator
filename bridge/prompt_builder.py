@@ -448,8 +448,21 @@ def build_prompt(
         ]
     system_prompt = "\n\n".join([p for p in system_parts if p])
 
+    is_arrangement_mode = bool(request.ensemble and request.ensemble.arrangement_mode)
+    is_compose_mode = bool(request.free_mode and request.ensemble and not is_arrangement_mode)
+    
+    plan_data = {}
+    plan_chord_map = None
+    if request.free_mode and request.ensemble:
+        plan_data = request.ensemble.plan if isinstance(request.ensemble.plan, dict) else {}
+        plan_chord_map = plan_data.get("chord_map") if isinstance(plan_data, dict) else None
+    has_plan_chord_map = isinstance(plan_chord_map, list) and len(plan_chord_map) > 0
+    
+    skip_auto_harmony = is_arrangement_mode or (is_compose_mode and has_plan_chord_map)
+
     context_summary, detected_key, _position = build_context_summary(
-        request.context, request.music.time_sig, length_q, request.music.key
+        request.context, request.music.time_sig, length_q, request.music.key,
+        skip_auto_harmony=skip_auto_harmony,
     )
 
     final_key = request.music.key
@@ -544,26 +557,18 @@ def build_prompt(
         user_prompt_parts.append(f"")
         user_prompt_parts.append(context_summary)
 
-    plan_data = {}
-    plan_chord_map = None
-    if request.free_mode and request.ensemble:
-        plan_data = request.ensemble.plan if isinstance(request.ensemble.plan, dict) else {}
-        plan_chord_map = plan_data.get("chord_map") if isinstance(plan_data, dict) else None
-
-    has_plan_chord_map = isinstance(plan_chord_map, list) and len(plan_chord_map) > 0
-
     ensemble_context = build_ensemble_context(
         request.ensemble,
         profile.get("name", ""),
         request.music.time_sig,
         length_q,
-        has_plan_chord_map=has_plan_chord_map,
+        has_plan_chord_map=skip_auto_harmony,
     )
     if ensemble_context:
         user_prompt_parts.append(f"")
         user_prompt_parts.append(ensemble_context)
 
-    if request.ensemble and request.ensemble.arrangement_mode:
+    if is_arrangement_mode:
         arrangement_context = build_arrangement_context(
             request.ensemble,
             profile.get("name", ""),
@@ -574,7 +579,6 @@ def build_prompt(
             user_prompt_parts.append(f"")
             user_prompt_parts.append(arrangement_context)
 
-    is_arrangement_mode = request.ensemble and request.ensemble.arrangement_mode
     sketch_chord_map_str = ""
     if is_arrangement_mode and request.ensemble.source_sketch:
         sketch_notes = request.ensemble.source_sketch.get("notes", [])

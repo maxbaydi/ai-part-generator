@@ -1014,6 +1014,7 @@ def build_context_summary(
     time_sig: str = "4/4",
     length_q: float = 16.0,
     key_str: str = "unknown",
+    skip_auto_harmony: bool = False,
 ) -> Tuple[str, str, str]:
     if not context:
         return "", "unknown", "isolated"
@@ -1023,7 +1024,7 @@ def build_context_summary(
     position = "isolated"
 
     notes_for_progression = context.extended_progression or context.existing_notes
-    if notes_for_progression:
+    if notes_for_progression and not skip_auto_harmony:
         progression, detected_key = analyze_harmony_progression(notes_for_progression, time_sig, length_q)
         if progression:
             parts.append(f"### HARMONY CONTEXT\nCHORD PROGRESSION: {progression}")

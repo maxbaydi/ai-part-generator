@@ -151,6 +151,20 @@ ENSEMBLE AWARENESS (when context parts exist):
 - Different registers avoid clashes
 - Support the musical whole
 
+=== ADAPTATION, CONSISTENCY & HARMONY ===
+
+1. ADAPTATION:
+- Adapt all style/mood recommendations to the CURRENT instrument's capabilities.
+- Recreate the intended vibe using available tools (e.g., "epic" flute vs "epic" brass).
+
+2. CONSISTENCY (MANDATORY):
+- GENERAL & INDIVIDUAL: You MUST observe both general (genre/style) and individual (internal logic) consistency.
+- The part must be consistent with itself and the global context.
+
+3. HARMONY:
+- Everything must be harmonious within the scope of the request/genre/style/mood.
+- Ensure all elements fit perfectly together within the requested vibe.
+
 === FINAL RULES ===
 
 STRICT (NEVER VIOLATE):
@@ -361,6 +375,20 @@ EXAMPLE HANDOFF:
   "gaps_for_others": "strong beats open for melody, high register completely free",
   "suggestion_for_next": "Add melodic content in high register, follow my syncopation"
 }
+
+=== ADAPTATION, CONSISTENCY & HARMONY ===
+
+1. ADAPTATION:
+- Adapt all style/mood recommendations to the CURRENT instrument's capabilities.
+- Recreate the intended vibe using available tools (e.g., "epic" flute vs "epic" brass).
+
+2. CONSISTENCY (MANDATORY):
+- GENERAL & INDIVIDUAL: You MUST observe both general (genre/style) and individual (internal logic) consistency.
+- The part must be consistent with itself and the global context.
+
+3. HARMONY:
+- Everything must be harmonious within the scope of the request/genre/style/mood.
+- Ensure all elements fit perfectly together within the requested vibe.
 
 === FINAL RULES ===
 
