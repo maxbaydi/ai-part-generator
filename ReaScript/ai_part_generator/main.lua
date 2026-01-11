@@ -173,6 +173,33 @@ local function apply_plan_order(plan, tracks)
   return ordered, #ordered > 0
 end
 
+local function get_enriched_style_prompt(musical_style, generation_mood)
+  local prompt_parts = {}
+  
+  if musical_style and musical_style ~= "" then
+    local desc = const.STYLE_DESCRIPTIONS[musical_style] or ""
+    if desc ~= "" then
+      table.insert(prompt_parts, "Musical Style (" .. musical_style .. "): " .. desc)
+    else
+      table.insert(prompt_parts, "Musical Style: " .. musical_style)
+    end
+  end
+  
+  if generation_mood and generation_mood ~= "" then
+    local desc = const.MOOD_DESCRIPTIONS[generation_mood] or ""
+    if desc ~= "" then
+      table.insert(prompt_parts, "Mood (" .. generation_mood .. "): " .. desc)
+    else
+      table.insert(prompt_parts, "Mood: " .. generation_mood)
+    end
+  end
+  
+  if #prompt_parts > 0 then
+    return table.concat(prompt_parts, "\n") .. "\n"
+  end
+  return ""
+end
+
 local function get_bpm_and_timesig(time_sec)
   local bpm = reaper.Master_GetTempo()
   local num = 4
@@ -820,7 +847,9 @@ local function run_generation(state, profiles_by_id)
     profile_id = state.profile_id,
     articulation_name = state.articulation_name,
     generation_type = state.generation_type,
-    generation_style = state.generation_style,
+    generation_style = state.musical_style .. ", " .. state.generation_mood, -- Combine for backend
+    musical_style = state.musical_style,
+    generation_mood = state.generation_mood,
     free_mode = state.free_mode,
     prompt = state.prompt,
     use_selected_tracks = state.use_selected_tracks,
@@ -960,6 +989,19 @@ local function start_compose_plan()
     previously_generated = {},
   }
 
+  local combined_style = nil
+  local final_prompt = compose_state.prompt or ""
+
+  if not compose_state.free_mode then
+    combined_style = (compose_state.musical_style or "") .. ", " .. (compose_state.generation_mood or "")
+    
+    local style_text = get_enriched_style_prompt(compose_state.musical_style, compose_state.generation_mood)
+    
+    if style_text ~= "" then
+      final_prompt = style_text .. final_prompt
+    end
+  end
+
   local request = build_request(
     compose_state.start_sec,
     compose_state.end_sec,
@@ -970,11 +1012,11 @@ local function start_compose_plan()
     first_track.profile.id,
     "",
     nil,
-    nil,
-    compose_state.prompt,
+    combined_style,
+    final_prompt,
     plan_ctx,
     compose_state.api_settings,
-    true,
+    compose_state.free_mode,
     false,
     ensemble_info,
     true
@@ -1099,6 +1141,19 @@ function start_next_compose_generation()
     generated_motif = compose_state.generated_motif,
   }
   
+  local combined_style = nil
+  local final_prompt = compose_state.prompt or ""
+
+  if not compose_state.free_mode then
+    combined_style = (compose_state.musical_style or "") .. ", " .. (compose_state.generation_mood or "")
+    
+    local style_text = get_enriched_style_prompt(compose_state.musical_style, compose_state.generation_mood)
+    
+    if style_text ~= "" then
+      final_prompt = style_text .. final_prompt
+    end
+  end
+
   local request = build_request(
     compose_state.start_sec,
     compose_state.end_sec,
@@ -1109,11 +1164,11 @@ function start_next_compose_generation()
     profile.id,
     articulation_name,
     nil,
-    nil,
-    compose_state.prompt,
+    combined_style,
+    final_prompt,
     ctx,
     compose_state.api_settings,
-    true,
+    compose_state.free_mode,
     compose_state.allow_tempo_changes or false,
     ensemble_info
   )
@@ -1513,6 +1568,19 @@ function start_next_arrange_generation()
     arrangement_assignment = assignment,
   }
   
+  local combined_style = nil
+  local final_prompt = arrange_state.prompt or ""
+
+  if not arrange_state.free_mode then
+    combined_style = (arrange_state.musical_style or "") .. ", " .. (arrange_state.generation_mood or "")
+    
+    local style_text = get_enriched_style_prompt(arrange_state.musical_style, arrange_state.generation_mood)
+    
+    if style_text ~= "" then
+      final_prompt = style_text .. final_prompt
+    end
+  end
+
   local request = build_request(
     arrange_state.start_sec,
     arrange_state.end_sec,
@@ -1523,11 +1591,11 @@ function start_next_arrange_generation()
     profile.id,
     articulation_name,
     nil,
-    nil,
-    arrange_state.prompt,
+    combined_style,
+    final_prompt,
     ctx,
     arrange_state.api_settings,
-    true,
+    arrange_state.free_mode,
     false,
     ensemble_info
   )
@@ -1641,6 +1709,16 @@ local function start_arrange_plan()
 
   utils.log(string.format("Arrange: using plan model '%s'", model_name))
 
+  local prompt_with_style = arrange_state.prompt or ""
+  
+  if not arrange_state.free_mode then
+    local style_text = get_enriched_style_prompt(arrange_state.musical_style, arrange_state.generation_mood)
+    
+    if style_text ~= "" then
+      prompt_with_style = style_text .. prompt_with_style
+    end
+  end
+
   local request = {
     time = { start_sec = arrange_state.start_sec, end_sec = arrange_state.end_sec },
     music = { bpm = arrange_state.bpm, time_sig = string.format("%d/%d", arrange_state.num, arrange_state.denom), key = arrange_state.key },
@@ -1650,7 +1728,7 @@ local function start_arrange_plan()
       cc_events = arrange_state.source_sketch.cc_events or {},
     },
     target_instruments = target_instruments,
-    user_prompt = arrange_state.prompt or "",
+    user_prompt = prompt_with_style,
     model = {
       provider = provider,
       model_name = model_name,
@@ -1772,6 +1850,9 @@ local function run_arrange(state, profile_list, profiles_by_id)
     api_settings = api_settings,
     ensemble_instruments = ensemble_instruments,
     prompt = state.prompt or "",
+    musical_style = state.musical_style,
+    generation_mood = state.generation_mood,
+    free_mode = state.free_mode,
     use_selected_tracks = state.use_selected_tracks,
   }
 
@@ -1871,6 +1952,9 @@ local function run_compose(state, profile_list, profiles_by_id)
     api_settings = api_settings,
     ensemble_instruments = ensemble_instruments,
     prompt = state.prompt or "",
+    musical_style = state.musical_style,
+    generation_mood = state.generation_mood,
+    free_mode = state.free_mode,
     use_selected_tracks = state.use_selected_tracks,
     allow_tempo_changes = state.allow_tempo_changes or false,
     tempo_applied = false,
@@ -1932,7 +2016,10 @@ function M.main()
     articulation_list = articulation_list,
     articulation_info = articulation_info,
     generation_type = track_settings.generation_type or const.DEFAULT_GENERATION_TYPE,
-    generation_style = track_settings.generation_style or const.DEFAULT_GENERATION_STYLE,
+    -- Backward compatibility for single style
+    musical_style = track_settings.musical_style or track_settings.generation_style or const.DEFAULT_MUSICAL_STYLE,
+    generation_mood = track_settings.generation_mood or const.DEFAULT_GENERATION_MOOD,
+    
     free_mode = track_settings.free_mode or false,
     allow_tempo_changes = track_settings.allow_tempo_changes or false,
     prompt = track_settings.prompt or "",

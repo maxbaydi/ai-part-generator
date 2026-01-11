@@ -158,8 +158,11 @@ local function draw_tab_generator(ctx, state, profile_list, profiles_by_id, call
     comp.label(ctx, "Type")
     comp.combo(ctx, "##type", state.generation_type, const.GENERATION_TYPES, function(v) state.generation_type = v end)
     
-    comp.label(ctx, "Style")
-    comp.combo(ctx, "##style", state.generation_style, const.GENERATION_STYLES, function(v) state.generation_style = v end)
+    comp.label(ctx, "Musical Style")
+    comp.combo(ctx, "##mus_style", state.musical_style, const.MUSICAL_STYLES, function(v) state.musical_style = v end)
+
+    comp.label(ctx, "Mood")
+    comp.combo(ctx, "##gen_mood", state.generation_mood, const.GENERATION_MOODS, function(v) state.generation_mood = v end)
   else
     comp.status_text(ctx, "In Free Mode, the AI decides articulation and style based on your prompt.", "dim")
   end
@@ -263,7 +266,23 @@ local function draw_tab_arranger(ctx, state, profile_list, profiles_by_id, callb
     end
   end
   
-  draw_key_selector(ctx, state)
+  comp.sub_header(ctx, "3. Global Settings")
+  
+  comp.checkbox(ctx, "Free Mode (AI chooses details)", state.free_mode, function(v) state.free_mode = v end)
+
+  if not state.free_mode then
+    draw_key_selector(ctx, state)
+    
+    comp.label(ctx, "Musical Style")
+    comp.combo(ctx, "##mus_style_arr", state.musical_style, const.MUSICAL_STYLES, function(v) state.musical_style = v end)
+
+    comp.label(ctx, "Mood")
+    comp.combo(ctx, "##gen_mood_arr", state.generation_mood, const.GENERATION_MOODS, function(v) state.generation_mood = v end)
+  else
+    comp.status_text(ctx, "In Free Mode, the AI decides style, mood and roles based on your prompt and context.", "dim")
+    draw_key_selector(ctx, state)
+  end
+
   draw_prompt_area(ctx, state, callbacks, tracks_info)
 
   reaper.ImGui_Spacing(ctx)

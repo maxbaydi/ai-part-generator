@@ -79,7 +79,9 @@ function M.get_track_settings(track)
   local settings = {}
   local _, articulation_name = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_ARTICULATION_NAME, "", false)
   local _, generation_type = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_TYPE, "", false)
-  local _, generation_style = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_STYLE, "", false)
+  -- local _, generation_style = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_STYLE, "", false) -- legacy
+  local _, musical_style = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_MUSICAL_STYLE, "", false)
+  local _, generation_mood = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_MOOD, "", false)
   local _, free_mode = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_FREE_MODE, "", false)
   local _, prompt = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_PROMPT, "", false)
   local _, use_selected = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_USE_SELECTED_TRACKS, "", false)
@@ -90,7 +92,15 @@ function M.get_track_settings(track)
 
   if articulation_name ~= "" then settings.articulation_name = articulation_name end
   if generation_type ~= "" then settings.generation_type = generation_type end
-  if generation_style ~= "" then settings.generation_style = generation_style end
+  
+  if musical_style ~= "" then settings.musical_style = musical_style end
+  if generation_mood ~= "" then settings.generation_mood = generation_mood end
+  -- fallback for legacy style
+  if not settings.musical_style then
+    local _, legacy = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_STYLE, "", false)
+    if legacy ~= "" then settings.musical_style = legacy end
+  end
+
   if free_mode ~= "" then settings.free_mode = free_mode == "1" end
   if prompt ~= "" then settings.prompt = prompt end
   if use_selected ~= "" then settings.use_selected_tracks = use_selected == "1" end
@@ -108,7 +118,10 @@ function M.save_track_settings(track, state)
   end
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_ARTICULATION_NAME, state.articulation_name or "", true)
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_TYPE, state.generation_type or "", true)
-  reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_STYLE, state.generation_style or "", true)
+  -- reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_STYLE, state.generation_style or "", true) -- legacy
+  reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_MUSICAL_STYLE, state.musical_style or "", true)
+  reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_GENERATION_MOOD, state.generation_mood or "", true)
+  
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_FREE_MODE, state.free_mode and "1" or "0", true)
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_PROMPT, state.prompt or "", true)
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_USE_SELECTED_TRACKS, state.use_selected_tracks and "1" or "0", true)
