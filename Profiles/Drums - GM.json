@@ -2,25 +2,12 @@
   "id": "drums_gm",
   "name": "Drums - GM",
   "family": "drums",
+  "vendor": "General MIDI",
+  "description": "General MIDI Standard Drum Kit. Universal drum mapping compatible with most GM synthesizers and samplers.",
   "midi": {
     "channel": 10,
     "polyphony": "poly",
-    "is_drum": true,
-    "drum_map": {
-      "kick": 36,
-      "snare": 38,
-      "rim": 37,
-      "clap": 39,
-      "hihat_closed": 42,
-      "hihat_open": 46,
-      "hihat_pedal": 44,
-      "tom_low": 41,
-      "tom_mid": 45,
-      "tom_high": 48,
-      "ride": 51,
-      "crash": 49,
-      "splash": 55
-    }
+    "is_drum": true
   },
   "range": {
     "absolute": [35, 81],
@@ -28,21 +15,29 @@
   },
   "fix_policy": "clamp",
   "articulations": {
-    "mode": "none",
-    "map": {}
-  },
-  "controllers": {
-    "semantic_to_cc": {
-      "dynamics": 1
-    },
-    "smoothing": {
-      "min_step": "1/32",
-      "interp": "linear",
-      "mode": "adaptive",
-      "write_every_step": false
+    "mode": "keyswitch",
+    "default": "kick",
+    "map": {
+      "kick": { "pitch": 36, "description": "Kick drum" },
+      "snare": { "pitch": 38, "description": "Snare" },
+      "rim": { "pitch": 37, "description": "Rim shot" },
+      "clap": { "pitch": 39, "description": "Hand clap" },
+      "hihat_closed": { "pitch": 42, "description": "Hi-hat closed" },
+      "hihat_open": { "pitch": 46, "description": "Hi-hat open" },
+      "hihat_pedal": { "pitch": 44, "description": "Hi-hat pedal" },
+      "tom_low": { "pitch": 41, "description": "Tom low" },
+      "tom_mid": { "pitch": 45, "description": "Tom mid" },
+      "tom_high": { "pitch": 48, "description": "Tom high" },
+      "ride": { "pitch": 51, "description": "Ride cymbal" },
+      "crash": { "pitch": 49, "description": "Crash cymbal" },
+      "splash": { "pitch": 55, "description": "Splash cymbal" }
     }
   },
+  "controllers": {
+    "dynamics": 1
+  },
   "ai": {
-    "system_prompt_template": "Generate drum patterns. Use kick (36), snare (38), hi-hat (42), toms, cymbals. Vary velocities."
+    "system_prompt_template": "",
+    "user_prompt_template": ""
   }
 }

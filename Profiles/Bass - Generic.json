@@ -2,6 +2,8 @@
   "id": "bass_generic",
   "name": "Bass - Generic",
   "family": "bass",
+  "vendor": "Generic",
+  "description": "Generic bass instrument. Basic MIDI bass without articulation controls. Compatible with most bass VST instruments.",
   "midi": {
     "channel": 1,
     "polyphony": "mono",
@@ -17,17 +19,10 @@
     "map": {}
   },
   "controllers": {
-    "semantic_to_cc": {
-      "dynamics": 1
-    },
-    "smoothing": {
-      "min_step": "1/32",
-      "interp": "cubic",
-      "mode": "adaptive",
-      "write_every_step": false
-    }
+    "dynamics": 1
   },
   "ai": {
-    "system_prompt_template": "Generate bass lines. Keep monophonic (one note at a time). Focus on root notes and fifths."
+    "system_prompt_template": "",
+    "user_prompt_template": ""
   }
 }

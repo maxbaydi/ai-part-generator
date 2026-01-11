@@ -14,14 +14,6 @@
     "preferred": ["C3", "C6"]
   },
   "fix_policy": "octave_shift_to_fit",
-  "legato": {
-    "mode": "keyswitch",
-    "keyswitch": "Ab1",
-    "velocity_on": 100,
-    "velocity_off": 1,
-    "mono_only": true,
-    "description": "Legato is for MONO parts only - smooth transition between single notes. Enable legato (velocity ≥64) when playing single melodic lines. Disable legato (velocity <64) when 2+ notes sound simultaneously (chords, double stops). Re-enable when returning to mono. Prefer keyswitch over CC for legato control."
-  },
   "articulations": {
     "mode": "cc",
     "cc_number": 58,
@@ -42,58 +34,17 @@
       "tremolo": { "cc_value": 56, "description": "Tremolo", "dynamics": "cc1" },
       "measured_tremolo": { "cc_value": 61, "description": "Measured Tremolo", "dynamics": "cc1" },
       "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" },
-      "con_sordino": { "cc_value": 86, "description": "Con Sordino", "dynamics": "cc1" }
+      "con_sordino": { "cc_value": 86, "description": "Con Sordino", "dynamics": "cc1" },
+      "legato": { "keyswitch": "Ab1", "velocity_on": 100, "velocity_off": 1, "mono_only": true, "description": "Legato transition (mono only)" }
     }
   },
   "controllers": {
-    "semantic_to_cc": {
-      "dynamics": 1,
-      "expression": 11,
-      "vibrato": 21
-    },
-    "smoothing": {
-      "min_step": "1/32",
-      "interp": "cubic",
-      "mode": "fixed",
-      "write_every_step": true
-    }
-  },
-  "orchestration_hints": {
-    "typical_roles": ["harmony", "countermelody", "melody"],
-    "character": "Warm, velvety, introspective. The alto voice of the string section. Often underused but very expressive.",
-    "best_for": [
-      "Inner voice harmonies (3rds, 5ths)",
-      "Countermelodies to violin",
-      "Warm sustained pads",
-      "Lyrical solo passages",
-      "Filling the gap between violin and cello"
-    ],
-    "register_character": {
-      "low": "C3-G3: Dark, nasal, distinctive character.",
-      "mid": "G3-D5: Warm, rich, the characteristic viola sound.",
-      "high": "D5-E6: Intense, somewhat strained. Use sparingly."
-    },
-    "ensemble_tips": [
-      "The 'glue' between violins and cellos",
-      "Often doubles cello an octave higher or violin an octave lower",
-      "In string quartet: plays inner harmonies (3rds, 5ths)",
-      "Can take melody when a warmer, more introspective color is needed",
-      "Divisi with violins creates rich mid-frequency texture"
-    ],
-    "texture_options": [
-      "Sustained harmonic padding",
-      "Inner voice in three-part harmony",
-      "Countermelody to main theme",
-      "Doubled melody with violin at unison or octave",
-      "Solo passages for intimate moments"
-    ],
-    "avoid": [
-      "Extreme high register for long passages (becomes strained)",
-      "Covering the main melody in busy passages",
-      "Thin single notes when other strings have full texture"
-    ]
+    "dynamics": 1,
+    "expression": 11,
+    "vibrato": 21
   },
   "ai": {
-    "system_prompt_template": "Generate viola parts for Cinematic Studio Strings. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any chords or double stops (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range C3-E6, preferred C3-C6."
+    "system_prompt_template": "",
+    "user_prompt_template": ""
   }
 }

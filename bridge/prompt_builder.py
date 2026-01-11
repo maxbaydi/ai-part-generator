@@ -126,12 +126,94 @@ def format_profile_user_template(template: str, values: Dict[str, Any]) -> str:
 
 
 def get_custom_curves_info(profile: Dict[str, Any]) -> Tuple[List[str], str]:
-    semantic_to_cc = profile.get("controllers", {}).get("semantic_to_cc", {})
-    custom_curves = [k for k in semantic_to_cc.keys() if k not in CUSTOM_CURVE_EXCLUSIONS]
+    controllers = profile.get("controllers", {})
+    semantic_to_cc = controllers.get("semantic_to_cc", controllers)
+    custom_curves = [k for k in semantic_to_cc.keys() if k not in CUSTOM_CURVE_EXCLUSIONS and isinstance(semantic_to_cc[k], int)]
     if not custom_curves:
         return custom_curves, ""
     curves_info = ", ".join([f"curves.{k} (CC{semantic_to_cc[k]})" for k in custom_curves])
     return custom_curves, curves_info
+
+
+def format_profile_for_prompt(profile: Dict[str, Any]) -> str:
+    lines = []
+    
+    name = profile.get("name", "Unknown")
+    range_info = profile.get("range", {})
+    preferred = range_info.get("preferred", [])
+    lines.append(f"INSTRUMENT: {name}")
+    if preferred:
+        lines.append(f"RANGE: {preferred[0]} - {preferred[1]}")
+    
+    midi = profile.get("midi", {})
+    polyphony = midi.get("polyphony", "poly")
+    lines.append(f"POLYPHONY: {polyphony}")
+    
+    controllers = profile.get("controllers", {})
+    semantic_to_cc = controllers.get("semantic_to_cc", controllers)
+    cc_list = []
+    for k, v in semantic_to_cc.items():
+        if isinstance(v, int):
+            cc_list.append(f"{k}=CC{v}")
+    if cc_list:
+        lines.append(f"CONTROLLERS: {', '.join(cc_list)}")
+    
+    art = profile.get("articulations", {})
+    mode = art.get("mode", "none")
+    art_map = art.get("map", {})
+    
+    legato = profile.get("legato", {})
+    if legato and not art_map.get("legato"):
+        art_map = dict(art_map)
+        art_map["legato"] = legato
+    
+    if mode == "cc" and art_map:
+        cc_num = art.get("cc_number")
+        lines.append(f"ARTICULATIONS (CC{cc_num}):")
+        for art_name, data in art_map.items():
+            if not isinstance(data, dict):
+                continue
+            cc_val = data.get("cc_value")
+            if cc_val is not None:
+                desc = data.get("description", art_name)
+                dynamics = data.get("dynamics", "")
+                dyn_str = f" [{dynamics}]" if dynamics else ""
+                lines.append(f"  {art_name}: {cc_val} - {desc}{dyn_str}")
+            elif data.get("velocity_on"):
+                ks = data.get("keyswitch", "")
+                lines.append(f"  {art_name}: keyswitch {ks} (vel_on={data['velocity_on']}, vel_off={data.get('velocity_off', 1)})")
+    
+    elif mode == "keyswitch" and art_map:
+        lines.append("ARTICULATIONS (keyswitch):")
+        for art_name, data in art_map.items():
+            if not isinstance(data, dict):
+                continue
+            ks = data.get("keyswitch") or data.get("pitch")
+            desc = data.get("description", art_name)
+            if data.get("velocity_on"):
+                lines.append(f"  {art_name}: {ks} (vel_on={data['velocity_on']}, vel_off={data.get('velocity_off', 1)})")
+            else:
+                lines.append(f"  {art_name}: {ks} - {desc}")
+    
+    elif midi.get("is_drum"):
+        drum_map = midi.get("drum_map", {})
+        if drum_map or art_map:
+            lines.append("DRUM MAP:")
+            source = art_map if art_map else drum_map
+            for drum_name, data in source.items():
+                if isinstance(data, dict):
+                    pitch = data.get("pitch")
+                else:
+                    pitch = data
+                lines.append(f"  {drum_name}: {pitch}")
+    
+    elif legato:
+        ks = legato.get("keyswitch", "")
+        vel_on = legato.get("velocity_on", 100)
+        vel_off = legato.get("velocity_off", 1)
+        lines.append(f"LEGATO: keyswitch {ks} (vel_on={vel_on}, vel_off={vel_off})")
+    
+    return "\n".join(lines)
 
 
 def resolve_prompt_pitch_range(pref_range: Any) -> Tuple[int, int]:
@@ -266,7 +348,7 @@ def build_articulation_list_for_prompt(profile: Dict[str, Any]) -> str:
 
     result_parts = []
     if long_arts:
-        result_parts.append("LONG articulations (dynamics via CC1 curve, use longer dur_q 1.0+):")
+        result_parts.append("LONG articulations (dynamics via Dynamics curve, use longer dur_q 1.0+):")
         result_parts.extend(long_arts)
     if short_arts:
         result_parts.append("SHORT articulations (dynamics via velocity, use short dur_q as specified):")
@@ -337,27 +419,30 @@ def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> Li
     current_bpm = request.music.bpm
     current_time_sig = request.music.time_sig
     lines = [
-        "### TEMPO & TIME SIGNATURE CHANGES (optional but encouraged)",
-        f"Current tempo: {current_bpm} BPM, time signature: {current_time_sig}",
-        "You MAY change both tempo AND time signature if it serves the music.",
+        "### TEMPO & TIME SIGNATURE CONTROL (YOUR CREATIVE CHOICE)",
+        f"Project default: {current_bpm} BPM, {current_time_sig}",
         "",
-        "FORMAT: tempo_markers: [{\"time_q\": 0, \"bpm\": 120, \"num\": 4, \"denom\": 4, \"linear\": false}, ...]",
+        "YOU DECIDE the tempo and time signature for this composition:",
+        "- SET the initial tempo (time_q: 0) - choose what fits the mood/style",
+        "- CHANGE tempo during the piece for dramatic effect (accelerando, ritardando)",
+        "- CHANGE time signature when needed (3/4 waltz, 6/8 compound, mixed meter)",
+        "",
+        "FORMAT: tempo_markers: [{\"time_q\": 0, \"bpm\": 85, \"num\": 3, \"denom\": 4}, ...]",
         "",
         "FIELDS:",
         f"- time_q: position in quarter notes (0..{length_hint})",
-        "- bpm: tempo (optional, omit to keep current tempo at that point)",
-        "- num/denom: time signature numerator/denominator (optional, e.g. num:3, denom:4 for 3/4)",
-        "- linear: true for gradual tempo ramp, false for instant change (default: false)",
+        "- bpm: tempo in beats per minute (REQUIRED at time_q=0 to set initial tempo)",
+        "- num/denom: time signature (e.g. num:6, denom:8 for 6/8)",
+        "- linear: true for gradual tempo ramp, false for instant change",
         "",
         "EXAMPLES:",
-        "- Change tempo at start: [{\"time_q\": 0, \"bpm\": 90}]",
-        "- Change time signature: [{\"time_q\": 0, \"num\": 3, \"denom\": 4}]",
-        "- Change both: [{\"time_q\": 0, \"bpm\": 90, \"num\": 6, \"denom\": 8}]",
-        "- Multiple changes: [{\"time_q\": 0, \"bpm\": 80}, {\"time_q\": 16, \"bpm\": 100, \"linear\": true}]",
+        "- Set tempo: [{\"time_q\": 0, \"bpm\": 72}]",
+        "- Set tempo + time sig: [{\"time_q\": 0, \"bpm\": 90, \"num\": 6, \"denom\": 8}]",
+        "- Accelerando: [{\"time_q\": 0, \"bpm\": 60}, {\"time_q\": 24, \"bpm\": 100, \"linear\": true}]",
+        "- Ritardando at end: [{\"time_q\": 0, \"bpm\": 120}, {\"time_q\": 48, \"bpm\": 80, \"linear\": true}]",
         "",
-        "COMMON TIME SIGNATURES: 4/4, 3/4, 6/8, 12/8, 2/4, 5/4, 7/8",
-        "Use time signature changes for: waltz feel (3/4), compound meter (6/8, 12/8), mixed meter sections.",
-        "Keep markers in ascending order by time_q. Max 4-6 markers.",
+        "COMMON TIME SIGNATURES: 4/4, 3/4, 2/4, 6/8, 12/8, 5/4, 7/8",
+        "Keep markers in ascending order. Max 4-6 markers.",
     ]
     if request.ensemble and request.ensemble.is_sequential:
         lines.append("")
@@ -491,11 +576,17 @@ def build_prompt(
     bars = max(1, int(length_q / quarters_per_bar))
     selection_info = build_selection_info(length_q, quarters_per_bar, bars)
 
+    if has_plan_chord_map:
+        valid_pitches = list(range(pitch_low, pitch_high + 1))
+        valid_pitches_str = f"MIDI {pitch_low}-{pitch_high} (follow chord_tones from CHORD MAP)"
+    else:
+        valid_pitches = get_scale_notes(final_key, pitch_low, pitch_high)
+        valid_pitches_str = ", ".join(str(p) for p in valid_pitches[:PROMPT_PITCH_PREVIEW_LIMIT])
+        if len(valid_pitches) > PROMPT_PITCH_PREVIEW_LIMIT:
+            valid_pitches_str += f"... ({len(valid_pitches)} total)"
+
     scale_notes = get_scale_note_names(final_key)
-    valid_pitches = get_scale_notes(final_key, pitch_low, pitch_high)
-    valid_pitches_str = ", ".join(str(p) for p in valid_pitches[:PROMPT_PITCH_PREVIEW_LIMIT])
-    if len(valid_pitches) > PROMPT_PITCH_PREVIEW_LIMIT:
-        valid_pitches_str += f"... ({len(valid_pitches)} total)"
+    profile_info = format_profile_for_prompt(profile)
 
     if request.free_mode:
         articulation_list_str = build_articulation_list_for_prompt(profile)
@@ -525,6 +616,9 @@ def build_prompt(
             f"YOU DECIDE: Choose the best generation type, style, and articulations for this context.",
             f"IMPORTANT: Match your output complexity to what the user requests. Simple request = simple output.",
             f"",
+            f"### INSTRUMENT PROFILE",
+            profile_info,
+            f"",
             f"### MUSICAL CONTEXT",
             f"- Key: {final_key}",
             f"- Scale notes: {scale_notes}",
@@ -532,14 +626,11 @@ def build_prompt(
             f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
             f"",
             *selection_info,
-            f"",
-            f"### AVAILABLE ARTICULATIONS:",
-            articulation_list_str,
         ])
 
         user_prompt_parts.extend([
             f"",
-            f"Note: Use Expression (CC11) for overall section dynamics, Dynamics (CC1) for note-level shaping. For SHORT articulations, velocity is primary.",
+            f"Note: Use Expression curve for overall section dynamics, Dynamics curve for note-level shaping. For SHORT articulations, velocity is primary.",
         ])
 
         is_ensemble = request.ensemble and request.ensemble.total_instruments > 1
@@ -551,11 +642,8 @@ def build_prompt(
         is_compose_or_arrange = is_compose_ensemble or is_arrangement_mode
 
         if is_compose_or_arrange and ensemble and isinstance(ensemble.current_instrument, dict):
-            current_role = str(ensemble.current_instrument.get("role") or "").strip().lower()
+            current_role = str(ensemble.current_instrument.get("role") or "").strip()
             current_role_upper = current_role.upper() if current_role else "UNKNOWN"
-
-            role_as_type = current_role if current_role else "melody"
-            type_hint = TYPE_HINTS.get(role_as_type, TYPE_HINTS.get("melody", ""))
 
             current_track = str(ensemble.current_instrument.get("track_name") or "").strip().lower()
             current_profile_name = str(ensemble.current_instrument.get("profile_name") or "").strip().lower()
@@ -585,19 +673,17 @@ def build_prompt(
             user_prompt_parts = [
                 f"## COMPOSE: {current_role_upper} for {profile.get('name', 'instrument')}",
                 f"",
-                f"### GENERATION TARGET (WHAT TO BUILD)",
-                f"1. YOUR ROLE (from plan): {current_role_upper}",
-                f"{type_hint}",
+                f"### YOUR ROLE (from plan): {current_role_upper}",
             ]
             if role_detail:
-                user_prompt_parts.append(f"")
-                user_prompt_parts.append(f"2. ROLE GUIDANCE (from plan):")
                 user_prompt_parts.append(role_detail)
             user_prompt_parts.extend([
                 f"",
+                f"### INSTRUMENT PROFILE",
+                profile_info,
+                f"",
                 f"### MUSICAL CONTEXT",
                 f"- Key: {final_key}",
-                f"- Scale notes: {scale_notes}",
                 f"- Tempo: {request.music.bpm} BPM, Time: {request.music.time_sig}",
                 f"- Length: {bars} bars ({round(length_q, 1)} quarter notes)",
                 f"",
@@ -608,6 +694,9 @@ def build_prompt(
             type_hint = TYPE_HINTS.get(gen_lower, f"ROLE: Generate a {generation_type} part. OBJECTIVE: Musical, memorable, fitting.")
             user_prompt_parts = [
                 f"## COMPOSE: {generation_style.upper()} {generation_type.upper()} for {profile.get('name', 'instrument')}",
+                f"",
+                f"### INSTRUMENT PROFILE",
+                profile_info,
                 f"",
                 f"### GENERATION TARGET (WHAT TO BUILD)",
                 f"1. PART TYPE ({generation_type}):",
@@ -737,7 +826,7 @@ def build_prompt(
                 user_prompt_parts.append("- 'building': gradually increase velocity toward next point")
                 user_prompt_parts.append("- 'climax': peak intensity, full expression")
                 user_prompt_parts.append("- 'fading'/'resolving': decrease toward next point")
-                user_prompt_parts.append("- Expression curve (CC11) should follow this arc shape")
+                user_prompt_parts.append("- Expression curve should follow this arc shape")
 
             texture_map = plan_data.get("texture_map") if isinstance(plan_data, dict) else None
             current_inst = request.ensemble.current_instrument if request.ensemble else None
@@ -967,19 +1056,19 @@ def build_prompt(
             f"",
             f"### THREE-LAYER DYNAMICS",
             f"1. VELOCITY (vel): Note attack intensity. Accent: 100-127, normal: 70-90, soft: 40-60",
-            f"2. CC11 EXPRESSION (curves.expression): GLOBAL section dynamics - phrase/section envelope",
-            f"3. CC1 DYNAMICS (curves.dynamics): PER-NOTE breathing - CRITICAL for realism!",
+            f"2. EXPRESSION (curves.expression): GLOBAL section dynamics - phrase/section envelope",
+            f"3. DYNAMICS (curves.dynamics): PER-NOTE breathing - CRITICAL for realism!",
             f"",
-            f"CC1 TECHNIQUES FOR SUSTAINED NOTES (dur_q >= 1.0):",
+            f"DYNAMICS TECHNIQUES FOR SUSTAINED NOTES (dur_q >= 1.0):",
             f"- CRESCENDO (<): low→high - for phrase starts, building tension",
             f"- DECRESCENDO (>): high→low - for phrase ends, resolution",
             f"- SWELL (<>): rise→fall - most common for whole/half notes",
             f"",
-            f"CC1 BREAKPOINTS - add for EACH sustained note:",
+            f"DYNAMICS BREAKPOINTS - add for EACH sustained note:",
             f"- dur_q >= 4.0 (whole): 4+ breakpoints with full swell",
             f"- dur_q >= 2.0 (half): 3+ breakpoints",
             f"- dur_q >= 1.0 (quarter): 2+ breakpoints",
-            f"- NEVER flat CC1 on sustained notes - sounds robotic!",
+            f"- NEVER flat dynamics on sustained notes - sounds robotic!",
         ])
     else:
         short_articulations = profile.get("articulations", {}).get("short_articulations", [])
@@ -998,8 +1087,8 @@ def build_prompt(
             f"",
             f"### THREE-LAYER DYNAMICS",
             f"1. VELOCITY: {velocity_hint}",
-            f"2. CC11 EXPRESSION: GLOBAL section envelope",
-            f"3. CC1 DYNAMICS: PER-NOTE breathing (cresc/decresc/swell for each sustained note)",
+            f"2. EXPRESSION CURVE: GLOBAL section envelope",
+            f"3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)",
         ])
 
     tempo_guidance = build_tempo_change_guidance(request, length_q)
@@ -1072,7 +1161,7 @@ def build_plan_prompt(request: GenerateRequest, length_q: float) -> Tuple[str, s
     bars = max(1, int(length_q / quarters_per_bar))
 
     user_prompt_parts = [
-        "## FREE MODE COMPOSITION PLAN",
+        "## COMPOSITION PLAN",
         "Create a detailed musical blueprint for this multi-instrument piece.",
         "",
         "### MUSICAL CONTEXT",

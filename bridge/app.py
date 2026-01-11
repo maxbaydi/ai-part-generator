@@ -118,6 +118,10 @@ def generate(request: GenerateRequest) -> JSONResponse:
     if not request.free_mode:
         forced_articulation = preset_settings.get("articulation")
 
+    chord_map = None
+    if request.ensemble and request.ensemble.plan:
+        chord_map = request.ensemble.plan.get("chord_map")
+
     response = build_response(
         parsed,
         profile,
@@ -134,6 +138,7 @@ def generate(request: GenerateRequest) -> JSONResponse:
         arrangement_mode=bool(request.ensemble and request.ensemble.arrangement_mode),
         source_sketch=(request.ensemble.source_sketch if request.ensemble and request.ensemble.arrangement_mode else None),
         forced_articulation=forced_articulation,
+        chord_map=chord_map,
     )
     logger.info(
         "Response built: notes=%d cc_events=%d keyswitches=%d program_changes=%d articulation=%s motif=%s handoff=%s",

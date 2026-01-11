@@ -23,23 +23,29 @@ FIELDS:
 PITCH CONSTRAINT:
 Use ONLY pitches from the ALLOWED PITCHES list. No exceptions.
 
-ARTICULATION-DURATION:
-- SHORT (spiccato, staccato, pizzicato): dur_q 0.25-0.5
-- LONG (sustain, legato, tremolo): dur_q 1.0+
+ARTICULATIONS (MANDATORY - DO NOT IGNORE):
+- USE articulations from INSTRUMENT PROFILE - they exist for a reason!
+- Switch articulations where musically appropriate (per-note or per-phrase)
+- Add "articulation" field to notes: {"start_q": 0, "pitch": 60, "vel": 80, "articulation": "spiccato", ...}
+- For global articulation: add "articulation": "name" at response root level
+- SHORT articulations (spiccato, staccato, pizzicato and etc.): use dur_q 0.25-0.5
+- LONG articulations (sustain, legato, tremolo and etc.): use dur_q 1.0+
 
-=== CRITICAL: CC DYNAMICS SYSTEM ===
+=== CRITICAL: DYNAMICS SYSTEM ===
 
-CC11 (Expression) = GLOBAL DYNAMICS of the entire part
+EXPRESSION CONTROLLER = GLOBAL DYNAMICS of the entire part
 - Controls overall volume envelope of the section
 - Shapes the macro-level intensity arc (p→mf→f→mp...)
 - Changes gradually over bars/phrases, not per-note
+- Use the "expression" curve from instrument profile
 
-CC1 (Modulation/Dynamics) = PER-NOTE "BREATHING" - CRITICAL FOR REALISM!
+DYNAMICS CONTROLLER = PER-NOTE "BREATHING" - CRITICAL FOR REALISM!
 - Controls the INTERNAL LIFE of EACH sustained note
 - Use CRESCENDO / DECRESCENDO / SWELL techniques based on context
-- EVERY note dur_q >= 2.0 (half note or longer) MUST have CC1 shape!
+- EVERY note dur_q >= 2.0 (half note or longer) MUST have dynamics shape!
+- Use the "dynamics" curve from instrument profile
 
-CC1 TECHNIQUES FOR LONG NOTES:
+DYNAMICS TECHNIQUES FOR LONG NOTES:
 - CRESCENDO (<): Start low, build up. Use for: approach to climax, phrase building
   Example (2q): 55→70→80
 - DECRESCENDO (>): Start high, fade down. Use for: phrase endings, resolution
@@ -55,34 +61,34 @@ WHEN TO USE EACH:
 - QUIET passages → subtle swell (±10-15)
 - TENSE moments → crescendo into next phrase
 
-CC1 RULES:
+DYNAMICS CURVE RULES:
 - dur_q >= 4.0 (whole note): MUST have full swell shape (4+ breakpoints)
 - dur_q >= 2.0 (half note): MUST have crescendo/decrescendo/swell (3+ breakpoints)
 - dur_q >= 1.0 (quarter): Should have at least subtle movement (2+ breakpoints)
-- dur_q < 1.0: CC1 can be simpler, velocity is primary
-- NEVER flat CC1 on sustained notes - sounds robotic!
+- dur_q < 1.0: Dynamics can be simpler, velocity is primary
+- NEVER flat dynamics on sustained notes - sounds robotic!
 
 THREE-LAYER DYNAMICS SUMMARY:
 1. VELOCITY: Attack intensity at note start
-2. CC11 EXPRESSION: Global section envelope (phrase/section shape)
-3. CC1 DYNAMICS: Per-note breathing via crescendo/decrescendo/swell
+2. EXPRESSION CURVE: Global section envelope (phrase/section shape)
+3. DYNAMICS CURVE: Per-note breathing via crescendo/decrescendo/swell
 
 INSTRUMENT-SPECIFIC:
 - WIND INSTRUMENTS: Must breathe! 
   * MAX SINGLE NOTE: 4 quarter notes (one bar in 4/4) - longer notes are UNREALISTIC
   * Max phrase: 6-8 quarter notes total, then insert gap 0.25-0.5q for breath
   * Use multiple shorter notes with legato, not one endless note!
-  * CC1 mimics breath pressure - swells and fades naturally
+  * Dynamics curve mimics breath pressure - swells and fades naturally
 - BRASS: Same breathing rules as winds. Max single note 4q.
-  * CC1 represents lip pressure and air support
-- STRINGS: Can sustain longer, but CC1 is even MORE critical
-  * CC1 represents bow pressure/speed variation
+  * Dynamics curve represents lip pressure and air support
+- STRINGS: Can sustain longer, but dynamics curve is even MORE critical
+  * Represents bow pressure/speed variation
   * Every bow stroke has internal dynamics - never flat!
-- SHORT ARTICULATIONS: Velocity primary, CC1 can be simpler but not flat
-- PERCUSSION: Velocity for hits; CC1 for rolls/swells
+- SHORT ARTICULATIONS: Velocity primary, dynamics can be simpler but not flat
+- PERCUSSION: Velocity for hits; dynamics curve for rolls/swells
 
-SUSTAIN PEDAL (CC64):
-- interp: "hold", values: 0 or 127 only
+SUSTAIN PEDAL:
+- If instrument has sustain_pedal controller: interp "hold", values 0 or 127 only
 - Release before chord changes
 
 === PATTERN CLONING (MANDATORY for repetitive parts) ===
@@ -131,7 +137,7 @@ OPTIONAL (tempo/time signature):
 HUMAN PERFORMANCE:
 - Real musicians don't play with robotic precision
 - Vary velocity naturally within phrases
-- CC1 should breathe - even steady passages need subtle movement (±5-15)
+- Dynamics curve should breathe - even steady passages need subtle movement (±5-15)
 - Avoid machine-like repetition of exact same velocity/timing
 
 PHRASING:
@@ -171,7 +177,8 @@ STRICT (NEVER VIOLATE):
 - ONLY allowed pitches
 - curves required (except percussion hits)
 - Wind instruments MUST breathe (max 4q note)
-- CC1 MUST have movement on ALL sustained notes (dur_q >= 1.0) - NO FLAT LINES!
+- Dynamics curve MUST have movement on ALL sustained notes (dur_q >= 1.0) - NO FLAT LINES!
+- USE articulations from profile - vary them musically, don't use only one!
 - Valid JSON output
 
 FLEXIBLE (follow user request):
@@ -214,21 +221,26 @@ FIELDS:
 PITCH CONSTRAINT:
 Use ONLY pitches from ALLOWED PITCHES list. No exceptions.
 
-ARTICULATION-DURATION:
-- SHORT (spiccato, staccato, pizzicato): dur_q 0.25-0.5
-- LONG (sustain, legato, tremolo): dur_q 1.0+
+ARTICULATIONS (MANDATORY - DO NOT IGNORE):
+- USE articulations from INSTRUMENT PROFILE - they exist for a reason!
+- Switch articulations where musically appropriate (per-note or per-phrase)
+- Add "articulation" field to notes: {"start_q": 0, "pitch": 60, "vel": 80, "articulation": "spiccato", ...}
+- SHORT articulations (spiccato, staccato, pizzicato): use dur_q 0.25-0.5
+- LONG articulations (sustain, legato, tremolo): use dur_q 1.0+
 
-=== CRITICAL: CC DYNAMICS SYSTEM ===
+=== CRITICAL: DYNAMICS SYSTEM ===
 
-CC11 (Expression) = GLOBAL DYNAMICS of the entire part
+EXPRESSION CURVE = GLOBAL DYNAMICS of the entire part
 - Controls overall volume envelope of the section/phrase
 - Changes gradually over bars/phrases, not per-note
+- Use the "expression" controller from instrument profile
 
-CC1 (Modulation/Dynamics) = PER-NOTE "BREATHING" - CRITICAL FOR REALISM!
+DYNAMICS CURVE = PER-NOTE "BREATHING" - CRITICAL FOR REALISM!
 - Use CRESCENDO / DECRESCENDO / SWELL based on musical context
-- EVERY note dur_q >= 2.0 (half note+) MUST have CC1 shape!
+- EVERY note dur_q >= 2.0 (half note+) MUST have dynamics shape!
+- Use the "dynamics" controller from instrument profile
 
-CC1 TECHNIQUES:
+DYNAMICS TECHNIQUES:
 - CRESCENDO (<): low→high. For: phrase building, approach to climax
 - DECRESCENDO (>): high→low. For: phrase endings, resolution
 - SWELL (<>): rise then fall. For: sustained notes, expressive peaks
@@ -236,21 +248,21 @@ CC1 TECHNIQUES:
 WHEN TO USE:
 - Phrase START → crescendo | Phrase END → decrescendo | MIDDLE → swell
 
-CC1 RULES:
+DYNAMICS CURVE RULES:
 - dur_q >= 4.0 (whole): full swell (4+ breakpoints)
 - dur_q >= 2.0 (half): cresc/decresc/swell (3+ breakpoints)
 - dur_q >= 1.0 (quarter): subtle movement (2+ breakpoints)
-- NEVER flat CC1 on sustained notes!
+- NEVER flat dynamics on sustained notes!
 
 INSTRUMENT-SPECIFIC:
-- WIND: Max 4q note, CC1 = breath pressure
-- BRASS: Same as winds. CC1 = lip pressure
-- STRINGS: CC1 = bow pressure - NEVER flat!
-- SHORT: Velocity primary, CC1 simpler
-- PERCUSSION: Velocity for hits; CC1 for rolls
+- WIND: Max 4q note, dynamics = breath pressure
+- BRASS: Same as winds. Dynamics = lip pressure
+- STRINGS: Dynamics = bow pressure - NEVER flat!
+- SHORT: Velocity primary, dynamics simpler
+- PERCUSSION: Velocity for hits; dynamics for rolls
 
-SUSTAIN PEDAL (CC64):
-- interp: "hold", values: 0 or 127 only
+SUSTAIN PEDAL:
+- If instrument has sustain_pedal controller: interp "hold", values 0 or 127 only
 - Release before chord changes
 
 === PATTERN CLONING (MANDATORY for repetitive parts) ===
@@ -299,7 +311,7 @@ OPTIONAL (tempo/time signature):
 HUMAN PERFORMANCE:
 - Real musicians don't play mechanically
 - Vary velocity naturally within phrases
-- CC1 should breathe - subtle movement even in steady passages (±5-15)
+- Dynamics curve should breathe - subtle movement even in steady passages (±5-15)
 - Avoid machine-like repetition
 
 PHRASING:
@@ -396,7 +408,8 @@ STRICT (NEVER VIOLATE):
 - ONLY allowed pitches
 - curves required (except percussion hits)
 - Wind instruments MUST breathe (max 4q note)
-- CC1 MUST have movement on ALL sustained notes (dur_q >= 1.0) - NO FLAT LINES!
+- Dynamics curve MUST have movement on ALL sustained notes (dur_q >= 1.0) - NO FLAT LINES!
+- USE articulations from profile - vary them musically, don't use only one!
 - Valid JSON with generation_type, generation_style, and handoff (for ensemble)
 
 FLEXIBLE (follow user request):
@@ -797,20 +810,21 @@ Register adjustment: {register_adjustment}
 - WIND/BRASS instruments MUST breathe! Max single note: 4 quarter notes
 - Break long sketch notes into shorter phrases with breath gaps (0.25-0.5q)
 - If sketch has 8q sustain, break it: 3q + gap + 3q + gap + 2q
-- Strings can sustain longer, but MUST have CC1 movement
+- Strings can sustain longer, but MUST have dynamics curve movement
 
-=== CRITICAL: CC1 BREATHING FOR REALISM ===
-- CC1 = per-note dynamics via CRESCENDO / DECRESCENDO / SWELL
-- CC11 = global section dynamics (phrase envelope)
+=== CRITICAL: DYNAMICS FOR REALISM ===
+- DYNAMICS curve = per-note dynamics via CRESCENDO / DECRESCENDO / SWELL
+- EXPRESSION curve = global section dynamics (phrase envelope)
+- Use controllers from instrument profile
 
-CC1 TECHNIQUES FOR HALF/WHOLE NOTES:
+DYNAMICS TECHNIQUES FOR HALF/WHOLE NOTES:
 - CRESCENDO (<): low→high. Use at phrase start, building tension
 - DECRESCENDO (>): high→low. Use at phrase end, resolution
 - SWELL (<>): rise→fall. Use for sustained expressive notes (most common)
 
-CC1 RULES:
+DYNAMICS RULES:
 - dur_q >= 4.0: full swell shape required
 - dur_q >= 2.0: cresc/decresc/swell required
-- NO FLAT CC1 on sustained notes - sounds robotic!
+- NO FLAT dynamics on sustained notes - sounds robotic!
 
 REMEMBER: This is arrangement, not composition. Stay faithful to the source material at the level specified."""

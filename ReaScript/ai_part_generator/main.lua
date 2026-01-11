@@ -1393,20 +1393,34 @@ local function apply_arrange_result_and_continue()
   if not arrange_state then
     return
   end
-  
+
   if apply_state then
     reaper.defer(apply_arrange_result_and_continue)
     return
   end
-  
+
   local current = arrange_state.pending_apply
   if current then
     utils.log(string.format("Arrange: applying results for '%s' (%d/%d)",
       current.track_name, arrange_state.current_index, arrange_state.total_tracks))
-    
+
+    local tempo_markers = nil
+    if arrange_state.allow_tempo_changes and not arrange_state.tempo_applied then
+      if type(current.response.tempo_markers) == "table" and #current.response.tempo_markers > 0 then
+        tempo_markers = current.response.tempo_markers
+        arrange_state.tempo_applied = true
+      end
+    end
+
+    local on_tempo_applied = function(new_bpm)
+      if new_bpm then
+        arrange_state.bpm = new_bpm
+      end
+    end
+
     begin_apply(current.response, current.profile_id, current.profile, current.articulation_name, current.target_track,
-      arrange_state.start_sec, arrange_state.end_sec, nil, nil)
-    
+      arrange_state.start_sec, arrange_state.end_sec, tempo_markers, on_tempo_applied)
+
     table.insert(arrange_state.generated_parts, {
       track_name = current.track_name,
       profile_name = current.profile_name,
@@ -1414,19 +1428,19 @@ local function apply_arrange_result_and_continue()
       notes = current.response.notes or {},
       cc_events = current.response.cc_events or {},
     })
-    
+
     arrange_state.pending_apply = nil
     reaper.defer(apply_arrange_result_and_continue)
     return
   end
-  
+
   arrange_state.current_index = arrange_state.current_index + 1
   if arrange_state.current_index > arrange_state.total_tracks then
     utils.log("Arrange: ALL COMPLETE!")
     arrange_state = nil
     return
   end
-  
+
   reaper.defer(start_next_arrange_generation)
 end
 
@@ -1600,7 +1614,7 @@ function start_next_arrange_generation()
     ctx,
     arrange_state.api_settings,
     arrange_state.free_mode,
-    false,
+    arrange_state.allow_tempo_changes or false,
     ensemble_info
   )
   
@@ -1859,6 +1873,8 @@ local function run_arrange(state, profile_list, profiles_by_id)
     use_style_mood = state.use_style_mood,
     free_mode = state.free_mode,
     use_selected_tracks = state.use_selected_tracks,
+    allow_tempo_changes = state.allow_tempo_changes or false,
+    tempo_applied = false,
   }
 
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_PROVIDER, state.api_provider or const.API_PROVIDER_LOCAL, true)

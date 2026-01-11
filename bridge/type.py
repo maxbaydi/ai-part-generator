@@ -29,6 +29,13 @@ TYPE_HINTS = {
         "Pay attention to voice leading—don't jump voicing wildly between chords. "
         "Adjust density based on style (e.g., simple triads for Pop, extended voicings for Jazz)."
     ),
+    "harmony": (
+        "ROLE: INNER VOICE / HARMONIC FILLER.\n"
+        "OBJECTIVE: Provide chord tones (3rds, 5ths, 7ths, 9ths) to fill the harmonic texture.\n"
+        "INSTRUCTIONS: Play sustained notes from the current chord. Focus on smooth voice leading. "
+        "Stay in the mid register to fill between bass and melody. "
+        "Use extensions (7ths, 9ths) when indicated in the chord map."
+    ),
     "pad": (
         "ROLE: ATMOSPHERE / GLUE.\n"
         "OBJECTIVE: Fill the frequency spectrum with sustained, evolving textures.\n"
@@ -37,6 +44,13 @@ TYPE_HINTS = {
         "CRITICAL: Use CC1 (Dynamics) to create slow 'breathing' swells—never leave a pad flat."
     ),
     "counter-melody": (
+        "ROLE: SECONDARY THEME / DIALOGUE.\n"
+        "OBJECTIVE: Weave a melodic line that complements BUT DOES NOT CLASH with the main melody.\n"
+        "INSTRUCTIONS: Fill the gaps left by the main melody (call and response). "
+        "Use a different rhythmic density or register than the main theme to ensure separation. "
+        "Harmonize nicely with the current chord structure."
+    ),
+    "countermelody": (
         "ROLE: SECONDARY THEME / DIALOGUE.\n"
         "OBJECTIVE: Weave a melodic line that complements BUT DOES NOT CLASH with the main melody.\n"
         "INSTRUCTIONS: Fill the gaps left by the main melody (call and response). "

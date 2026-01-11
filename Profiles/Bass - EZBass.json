@@ -33,21 +33,12 @@
     }
   },
   "controllers": {
-    "semantic_to_cc": {
-      "vibrato": 1,
-      "sustain_pedal": 64,
-      "damping": 67
-    },
-    "smoothing": {
-      "min_step": "1/32",
-      "interp": "cubic",
-      "mode": "adaptive",
-      "write_every_step": false
-    }
+    "vibrato": 1,
+    "sustain_pedal": 64,
+    "damping": 67
   },
   "ai": {
-    "system_prompt_template": "Generate electric bass guitar parts for Toontrack EZBass. Create appropriate bass lines for ANY musical style requested.\n\nINSTRUMENT CHARACTERISTICS:\n- Primarily monophonic (one note at a time)\n- Foundation instrument - supports harmony and rhythm\n- Playable range: A#1-E4, preferred: B1-B3\n\nCC CONTROLLERS - USE THESE CURVE NAMES:\n- curves.vibrato (CC1): Vibrato intensity on long notes\n- curves.sustain_pedal (CC64): For arpeggios, interp: hold, ONLY 0 or 127\n- curves.damping (CC67): Palm mute amount (0=open, 127=fully muted)\n\nSTYLE ADAPTATION:\n- ROCK/METAL: Root-fifth patterns, power, driving 8th notes, occasional fills\n- POP: Simple, melodic, supportive, lock with drums\n- FUNK/R&B: Syncopation, ghost notes, slap technique, 16th-note grooves\n- JAZZ: Walking bass lines, chromatic approaches, swing feel\n- ELECTRONIC/HIP-HOP: Synth-bass style, sub-bass focus, rhythmic patterns\n- CINEMATIC: Sustained low notes, dramatic swells, sparse but powerful\n- LATIN: Montuno patterns, syncopated rhythms, tumbao feel\n\nARTICULATIONS (keyswitches):\n- sustain: Normal fingered notes (hold A-1)\n- harmonic: Natural harmonics (hold A#-1)\n- slap: Slap/pop technique (hold B-1)\n- ghost_note: Soft percussive notes (press E0)\n- loud_mute: Percussive muted hits (press D#0)\n- slide_down/slide_up: Pitch slides (press F0/G#0)\n- slide: Slide between notes (hold G0)\n\nMUSICAL PRINCIPLES:\n- Root notes on downbeats establish tonality\n- Fifths and octaves add power without cluttering\n- Passing tones connect chord changes smoothly\n- Ghost notes and mutes add groove and pocket\n- Use curves.damping for palm-muted sections\n- Space and rests are as important as notes",
-    "user_prompt_template": "FOR BASS - IGNORE dynamics/expression curves, USE INSTEAD:\n1. curves.vibrato - for long notes, start 0 rise to 40-70\n2. curves.damping - for palm mute sections (0=open, 127=muted)\n3. curves.sustain_pedal - for arpeggios ONLY, interp: hold, values 0 or 127\n   Release (0) BEFORE chord change, press (127) on new chord"
+    "system_prompt_template": "Sustain pedal (CC64): interp hold, values 0 or 127 only. Damping (CC67): 0=open, 127=fully muted.",
+    "user_prompt_template": ""
   }
 }
-

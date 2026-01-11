@@ -14,14 +14,6 @@
     "preferred": ["D4", "D7"]
   },
   "fix_policy": "octave_shift_to_fit",
-  "legato": {
-    "mode": "keyswitch",
-    "keyswitch": "Ab1",
-    "velocity_on": 100,
-    "velocity_off": 1,
-    "mono_only": true,
-    "description": "Legato is for MONO parts only - smooth transition between single notes. Enable legato (velocity ≥64) when playing single melodic lines. Disable legato (velocity <64) when 2+ notes sound simultaneously. Re-enable when returning to mono. Prefer keyswitch over CC for legato control."
-  },
   "articulations": {
     "mode": "cc",
     "cc_number": 58,
@@ -37,58 +29,17 @@
       "trills": { "cc_value": 46, "description": "Trills", "dynamics": "cc1" },
       "flutter": { "cc_value": 51, "description": "Flutter Tongue", "dynamics": "cc1" },
       "measured_reps": { "cc_value": 61, "description": "Measured Repetitions", "dynamics": "velocity" },
-      "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" }
+      "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" },
+      "legato": { "keyswitch": "Ab1", "velocity_on": 100, "velocity_off": 1, "mono_only": true, "description": "Legato transition (mono only)" }
     }
   },
   "controllers": {
-    "semantic_to_cc": {
-      "dynamics": 1,
-      "expression": 11,
-      "vibrato": 21
-    },
-    "smoothing": {
-      "min_step": "1/32",
-      "interp": "cubic",
-      "mode": "fixed",
-      "write_every_step": true
-    }
-  },
-  "orchestration_hints": {
-    "typical_roles": ["melody", "countermelody", "color"],
-    "character": "Bright, airy, ethereal. The soprano voice of woodwinds. Pure and crystalline.",
-    "best_for": [
-      "Lyrical melodic solos",
-      "Delicate, ethereal passages",
-      "Fast virtuosic runs",
-      "Doubling violin melody at unison or octave",
-      "Bird-like ornaments and trills"
-    ],
-    "register_character": {
-      "low": "C4-G4: Breathy, soft, intimate. Limited projection.",
-      "mid": "G4-D6: Bright, clear, most expressive. Primary melodic range.",
-      "high": "D6-C7: Brilliant, piercing. Use for special effects and climaxes."
-    },
-    "ensemble_tips": [
-      "Doubles violin melody beautifully at octave or unison",
-      "Creates shimmer when combined with strings tremolo",
-      "Pairs well with harp for ethereal textures",
-      "Can cut through orchestra in high register",
-      "Leave space for breath - natural phrases"
-    ],
-    "texture_options": [
-      "Solo lyrical melody",
-      "Ornamental flourishes",
-      "Tremolo/flutter for texture",
-      "Arpeggiated figures",
-      "Trills and grace notes"
-    ],
-    "avoid": [
-      "Sustained low notes in loud passages (won't project)",
-      "Competing with brass in full orchestration",
-      "Very long phrases without breath marks"
-    ]
+    "dynamics": 1,
+    "expression": 11,
+    "vibrato": 21
   },
   "ai": {
-    "system_prompt_template": "Generate flute parts for Cinematic Studio Woodwinds. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range C4-C7, preferred D4-D7."
+    "system_prompt_template": "",
+    "user_prompt_template": ""
   }
 }

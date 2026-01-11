@@ -289,6 +289,9 @@ local function draw_tab_arranger(ctx, state, profile_list, profiles_by_id, callb
     comp.status_text(ctx, "In Free Mode, the AI decides style, mood and roles based on your prompt and context.", "dim")
     draw_key_selector(ctx, state)
   end
+  
+  reaper.ImGui_Spacing(ctx)
+  comp.checkbox(ctx, "Allow Tempo/Time Sig Changes", state.allow_tempo_changes, function(v) state.allow_tempo_changes = v end)
 
   draw_prompt_area(ctx, state, callbacks, tracks_info)
 

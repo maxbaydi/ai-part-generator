@@ -22,64 +22,12 @@
     }
   },
   "controllers": {
-    "semantic_to_cc": {
-      "dynamics": 1,
-      "expression": 11,
-      "sustain_pedal": 64
-    },
-    "smoothing": {
-      "min_step": "1/32",
-      "interp": "hold",
-      "mode": "adaptive",
-      "write_every_step": false
-    }
-  },
-  "orchestration_hints": {
-    "typical_roles": ["harmony", "accompaniment", "melody", "bass"],
-    "character": "Versatile, percussive attack with sustain. Can fill multiple roles simultaneously.",
-    "best_for": [
-      "Harmonic accompaniment (chords, arpeggios)",
-      "Solo melodic passages",
-      "Rhythmic ostinatos",
-      "Bass line with left hand",
-      "Full self-contained arrangements"
-    ],
-    "register_character": {
-      "bass": "A0-E2: Deep, powerful, rumbling. Use sparingly, great for impact.",
-      "low": "E2-C4: Warm, rich bass notes and low accompaniment.",
-      "mid": "C4-C6: Sweet spot for melody and harmony. Most expressive.",
-      "high": "C6-C8: Bright, crystalline, delicate. Use for sparkle and highlights."
-    },
-    "ensemble_tips": [
-      "In ensemble: be SPARSE, don't compete with other instruments",
-      "Focus on ONE role: either rhythm OR harmony OR color",
-      "Stay out of registers used by main melody instruments",
-      "Arpeggios and broken chords provide movement without dominating",
-      "Avoid thick chords in mid-register when strings are playing"
-    ],
-    "texture_options": [
-      "Block chords (powerful, dramatic)",
-      "Arpeggiated accompaniment (flowing, romantic)",
-      "Broken octaves in bass (epic, driving)",
-      "Tremolo/repeated notes (tension, urgency)",
-      "Single line melody with sparse accompaniment",
-      "Alberti bass patterns (classical)",
-      "Wide voicings with sustain pedal (cinematic)"
-    ],
-    "solo_mode": {
-      "description": "When piano is the ONLY instrument, it must be self-sufficient:",
-      "left_hand": "Bass notes, octaves, fifths on downbeats + arpeggios or patterns for movement",
-      "right_hand": "Melody in upper voice + harmonic support, ornaments",
-      "principle": "Both hands have independent but complementary roles, creating a complete sound"
-    },
-    "avoid": [
-      "Thick voicings in the same register as strings/winds",
-      "Constant activity when other instruments have melody",
-      "Muddy low-register clusters without pedal control"
-    ]
+    "dynamics": 1,
+    "expression": 11,
+    "sustain_pedal": 64
   },
   "ai": {
-    "system_prompt_template": "Generate piano parts for Cinematic Studio Piano.\n\nINSTRUMENT CHARACTERISTICS:\n- Full polyphonic capability (88 keys, A0-C8)\n- Dynamics controlled primarily by VELOCITY (0-127)\n- Expression (CC11) for overall volume automation\n- Dynamics (CC1) for subtle tonal shaping\n\n### SUSTAIN PEDAL (CC64) - CRITICAL RULES ###\n\nThe sustain pedal is the MOST IMPORTANT expressive control for piano. It must be used intelligently to create musical, non-muddy results.\n\n**VALUES:**\n- 127 = Pedal DOWN (strings ring freely)\n- 0 = Pedal UP (dampens all ringing strings)\n- Use ONLY 0 or 127, NO intermediate values!\n- Always use interp: hold (no interpolation)\n\n**WHEN TO PRESS PEDAL (127):**\n1. At the START of a new chord or harmonic section\n2. On downbeats when establishing new harmony\n3. When you want notes to ring and blend together\n4. For legato passages where physical overlap is impossible\n5. For arpeggios that should sound like one shimmering chord\n6. For sustained passages and pads\n\n**WHEN TO RELEASE PEDAL (0):**\n1. BEFORE a chord change (release just before new chord starts)\n2. When harmony changes to prevent muddy sound\n3. Between phrases for clarity and breathing\n4. Before staccato or detached passages\n5. When moving to a different harmonic area\n6. At phrase endings before silence\n\n**TIMING PATTERNS:**\n- Basic: Release 1/16 note BEFORE chord change, press ON new chord\n- Legato pedaling: Release and press simultaneously on new chord (syncopated pedaling)\n- Half-pedaling effect: Quick release-press for partial clearing\n\n**STYLE-SPECIFIC USAGE:**\n\nBALLAD/ROMANTIC:\n- Long pedal holds (2-4 beats per chord)\n- Release smoothly before chord changes\n- Creates warm, blended sound\n\nCLASSICAL/CLEAR:\n- Shorter pedal durations (1-2 beats)\n- More frequent releases for articulation\n- Clarity over blend\n\nCINEMATIC/EPIC:\n- Extended pedal holds for drama\n- Let harmonies ring and build\n- Strategic releases for impact\n\nARPEGGIOS:\n- Press pedal at arpeggio start\n- Hold through entire arpeggio pattern\n- Release just before chord change\n- Pattern: ON→play arpeggio→OFF before change→ON on new chord\n\nCHORDS:\n- Press on each new chord\n- Release just before next chord\n- Never let different chords blend!\n\n**COMMON MISTAKES TO AVOID:**\n- Holding pedal through chord changes (creates mud)\n- Not using pedal at all (sounds dry and disconnected)\n- Releasing too early (breaks legato)\n- Releasing too late (harmonies clash)\n\n### VELOCITY GUIDELINES ###\n- pp (pianissimo): 20-40\n- p (piano): 40-60\n- mp (mezzo-piano): 60-75\n- mf (mezzo-forte): 75-90\n- f (forte): 90-110\n- ff (fortissimo): 110-127\n\nPLAYABLE RANGE: A0 (21) - C8 (108)\nPREFERRED RANGE: C2 (36) - C6 (84)",
-    "user_prompt_template": "### SOLO PIANO COMPOSITION GUIDELINES ###\n\nFor SOLO piano (no other instruments), the piano should be SELF-SUFFICIENT:\n\nLEFT HAND (MIDI 36-60):\n- Bass: root notes, octaves, fifths on downbeats\n- Movement: arpeggios, broken chords, Alberti bass, rolling patterns\n- Provides harmonic foundation\n\nRIGHT HAND (MIDI 60-84):\n- Melody: singable line in upper voice\n- Harmony: chord voicings, double notes, octave melodies\n- Ornaments: grace notes, runs, fills\n\nTEXTURES (suggestions):\n- Arpeggios (flowing, romantic)\n- Block chords (powerful, dramatic)\n- Broken octaves (epic, driving)\n- Tremolo/repeated notes (tension)\n\nBoth hands typically have independent but complementary roles.\n\n### SUSTAIN PEDAL (CC64) ###\n\nUSE curves.sustain_pedal with interp: hold\nONLY values 0 (up) or 127 (down)\n\nPATTERN: Press on new chord, release just BEFORE next chord change\nExample for 2-bar chords: {time_q: 0, value: 127}, {time_q: 7.875, value: 0}, {time_q: 8, value: 127}...\n\nARPEGGIOS: short notes (dur_q 0.25-0.5), pedal makes them ring\nCHORDS: longer notes (dur_q 1.0-4.0), pedal enhances sustain\n\n### DYNAMICS ###\nVelocity is PRIMARY for piano dynamics.\nOptional: curves.expression for overall section fade in/out"
+    "system_prompt_template": "Sustain pedal (CC64): release BEFORE chord change, press ON new chord. Use interp: hold, values 0 or 127 only.",
+    "user_prompt_template": ""
   }
 }

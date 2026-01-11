@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from bisect import bisect_right
+
 try:
     from logger_config import logger
 except ImportError:
@@ -89,6 +91,131 @@ MIN_NOTE_DUR_FOR_DYNAMICS = 1.0
 SWELL_PEAK_RATIO = 0.35
 DYNAMICS_BASE_VALUE = 60
 DYNAMICS_SWELL_AMOUNT = 25
+
+HARMONY_VALIDATION_TOLERANCE_Q = 0.125
+
+
+def get_active_chord_at_time(
+    time_q: float,
+    chord_map: List[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    if not chord_map:
+        return None
+    times = [float(c.get("time_q", 0)) for c in chord_map]
+    idx = bisect_right(times, time_q) - 1
+    if idx < 0:
+        return chord_map[0] if chord_map else None
+    return chord_map[idx]
+
+
+def find_nearest_chord_tone(pitch: int, chord_tones: List[int], direction: int = 0) -> int:
+    if not chord_tones:
+        return pitch
+    pc = pitch % 12
+    if pc in chord_tones:
+        return pitch
+    
+    best_pitch = pitch
+    min_distance = 12
+    
+    for offset in range(1, 7):
+        up_pc = (pc + offset) % 12
+        down_pc = (pc - offset) % 12
+        
+        if direction >= 0 and up_pc in chord_tones:
+            if offset < min_distance:
+                min_distance = offset
+                best_pitch = pitch + offset
+                if direction > 0:
+                    break
+        
+        if direction <= 0 and down_pc in chord_tones:
+            if offset < min_distance:
+                min_distance = offset
+                best_pitch = pitch - offset
+                if direction < 0:
+                    break
+    
+    return best_pitch
+
+
+def validate_notes_against_harmony(
+    notes: List[Dict[str, Any]],
+    chord_map: List[Dict[str, Any]],
+    abs_range: Optional[Tuple[int, int]] = None,
+    tolerance_q: float = HARMONY_VALIDATION_TOLERANCE_Q,
+) -> Tuple[List[Dict[str, Any]], int]:
+    if not chord_map or not notes:
+        return notes, 0
+    
+    chord_map_sorted = sorted(chord_map, key=lambda c: float(c.get("time_q", 0)))
+    corrected_count = 0
+    
+    for note in notes:
+        if not isinstance(note, dict):
+            continue
+        
+        try:
+            start_q = float(note.get("start_q", 0))
+            pitch = int(note.get("pitch", 60))
+        except (TypeError, ValueError):
+            continue
+        
+        active_chord = get_active_chord_at_time(start_q, chord_map_sorted)
+        if not active_chord:
+            continue
+        
+        chord_tones = active_chord.get("chord_tones", [])
+        if not chord_tones or not isinstance(chord_tones, list):
+            continue
+        
+        chord_tones_int = []
+        for ct in chord_tones:
+            try:
+                chord_tones_int.append(int(ct) % 12)
+            except (TypeError, ValueError):
+                continue
+        
+        if not chord_tones_int:
+            continue
+        
+        pc = pitch % 12
+        if pc in chord_tones_int:
+            continue
+        
+        next_chord_time = None
+        for chord in chord_map_sorted:
+            ct = float(chord.get("time_q", 0))
+            if ct > start_q:
+                next_chord_time = ct
+                break
+        
+        if next_chord_time is not None and (next_chord_time - start_q) <= tolerance_q:
+            next_chord = get_active_chord_at_time(next_chord_time, chord_map_sorted)
+            if next_chord:
+                next_tones = next_chord.get("chord_tones", [])
+                next_tones_int = [int(t) % 12 for t in next_tones if isinstance(t, (int, float))]
+                if pc in next_tones_int:
+                    continue
+        
+        new_pitch = find_nearest_chord_tone(pitch, chord_tones_int, direction=0)
+        
+        if abs_range:
+            pitch_low, pitch_high = abs_range
+            new_pitch = max(pitch_low, min(pitch_high, new_pitch))
+        
+        if new_pitch != pitch:
+            note["pitch"] = new_pitch
+            corrected_count += 1
+            logger.debug(
+                "Harmony correction: pitch %d -> %d at time_q %.2f (chord %s, tones %s)",
+                pitch, new_pitch, start_q, active_chord.get("chord", "?"), chord_tones_int
+            )
+    
+    if corrected_count > 0:
+        logger.info("Harmony validation: corrected %d notes to match chord_map", corrected_count)
+    
+    return notes, corrected_count
 
 
 def ensure_per_note_dynamics(
@@ -878,6 +1005,7 @@ def build_response(
     arrangement_mode: bool = False,
     source_sketch: Optional[Dict[str, Any]] = None,
     forced_articulation: Optional[str] = None,
+    chord_map: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     midi_cfg = profile.get("midi", {})
     default_chan = int(midi_cfg.get("channel", 1))
@@ -915,6 +1043,12 @@ def build_response(
     logger.info("build_response: normalizing %d notes", len(notes_raw))
     notes = normalize_notes(notes_raw, length_q, default_chan, abs_range, fix_policy, mono)
     logger.info("build_response: normalized to %d notes", len(notes))
+    
+    if chord_map and not is_drum:
+        notes, harmony_corrections = validate_notes_against_harmony(notes, chord_map, abs_range)
+        if harmony_corrections > 0:
+            logger.info("build_response: harmony validation corrected %d notes", harmony_corrections)
+    
     if arrangement_mode:
         logger.info("build_response: resolve_same_pitch_overlaps")
         resolve_same_pitch_overlaps(notes)

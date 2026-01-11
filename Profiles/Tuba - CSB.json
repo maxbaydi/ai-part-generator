@@ -14,14 +14,6 @@
     "preferred": ["F2", "Bb4"]
   },
   "fix_policy": "octave_shift_to_fit",
-  "legato": {
-    "mode": "keyswitch",
-    "keyswitch": "Ab1",
-    "velocity_on": 100,
-    "velocity_off": 1,
-    "mono_only": true,
-    "description": "Legato is for MONO parts only - smooth transition between single notes. Enable legato (velocity ≥64) when playing single melodic lines. Disable legato (velocity <64) when 2+ notes sound simultaneously. Re-enable when returning to mono. Prefer keyswitch over CC for legato control."
-  },
   "articulations": {
     "mode": "cc",
     "cc_number": 58,
@@ -39,58 +31,17 @@
       "flutter": { "cc_value": 51, "description": "Flutter Tongue", "dynamics": "cc1" },
       "mute_long": { "cc_value": 56, "description": "Mute Long", "dynamics": "cc1" },
       "double_tongue": { "cc_value": 61, "description": "Double Tongue", "dynamics": "velocity" },
-      "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" }
+      "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" },
+      "legato": { "keyswitch": "Ab1", "velocity_on": 100, "velocity_off": 1, "mono_only": true, "description": "Legato transition (mono only)" }
     }
   },
   "controllers": {
-    "semantic_to_cc": {
-      "dynamics": 1,
-      "expression": 11,
-      "vibrato": 21
-    },
-    "smoothing": {
-      "min_step": "1/32",
-      "interp": "cubic",
-      "mode": "fixed",
-      "write_every_step": true
-    }
-  },
-  "orchestration_hints": {
-    "typical_roles": ["bass", "harmony"],
-    "character": "Massive, deep, powerful. The foundation of brass section. Provides gravitas and weight.",
-    "best_for": [
-      "Bass foundation in brass chorales",
-      "Powerful sustained pedal tones",
-      "Doubling contrabass for extra weight",
-      "Comic or ominous low passages",
-      "Rhythmic punctuation in loud sections"
-    ],
-    "register_character": {
-      "low": "D2-G2: Very deep, rumbling. Use for pedal tones and impact.",
-      "mid": "G2-Bb3: Primary working range. Clear, powerful.",
-      "high": "Bb3-F5: Surprisingly agile, almost euphonium-like. Use sparingly."
-    },
-    "ensemble_tips": [
-      "Usually plays bass line, doubling bass trombone or contrabass",
-      "Can rest in quiet passages - its absence creates lightness",
-      "Essential for brass tutti power",
-      "Provides fundamental that other brass builds on",
-      "One note at climax can define the moment"
-    ],
-    "texture_options": [
-      "Sustained pedal tones",
-      "Root movement with harmony",
-      "Rhythmic bass patterns",
-      "Staccato punctuation",
-      "Doubling other bass instruments"
-    ],
-    "avoid": [
-      "Fast melodic passages",
-      "Exposed soft playing (projection issues)",
-      "Competing with melodic instruments"
-    ]
+    "dynamics": 1,
+    "expression": 11,
+    "vibrato": 21
   },
   "ai": {
-    "system_prompt_template": "Generate tuba parts for Cinematic Studio Brass. Use CC1 for dynamics on long articulations, velocity for short articulations. LEGATO: Keyswitch Ab1 toggles legato (velocity ≥64 on, <64 off). IMPORTANT: Legato is for MONO parts only - use it for smooth note-to-note transitions in single melodic lines. Disable legato before any polyphonic passages (2+ simultaneous notes), re-enable when returning to mono melody. Switch articulations via CC58. Playable range D2-F5, preferred F2-Bb4."
+    "system_prompt_template": "",
+    "user_prompt_template": ""
   }
 }

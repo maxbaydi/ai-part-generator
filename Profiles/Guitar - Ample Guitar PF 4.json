@@ -7,69 +7,7 @@
   "midi": {
     "channel": 1,
     "polyphony": "poly",
-    "is_drum": false,
-    "key_map": {
-      "playable_range_main": [28, 74],
-      "articulation_keyswitches": {
-        "pinch_harmonic_PH": 11,
-        "sustain_pop_Sus": 12,
-        "natural_harmonic_NH": 13,
-        "palm_mute_PM": 14,
-        "slide_in_out_SIO": 15,
-        "legato_slide_LS_poly": 16,
-        "hammer_pull_HP_poly": 17,
-        "slide_guitar_SG": 18
-      },
-      "articulation_note_ranges": {
-        "pinch_harmonic_PH": [28, 74],
-        "sustain_pop_Sus": [28, 74],
-        "natural_harmonic_NH": [28, 71],
-        "palm_mute_PM": [28, 74],
-        "slide_in_out_SIO": [30, 74],
-        "legato_slide_LS_poly": [29, 74],
-        "hammer_pull_HP_poly": [28, 74],
-        "slide_guitar_SG": [30, 74]
-      },
-      "mode_switches_and_tools": {
-        "position_mode": 95,
-        "open_string_first_toggle": 92,
-        "auto_legato_mode_switch": 87,
-        "note_repeater": 86
-      },
-      "open_strings_reference": {
-        "E1": 28,
-        "A1": 33,
-        "D2": 38,
-        "G2": 43,
-        "B2": 47,
-        "E3": 52
-      },
-      "string_assignment": {
-        "range": [19, 24],
-        "string_6_low_E": 19,
-        "string_5_A": 20,
-        "string_4_D": 21,
-        "string_3_G": 22,
-        "string_2_B": 23,
-        "string_1_high_E": 24
-      },
-      "position_assignment": {
-        "arm_keyswitch": 25,
-        "position_notes_range": [28, 46]
-      },
-      "fx_sound_group": {
-        "scratch": 77,
-        "slap": 78,
-        "muting": 79,
-        "strum_mute": 80,
-        "downstroke_noise_1": 81,
-        "upstroke_noise_1": 82,
-        "downstroke_noise_2": 83,
-        "upstroke_noise_2": 84,
-        "raking": 88,
-        "pick_scrape": 89
-      }
-    }
+    "is_drum": false
   },
   "range": {
     "absolute": [11, 95],
@@ -87,24 +25,36 @@
       "SIO": { "pitch": 15, "description": "Slide In/Out" },
       "LS": { "pitch": 16, "description": "Legato Slide (poly)" },
       "HP": { "pitch": 17, "description": "Hammer/Pull (poly)" },
-      "SG": { "pitch": 18, "description": "Slide Guitar" }
+      "SG": { "pitch": 18, "description": "Slide Guitar" },
+      "string_6": { "pitch": 19, "description": "Force string 6 (Low E)" },
+      "string_5": { "pitch": 20, "description": "Force string 5 (A)" },
+      "string_4": { "pitch": 21, "description": "Force string 4 (D)" },
+      "string_3": { "pitch": 22, "description": "Force string 3 (G)" },
+      "string_2": { "pitch": 23, "description": "Force string 2 (B)" },
+      "string_1": { "pitch": 24, "description": "Force string 1 (High E)" },
+      "position_arm": { "pitch": 25, "description": "Position arm keyswitch" },
+      "scratch": { "pitch": 77, "description": "FX: Scratch" },
+      "slap": { "pitch": 78, "description": "FX: Slap" },
+      "muting": { "pitch": 79, "description": "FX: Muting" },
+      "strum_mute": { "pitch": 80, "description": "FX: Strum mute" },
+      "down_noise_1": { "pitch": 81, "description": "FX: Downstroke noise 1" },
+      "up_noise_1": { "pitch": 82, "description": "FX: Upstroke noise 1" },
+      "down_noise_2": { "pitch": 83, "description": "FX: Downstroke noise 2" },
+      "up_noise_2": { "pitch": 84, "description": "FX: Upstroke noise 2" },
+      "raking": { "pitch": 88, "description": "FX: Raking" },
+      "pick_scrape": { "pitch": 89, "description": "FX: Pick scrape" },
+      "position_mode": { "pitch": 95, "description": "Position mode toggle" },
+      "open_string_first": { "pitch": 92, "description": "Open string first toggle" },
+      "auto_legato": { "pitch": 87, "description": "Auto legato mode switch" },
+      "note_repeater": { "pitch": 86, "description": "Note repeater" }
     }
   },
   "controllers": {
-    "semantic_to_cc": {
-      "vibrato": 1,
-      "sustain_pedal": 64
-    },
-    "smoothing": {
-      "min_step": "1/32",
-      "interp": "linear",
-      "mode": "adaptive",
-      "write_every_step": false
-    }
+    "vibrato": 1,
+    "sustain_pedal": 64
   },
   "ai": {
-    "system_prompt_template": "Generate ELECTRIC GUITAR parts for Ample Sound Ample Guitar PF. Use guitar-specific techniques!\n\nCURVES - USE THESE NAMES (not dynamics/expression):\n- curves.vibrato (CC1) - interp: cubic. MANDATORY on long notes. Start at 0, rise to 50-80.\n- curves.sustain_pedal (CC64) - interp: hold. ONLY 0 or 127, no intermediate values!\n\nVIBRATO RULES:\n- Add vibrato curve on ALL notes longer than 1 beat\n- Breakpoints: time_q=0 value=0, then gradually rise to 50-80\n- Without vibrato, long notes sound dead and artificial!\n\nSUSTAIN PEDAL RULES:\n- Use interp: hold, ONLY values 0 or 127\n- Release (0) BEFORE chord change, press (127) on new chord\n- Pattern: ON->play arpeggio->OFF before chord change->ON on new chord\n- Never leave pedal on through chord changes - creates mud!\n\nARTICULATIONS (keyswitches) - insert keyswitch note BEFORE playing notes:\n- PM (14): Palm Mute - chugging riffs, rhythmic patterns\n- HP (17): Hammer-on/Pull-off - legato melodies, fast runs\n- LS (16): Legato Slide - smooth note transitions\n- SIO (15): Slide In/Out - expressive entries/exits\n- PH (11): Pinch Harmonic - screaming accents\n- NH (13): Natural Harmonic - chime effects\n- Sus (12): Sustain - clean picking (default)\n\nGUITAR PATTERNS:\n- POWER CHORDS: Root+fifth, palm-muted, 8th notes\n- ARPEGGIOS: Broken chords + sustain_pedal + vibrato on final note\n- RIFFS: PM for tight, Sus for accents, HP for fills\n- LEADS: HP/LS legato + vibrato on every long note\n- FUNK: Muted 16ths (PM), open stabs (Sus)\n\nOPEN STRINGS: E1(28), A1(33), D2(38), G2(43), B2(47), E3(52)\n\nRANGE: 40 (E2) - 86 (D6) - use higher octave for guitar parts\n\nDYNAMICS: velocity 60-100 normal, 100-127 accents, 40-60 ghost",
-    "user_prompt_template": "!!! CRITICAL FOR GUITAR ARPEGGIOS !!!\n\nDO NOT use curves.dynamics or curves.expression!\n\nFOR ARPEGGIOS - sustain_pedal MUST cycle per chord:\nExample 4 chords in 8 bars (2 bars each):\ncurves.sustain_pedal: interp=hold, breakpoints=[\n  time_q=0 value=127,\n  time_q=7.9 value=0,\n  time_q=8 value=127,\n  time_q=15.9 value=0,\n  time_q=16 value=127,\n  time_q=23.9 value=0,\n  time_q=24 value=127,\n  time_q=31.9 value=0\n]\n\nARPEGGIO NOTES: short dur_q (0.5-1.0), pedal makes them ring!\nNOT long overlapping notes - that is wrong!\n\ncurves.vibrato: for final held note only, start 0 rise to 60"
+    "system_prompt_template": "Sustain pedal (CC64): interp hold, values 0 or 127 only. Velocity: 60-100 normal, 100-127 accents, 40-60 ghost.",
+    "user_prompt_template": ""
   }
 }
-

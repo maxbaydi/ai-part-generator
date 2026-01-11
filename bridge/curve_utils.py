@@ -5,7 +5,9 @@ from typing import Any, Dict, List, Optional
 try:
     from constants import (
         DEFAULT_CC_INTERP,
+        DEFAULT_SMOOTHING_MIN_STEP,
         DEFAULT_SMOOTHING_MODE,
+        DEFAULT_SMOOTHING_WRITE_EVERY_STEP,
         MIDI_MAX,
         MIDI_MIN,
         MIN_CC_STEP_Q,
@@ -18,7 +20,9 @@ try:
 except ImportError:
     from .constants import (
         DEFAULT_CC_INTERP,
+        DEFAULT_SMOOTHING_MIN_STEP,
         DEFAULT_SMOOTHING_MODE,
+        DEFAULT_SMOOTHING_WRITE_EVERY_STEP,
         MIDI_MAX,
         MIDI_MIN,
         MIN_CC_STEP_Q,
@@ -170,12 +174,11 @@ def build_cc_events(
     default_chan: int,
 ) -> List[Dict[str, Any]]:
     controller_cfg = profile.get("controllers", {})
-    semantic_to_cc = controller_cfg.get("semantic_to_cc", {})
-    smoothing = controller_cfg.get("smoothing", {})
-    step_q = parse_step_q(smoothing.get("min_step", "1/64"))
-    interp_default = smoothing.get("interp", DEFAULT_CC_INTERP)
-    mode = smoothing.get("mode", DEFAULT_SMOOTHING_MODE)
-    write_every_step = bool(smoothing.get("write_every_step", True))
+    semantic_to_cc = controller_cfg.get("semantic_to_cc", controller_cfg)
+    step_q = parse_step_q(DEFAULT_SMOOTHING_MIN_STEP)
+    interp_default = DEFAULT_CC_INTERP
+    mode = DEFAULT_SMOOTHING_MODE
+    write_every_step = DEFAULT_SMOOTHING_WRITE_EVERY_STEP
 
     events: List[Dict[str, Any]] = []
     if not curves:
