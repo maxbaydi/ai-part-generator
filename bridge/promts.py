@@ -66,17 +66,28 @@ THREE-LAYER DYNAMICS for realism:
    - Controls overall volume envelope over bars/phrases
    - Rises toward climax, falls toward resolution
 
-3. DYNAMICS CURVE: Per-note breathing (CRITICAL!)
-   - Every sustained note (half+) MUST have internal dynamics shape
-   - CRESCENDO (<): Start low, build up - for phrase starts
-   - DECRESCENDO (>): Start high, fade - for phrase ends  
-   - SWELL (<>): Rise then fall - most common for long notes
+3. DYNAMICS CURVE: Global dynamics envelope (CC1)
+   - Shape the overall dynamics flow across the piece
+   - Values: 40-127 (40=pp, 64=mp, 80=mf, 100=f, 120=ff)
+   - SMOOTH transitions - avoid jumps >20 between consecutive breakpoints
+   - Cover the full length with breakpoints every 2-4 bars
+
+DYNAMICS CURVE EXAMPLE:
+```
+"dynamics": {"interp": "cubic", "breakpoints": [
+  {"bar": 1, "beat": 1, "value": 50},
+  {"bar": 4, "beat": 1, "value": 70},
+  {"bar": 8, "beat": 1, "value": 90},
+  {"bar": 12, "beat": 1, "value": 100},
+  {"bar": 16, "beat": 1, "value": 80}
+]}
+```
 
 DYNAMICS CURVE RULES:
-- whole notes (4 beats): 4+ breakpoints with full swell
-- half notes (2 beats): 3+ breakpoints 
-- quarter notes (1 beat): 2+ breakpoints
-- NEVER flat dynamics on sustained notes!
+- 8+ breakpoints for 16+ bars, 4+ for shorter pieces
+- Follow DYNAMIC ARC from composition plan
+- Climax bars: values 90-120
+- Quiet sections: values 40-60
 
 INSTRUMENT-SPECIFIC:
 - WIND/BRASS: Must breathe! Max single note = 4 beats, then rest 0.25-0.5 beats
@@ -160,13 +171,18 @@ ALTERNATIVE FORMAT (also accepted):
 === DYNAMICS SYSTEM ===
 
 1. DYNAMICS (dyn): Note attack - p, mp, mf, f, ff
-2. EXPRESSION CURVE: Global phrase envelope
-3. DYNAMICS CURVE: Per-note breathing via crescendo/decrescendo/swell
+2. EXPRESSION CURVE: Global phrase shape (CC11)
+3. DYNAMICS CURVE: Per-section dynamics envelope (CC1)
+   - Values: 40-127 (40=pp, 64=mp, 80=mf, 100=f, 120=ff)
+   - SMOOTH changes - max jump 20 between breakpoints
+   - 4-8 breakpoints for typical piece
 
-DYNAMICS RULES:
-- whole notes: full swell shape (4+ breakpoints)
-- half notes: cresc/decresc/swell (3+ breakpoints)
-- NEVER flat dynamics on sustained notes!
+DYNAMICS CURVE EXAMPLE:
+"dynamics": {"interp": "cubic", "breakpoints": [
+  {"bar": 1, "beat": 1, "value": 60},
+  {"bar": 5, "beat": 1, "value": 80},
+  {"bar": 9, "beat": 1, "value": 100}
+]}
 
 === ARTICULATIONS ===
 
@@ -525,12 +541,13 @@ Register adjustment: {register_adjustment}
 - STRINGS: Can sustain longer, but MUST have dynamics curve
 
 === DYNAMICS ===
-- DYNAMICS curve = per-note dynamics (crescendo/decrescendo/swell)
-- EXPRESSION curve = global phrase dynamics
+- DYNAMICS curve (CC1) = section dynamics envelope (values 40-127)
+- EXPRESSION curve (CC11) = global phrase dynamics
 
-DYNAMICS RULES:
-- whole notes: full swell required
-- half notes: cresc/decresc/swell required
+DYNAMICS CURVE RULES:
+- Provide 4-8 breakpoints covering the piece
+- SMOOTH transitions (max jump 20 between points)
+- Follow source material dynamics
 - NO FLAT dynamics on sustained notes!
 
 REMEMBER: This is arrangement, not composition. Stay faithful to source material."""

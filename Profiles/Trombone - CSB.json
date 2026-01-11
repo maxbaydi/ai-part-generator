@@ -32,7 +32,8 @@
       "mute_long": { "cc_value": 56, "description": "Mute Long", "dynamics": "cc1" },
       "double_tongue": { "cc_value": 61, "description": "Double Tongue", "dynamics": "velocity" },
       "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" },
-      "legato": { "keyswitch": "Ab1", "velocity_on": 100, "velocity_off": 1, "mono_only": true, "description": "Legato transition (mono only)" }
+      "legato": { "cc_value": 76, "description": "Legato On", "dynamics": "cc1" },
+      "legato_off": { "cc_value": 81, "description": "Legato Off", "dynamics": "cc1" }
     }
   },
   "controllers": {

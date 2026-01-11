@@ -1,9 +1,9 @@
-INFO:     Started server process [1732]
+INFO:     Started server process [17800]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-2026-01-11 18:00:26,012 INFO ai_part_generator: Plan: profile=violin_css provider=openrouter model=google/gemini-3-flash-preview free_mode=False
-2026-01-11 18:00:26,013 INFO ai_part_generator: Plan prompt to LLM:
+2026-01-12 01:18:55,203 INFO ai_part_generator: Plan: profile=horn_csb provider=openrouter model=google/gemini-3-flash-preview free_mode=False
+2026-01-12 01:18:55,203 INFO ai_part_generator: Plan prompt to LLM:
 ## COMPOSITION PLAN
 Create a detailed musical blueprint for this multi-instrument piece.
 
@@ -15,16 +15,14 @@ Create a detailed musical blueprint for this multi-instrument piece.
 ### ENSEMBLE TO ORCHESTRATE
 Assign roles and plan how these instruments will work together:
 
-- 1. **Violin 1 (Violin - CSS)** (family: strings, range: G3-B6)
-    Description: Cinematic Studio Strings Violin. Bright, expressive tone with rich overtones. Ideal for melodic line
-- 2. **Violin 2 (Violin - CSS)** (family: strings, range: G3-B6)
-    Description: Cinematic Studio Strings Violin. Bright, expressive tone with rich overtones. Ideal for melodic line
-- 3. **Viola (Viola - CSS)** (family: strings, range: C3-C6)
-    Description: Cinematic Studio Strings Viola. Warm, rich midrange tone with velvety character. Perfect for inner v
-- 4. **Cello (Cello - CSS)** (family: strings, range: C3-G6)
-    Description: Cinematic Studio Strings Cello. Deep, rich tone with exceptional expressiveness. Ideal for both melo
-- 5. **Bass (Bass - CSS)** (family: strings, range: E2-D4)
-    Description: Cinematic Studio Strings Double Bass. Massive, resonant low end providing orchestral foundation. Dee
+- 1. **Horn (Horn - CSB)** (family: brass, range: F2-C5)
+    Description: Cinematic Studio Brass French Horn. Warm, noble tone with rich overtones. Versatile for both heroic
+- 2. **Trumpet (Trumpet - CSB)** (family: brass, range: G3-G5)
+    Description: Cinematic Studio Brass Trumpet. Bright, brilliant tone with piercing projection. Ideal for heroic fa
+- 3. **Trombone (Trombone - CSB)** (family: brass, range: G2-F4)
+    Description: Cinematic Studio Brass Trombone. Powerful, resonant tone with wide dynamic range. Excellent for bold
+- 4. **Tuba (Tuba - CSB)** (family: brass, range: F2-Bb4)
+    Description: Cinematic Studio Brass Tuba. Deep, resonant bass providing orchestral foundation. Massive low-end po
 
 PLANNING TASKS:
 1. Assign ROLE to each instrument (melody/bass/harmony/rhythm/countermelody/pad)
@@ -34,49 +32,47 @@ PLANNING TASKS:
 5. Order instruments by GENERATION PRIORITY (bass/rhythm first, melody second, etc.)
 
 ### USER REQUEST (this is the main creative direction)
-Musical Style (Cinematic): Focus on evolution and emotion. Harmony: Chromatic mediants (e.g., Cm to Em), sus2/sus4 chords for ambiguity. Texture: Slow harmonic rhythm, pulsing ostinatos, layered dynamics. Bass: Deep drones/pedal points.
-Mood (Romantic): Passion and love. Harmony: Lush extended chords (Maj7, add9, m7b5), chromatic appoggiaturas. Melody: Sweeping, large interval leaps, expressive swells. Rhythm: Flexible, push-and-pull (rubato).
+Musical Style (Film Score): Underscore technique. Harmony: Static or slowly shifting (Neo-Riemannian), minor 9ths, avoidance of perfect cadences. Texture: Sparse, leaves room for dialogue (frequency 'pocketing'). Rhythm: Subtle pulse, not overpowering.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
 
 Interpret the user's request and plan a composition that fulfills their vision.
 
 ### OUTPUT (valid JSON only):
-2026-01-11 18:00:26,013 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
-2026-01-11 18:00:26,013 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
-2026-01-11 18:00:39,734 INFO ai_part_generator: OpenRouter response received: 5923 chars
-2026-01-11 18:00:39,735 INFO ai_part_generator: LLM plan response received: 5923 chars
-2026-01-11 18:00:39,735 INFO ai_part_generator: LLM plan preview: {
-  "plan_summary": "A 24-bar cinematic romantic work in G Minor/Major, focusing on emotional swelling and chromatic mediant relationships. The arc begins with a grounded, dark G minor pedal, expanding into lush Bb and D major textures before a climactic shift to B Major (chromatic mediant). Texture moves from a sparse low-end drone to a dense, soaring string quintet. The register spacing is wide to emphasize the 'cinematic' scope, keeping the Bass/Cello in the deep sub-ranges while Violins reac...(truncated)
-INFO:     127.0.0.1:56422 - "POST /plan HTTP/1.1" 200 OK
-2026-01-11 18:00:40,175 INFO ai_part_generator: Generate: profile=bass_css preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Cinematic, Romantic
-2026-01-11 18:00:40,175 INFO ai_part_generator: User prompt to LLM:
-## COMPOSE: BASS for Bass - CSS
+2026-01-12 01:18:55,203 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:18:55,203 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:19:08,383 INFO ai_part_generator: OpenRouter response received: 5681 chars
+2026-01-12 01:19:08,385 INFO ai_part_generator: LLM plan response received: 5681 chars
+2026-01-12 01:19:08,386 INFO ai_part_generator: LLM plan preview: {
+  "plan_summary": "This composition blends cinematic underscore with heroic preparation. The architecture follows a gradual 'gathering' of forces, starting with a sparse Tuba/Trombone foundation and layering upward into a noble Horn-led fanfare. The harmonic language utilizes Neo-Riemannian shifts (moving between minor 9ths and major triads) to evoke the gravity of battle preparation while maintaining a confident, rising trajectory. Texture is managed via 'frequency pocketing'—keeping the mid-...(truncated)
+INFO:     127.0.0.1:57394 - "POST /plan HTTP/1.1" 200 OK
+2026-01-12 01:19:08,790 INFO ai_part_generator: Generate: profile=tuba_csb preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Film Score, Heroic
+2026-01-12 01:19:08,790 INFO ai_part_generator: User prompt to LLM:
+## COMPOSE: BASS for Tuba - CSB
 
 ### YOUR ROLE (from plan): BASS
-Register: E2-B2 (low)
-Deep, sustained drones. Use molto vibrato on longer notes.
-Relationship: Foundation for harmonic shifts
+Register: F2-C3 (low)
+Anchor the 3/4 pulse with heavy downbeats. Use long, connected notes.
+Relationship: Foundation for Trombone
 
 ### INSTRUMENT PROFILE
-INSTRUMENT: Bass - CSS
-RANGE: E2 - D4
-POLYPHONY: poly
+INSTRUMENT: Tuba - CSB
+RANGE: F2 - Bb4
+POLYPHONY: mono
 CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
 ARTICULATIONS (CC58):
-  sustain: 0 - Sustain (Low Latency Legato) [cc1]
-  sustain_expressive: 6 - Sustain (Expressive Legato) [cc1]
-  spiccato: 11 - Spiccato [velocity]
+  sustain: 0 - Sustain / Legato [cc1]
+  repetitions: 11 - Repetitions [velocity]
   staccatissimo: 16 - Staccatissimo [velocity]
   staccato: 21 - Staccato [velocity]
   sforzando: 26 - Sforzando [velocity]
-  pizzicato: 31 - Pizzicato [velocity]
-  bartok_snap: 36 - Bartok Snap [velocity]
-  col_legno: 41 - Col Legno [velocity]
+  mute_short: 31 - Mute Short [velocity]
+  rips: 41 - Rips [velocity]
   trills: 46 - Trills [cc1]
-  harmonics: 51 - Harmonics [cc1]
-  tremolo: 56 - Tremolo [cc1]
-  measured_tremolo: 61 - Measured Tremolo [cc1]
+  flutter: 51 - Flutter Tongue [cc1]
+  mute_long: 56 - Mute Long [cc1]
+  double_tongue: 61 - Double Tongue [velocity]
   marcato: 66 - Marcato [velocity]
-  con_sordino: 86 - Con Sordino [cc1]
   legato: keyswitch Ab1 (vel_on=100, vel_off=1)
 
 ### MUSICAL CONTEXT
@@ -92,27 +88,14 @@ ARTICULATIONS (CC58):
 - Consider using the full selection for complete compositions; shorter portions for fragments or phrases
 - Patterns/repeats can help keep JSON concise for repeating figures
 
-### TEMPORAL POSITION
-This is the BEGINNING of a musical section. There is existing material AFTER the generation area.
-AFTER (following notes) (29 notes, range G1-A#2): A#2@77.99(v50,ch1) A#2@81.99(v45,ch1) A#2@85.99(v55,ch1) A#2@89.99(v50,ch1) A#2@93.99(v55,ch1) A#2@97.99(v40,ch1) G#2@103.99(v60,ch1) G2@105.99(v55,ch1) ... A#1@171.99(v60,ch1) G#1@173.99(v65,ch1) G1@175.99(v55,ch1) A#1@179.99(v70,ch1)
-First notes after target: A#2, A#2, A#2, A#2
-### DYNAMICS CONTEXT
-Velocity range: 40-90 (p-f), avg 64.4 (mp), span 50
-Channel usage: ch1:29
-### CC CONTEXT
-Dynamics (CC1): range 35-117, avg 68.6, trend rising (crescendo), events 802
-Expression (CC11): range 60-101, avg 80.4, trend rising (crescendo), events 802
-CC58: range 6-6, avg 6.0, trend unknown, events 3
-
 ### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
-You are generating part 1 of 5 for a unified composition.
+You are generating part 1 of 4 for a unified composition.
 
 ENSEMBLE INSTRUMENTS (in generation order):
-  1. Bass (Bass - CSS) (strings, role: bass, range: E2-D4) ← YOU ARE GENERATING THIS
-  2. Cello (Cello - CSS) (strings, role: rhythm, range: C3-G6)
-  3. Viola (Viola - CSS) (strings, role: harmony, range: C3-C6)
-  4. Violin 2 (Violin - CSS) (strings, role: countermelody, range: G3-B6)
-  5. Violin 1 (Violin - CSS) (strings, role: melody, range: G3-B6)
+  1. Tuba (Tuba - CSB) (brass, role: bass, range: F2-Bb4) ← YOU ARE GENERATING THIS
+  2. Trombone (Trombone - CSB) (brass, role: harmony, range: G2-F4)
+  3. Horn (Horn - CSB) (brass, role: melody, range: F2-C5)
+  4. Trumpet (Trumpet - CSB) (brass, role: countermelody, range: G3-G5)
 
 ENSEMBLE COORDINATION RULES:
 1. AVOID UNISON: Don't duplicate exact same notes as other instruments
@@ -123,7 +106,7 @@ ENSEMBLE COORDINATION RULES:
 6. FOLLOW HARMONY: Play the same chord changes as existing parts
 7. PHRASE TOGETHER: Start and end phrases at similar times
 
-YOUR ROLE (Bass (Bass - CSS)): BASS: Harmonic foundation. Play roots and fifths. Define the harmony.
+YOUR ROLE (Tuba (Tuba - CSB)): BASS: Harmonic foundation. Play roots and fifths. Define the harmony.
 
 ORCHESTRATION LAYERS:
   - MELODY layer: Main theme carrier (lead instrument)
@@ -133,16 +116,17 @@ ORCHESTRATION LAYERS:
 
 
 ### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
-A 24-bar cinematic romantic work in G Minor/Major, focusing on emotional swelling and chromatic mediant relationships. The arc begins with a grounded, dark G minor pedal, expanding into lush Bb and D major textures before a climactic shift to B Major (chromatic mediant). Texture moves from a sparse low-end drone to a dense, soaring string quintet. The register spacing is wide to emphasize the 'cinematic' scope, keeping the Bass/Cello in the deep sub-ranges while Violins reach for the B5-A6 range during the climax. Harmonic tension is maintained through sus2 chords and expressive appoggiaturas in the inner voices.
+This composition blends cinematic underscore with heroic preparation. The architecture follows a gradual 'gathering' of forces, starting with a sparse Tuba/Trombone foundation and layering upward into a noble Horn-led fanfare. The harmonic language utilizes Neo-Riemannian shifts (moving between minor 9ths and major triads) to evoke the gravity of battle preparation while maintaining a confident, rising trajectory. Texture is managed via 'frequency pocketing'—keeping the mid-range clear for Horns/Trumpets while Tuba/Trombone anchor the low end. The 3/4 time signature is treated as a heavy, deliberate waltz/march, utilizing dotted rhythms to create forward momentum without overwhelming the scene's dialogue capability.
 
 **CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
 ```
 Bar.Beat | Chord        | Notes for YOUR range
 ---------|--------------|---------------------
-1.1       | Gm(add9) (i) | G2, B2, D3, A2
-5.1       | Ebmaj7 (VI)  | D#3, G2, A#2, D3
-9.1       | Bmaj7 (bIII (Chrom. Mediant)) | B2, D#3, F#2, A#2
-17.1       | Dsus4 (V)    | D3, G2, A2
+1.1       | Cm9 (i)      | C3, D#3, G2, A#2, D3
+5.1       | Abmaj7 (VI)  | G#2, C3, D#3, G2
+9.1       | Cmaj (I)     | C3, D#3, G2
+13.1       | Fmaj/C (IV/I) | F2, G#2, C3
+17.1       | Gadd2 (V)    | G2, B2, D3
 ```
 
 CHORD MAP RULES:
@@ -155,10 +139,10 @@ CHORD MAP RULES:
 ```
 Bar   | Dynamics | Trend
 ------|----------|-------
-Bar 1  | p        | → stable
+Bar 1  | pp       | → stable
 Bar 9  | mf       | ↗ building
-Bar 13 | ff       | ★ climax
-Bar 21 | pp       | ↘ fading
+Bar 17 | f        | ★ climax
+Bar 24 | mf       | ↓ resolving
 ```
 DYNAMIC ARC RULES:
 - Match the dynamics level at each bar
@@ -168,9 +152,9 @@ DYNAMIC ARC RULES:
 
 **TEXTURE MAP (WHEN TO PLAY/REST):**
 - Bars 1-8: sparse density → YOU PLAY
-    Texture: pedal
-- Bars 9-16: dense density → YOU PLAY
     Texture: homophonic
+- Bars 17-24: dense density → YOU PLAY
+    Texture: polyphonic
 
 TEXTURE RULES:
 - TACET sections: output empty notes array for those bars
@@ -178,99 +162,74 @@ TEXTURE RULES:
 - 'full'/'tutti': all instruments active, denser writing
 
 **PHRASE STRUCTURE (BREATHING & CADENCES):**
-- **EXPOSITION** (Bars 1-8)
+- **THE CALL (UNDERSCORE)** (Bars 1-8)
     Function: opening
     Breathe at: Bar 4.3, Bar 8.3
     Climax: Bar 5 (low)
-- **EXPANSION** (Bars 9-16)
+- **THE RESOLVE (HEROIC)** (Bars 9-16)
     Function: development
-    Breathe at: Bar 12.3, Bar 16.1
-    Climax: Bar 13 (high)
-- **RESOLUTION** (Bars 17-24)
-    Function: closing
-    Breathe at: Bar 20.3, Bar 24.1
-    Climax: Bar 17 (medium)
-
-**ACCENT MAP (RHYTHMIC SYNC):**
-- STRONG accents (all instruments): Bar 13.1
-  → Place notes ON these beats, use f-ff dynamics
-- MEDIUM accents (optional): Bar 1.1
+    Breathe at: Bar 12.3, Bar 16.3
+    Climax: Bar 13 (medium)
+- **THE ANTHEM (FANFARE)** (Bars 17-24)
+    Function: climax
+    Breathe at: Bar 20.3
+    Climax: Bar 21 (high)
 
 **MOTIF BLUEPRINT:**
-- Idea: The 'Yearning' Leap
-- Character: Romantic, sweeping, reaching
-- Notes: D4 → D5 → C5 → Bb4 → A4
-- Intervals: [+12, -2, -2, -1] semitones
+- Idea: Rising Heroic Preparation Motif
+- Character: Noble, steady, ascending
+- Notes: C3 → G3 → C4 → D4 → E4
+- Intervals: [+7, +5, +2, +2] semitones
 
 MOTIF RULE: MELODY role should establish this motif, others respond/develop it
 
 **SECTION OVERVIEW:**
-- Bars 1-8 | [INTRO/A] | texture: Atmospheric drone | dynamics: p→mp | energy: low
-    Active: Bass, Cello, Viola
-    Tacet: Violin 1
-- Bars 9-16 | [CLIMAX/B] | texture: Full orchestral swell | dynamics: mf→ff | energy: high
-    Active: Violin 1, Violin 2, Viola, Cello, Bass
+- Bars 1-8 | [INTRO] | texture: low-end-focused | dynamics: pp→p | energy: static
+    Active: Tuba, Trombone
+    Tacet: Trumpet, Horn
+- Bars 9-16 | [THEME] | texture: middle-heavy | dynamics: mp→mf | energy: building
+    Active: Tuba, Trombone, Horn
+    Tacet: Trumpet
+- Bars 17-24 | [FANFARE] | texture: full-ensemble | dynamics: f→ff | energy: high
+    Active: Tuba, Trombone, Horn, Trumpet
 
 **ROLE ASSIGNMENTS:**
-- **Bass** → BASS (E2-B2 (low) register)
-    Deep, sustained drones. Use molto vibrato on longer notes.
-    Relationship: Foundation for harmonic shifts
-- **Cello** → RHYTHM (C3-G4 (mid-low) register)
-    Pulsing quarter-note ostinatos on the root and fifth.
-    Relationship: Engine driving the 3/4 feel
-- **Viola** → HARMONY (G3-D5 (mid) register)
-    Rich inner voice playing sus2/sus4 extensions. Smooth voice leading.
-    Relationship: Connects bass to melody
-- **Violin 2** → COUNTERMELODY (G4-E6 (high) register)
-    Expressive descents that provide friction against Violin 1.
-    Relationship: Harmonic support and tension
-- **Violin 1** → MELODY (D5-B6 (very high) register)
-    Sweeping leaps. Use portamento on octave jumps for Romantic feel.
-    Relationship: Primary emotional focus
+- **Tuba** → BASS (F2-C3 (low) register)
+    Anchor the 3/4 pulse with heavy downbeats. Use long, connected notes.
+    Relationship: Foundation for Trombone
+- **Trombone** → HARMONY (G2-D4 (low-mid) register)
+    Provide the 'Neo-Riemannian' shifts. Focus on smooth voice leading.
+    Relationship: Bridge between Tuba and Horn
+- **Horn** → MELODY (G3-C5 (mid) register)
+    Main melodic carrier. Emphasize ascending 4ths and 5ths. Warm and noble.
+    Relationship: Primary voice
+- **Trumpet** → COUNTERMELODY (G4-G5 (high) register)
+    Add brilliance to the final section. Use triplets and dotted rhythms.
+    Relationship: Top-line highlights
 
 
 ### COMPOSITION RULES
-- ALLOWED RANGE: E2 to D4
+- ALLOWED RANGE: F2 to A#4
 - Suggested note count: 48-192 (adapt based on musical needs)
 - Channel: 1
 - Articulation: legato
+- MAX NOTE DURATION: 4 beats (wind/brass need to breathe - split long notes with rests)
 
 ### THREE-LAYER DYNAMICS
 1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
 2. EXPRESSION CURVE: GLOBAL section envelope
 3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
 
-### TEMPO & TIME SIGNATURE CONTROL (YOUR CREATIVE CHOICE)
-Project default: 112.0 BPM, 3/4
+DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)
 
-YOU DECIDE the tempo and time signature for this composition:
-- SET the initial tempo (time_q: 0) - choose what fits the mood/style
-- CHANGE tempo during the piece for dramatic effect (accelerando, ritardando)
-- CHANGE time signature when needed (3/4 waltz, 6/8 compound, mixed meter)
-
-FORMAT: tempo_markers: [{"time_q": 0, "bpm": 85, "num": 3, "denom": 4}, ...]
-
-FIELDS:
-- time_q: position in quarter notes (0..72.0)
-- bpm: tempo in beats per minute (REQUIRED at time_q=0 to set initial tempo)
-- num/denom: time signature (e.g. num:6, denom:8 for 6/8)
-- linear: true for gradual tempo ramp, false for instant change
-
-EXAMPLES:
-- Set tempo: [{"time_q": 0, "bpm": 72}]
-- Set tempo + time sig: [{"time_q": 0, "bpm": 90, "num": 6, "denom": 8}]
-- Accelerando: [{"time_q": 0, "bpm": 60}, {"time_q": 24, "bpm": 100, "linear": true}]
-- Ritardando at end: [{"time_q": 0, "bpm": 120}, {"time_q": 48, "bpm": 80, "linear": true}]
-
-COMMON TIME SIGNATURES: 4/4, 3/4, 2/4, 6/8, 12/8, 5/4, 7/8
-Keep markers in ascending order. Max 4-6 markers.
-
-IMPORTANT: Only output tempo_markers for the FIRST instrument in sequential generation.
+### TEMPO/TIME SIGNATURE
+Tempo is set by the composition plan: 112 BPM
+DO NOT output tempo_markers - tempo changes are controlled by the plan.
 
 ### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
-Musical Style (Cinematic): Focus on evolution and emotion. Harmony: Chromatic mediants (e.g., Cm to Em), sus2/sus4 chords for ambiguity. Texture: Slow harmonic rhythm, pulsing ostinatos, layered dynamics. Bass: Deep drones/pedal points.
-Mood (Romantic): Passion and love. Harmony: Lush extended chords (Maj7, add9, m7b5), chromatic appoggiaturas. Melody: Sweeping, large interval leaps, expressive swells. Rhythm: Flexible, push-and-pull (rubato).
-
+Musical Style (Film Score): Underscore technique. Harmony: Static or slowly shifting (Neo-Riemannian), minor 9ths, avoidance of perfect cadences. Texture: Sparse, leaves room for dialogue (frequency 'pocketing'). Rhythm: Subtle pulse, not overpowering.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
 
 INTERPRET USER REQUEST:
 - If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
@@ -283,377 +242,89 @@ INTERPRET USER REQUEST:
 curves.vibrato (CC21)
 
 ### OUTPUT (valid JSON only):
-2026-01-11 18:00:40,176 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
-2026-01-11 18:00:40,176 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
-2026-01-11 18:00:50,771 INFO ai_part_generator: OpenRouter response received: 3765 chars
-2026-01-11 18:00:50,771 INFO ai_part_generator: LLM response received: 3765 chars
-2026-01-11 18:00:50,771 INFO ai_part_generator: LLM response preview: ```json
+2026-01-12 01:19:08,790 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:19:08,790 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:19:19,116 INFO ai_part_generator: OpenRouter response received: 3260 chars
+2026-01-12 01:19:19,116 INFO ai_part_generator: LLM response received: 3260 chars
+2026-01-12 01:19:19,116 INFO ai_part_generator: LLM response preview: ```json
 {
-  "tempo_markers": [
-    {"time_q": 0, "bpm": 68, "num": 3, "denom": 4},
-    {"time_q": 36, "bpm": 76, "linear": true},
-    {"time_q": 48, "bpm": 82, "linear": true},
-    {"time_q": 60, "bpm": 60, "linear": true}
-  ],
   "notes": [
-    {"bar": 1, "beat": 1, "note": "G2", "dur": "dh", "dyn": "p", "art": "sustain_expressive", "chan": 1},
-    {"bar": 2, "beat": 1, "note": "G2", "dur": "dh", "dyn": "p", "art": "sustain_expressive", "chan": 1},
-    {"bar": 3, "beat": 1, "note": "G2", "dur": ...(truncated)
-2026-01-11 18:00:50,772 INFO ai_part_generator: build_response: normalizing 20 notes
-2026-01-11 18:00:50,772 INFO ai_part_generator: build_response: normalized to 20 notes
-2026-01-11 18:00:50,776 INFO ai_part_generator: Response built: notes=20 cc_events=1731 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
-INFO:     127.0.0.1:56446 - "POST /generate HTTP/1.1" 200 OK
-2026-01-11 18:00:51,791 INFO ai_part_generator: Generate: profile=cello_css preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Cinematic, Romantic
-2026-01-11 18:00:51,791 INFO ai_part_generator: User prompt to LLM:
-## COMPOSE: RHYTHM for Cello - CSS
+    {"bar": 1, "beat": 1, "note": "C2", "dur": "half", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 1, "beat": 3.5, "note": "G2", "dur": "8th", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 2, "beat": 1, "note": "C2", "dur": "dq", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 3, "beat": 1, "note": "C2", "dur": "half", "dyn": "p", "art": "legato", "chan": 1},
+    {"bar": 5, "beat": 1, "note": "G#2", "dur": "half", "dyn": "p", "art": "legato", "chan"...(truncated)
+2026-01-12 01:19:19,117 INFO ai_part_generator: build_response: normalizing 24 notes
+2026-01-12 01:19:19,117 INFO ai_part_generator: build_response: normalized to 24 notes
+2026-01-12 01:19:19,118 INFO ai_part_generator: Dynamics fallback: added 77 breakpoints for 22 sustained notes (model had 7)
+2026-01-12 01:19:19,124 INFO ai_part_generator: Response built: notes=24 cc_events=1731 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
+INFO:     127.0.0.1:57401 - "POST /generate HTTP/1.1" 200 OK
+2026-01-12 01:19:20,045 INFO ai_part_generator: Generate: profile=trombone_csb preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Film Score, Heroic
+2026-01-12 01:19:20,045 INFO ai_part_generator: User prompt to LLM:
+## COMPOSE: HARMONY for Trombone - CSB
 
-### YOUR ROLE (from plan): RHYTHM
-Register: C3-G4 (mid-low)
-Pulsing quarter-note ostinatos on the root and fifth.
-Relationship: Engine driving the 3/4 feel
+### YOUR ROLE (from plan): HARMONY
+Register: G2-D4 (low-mid)
+Provide the 'Neo-Riemannian' shifts. Focus on smooth voice leading.
+Relationship: Bridge between Tuba and Horn
 
 ### INSTRUMENT PROFILE
-INSTRUMENT: Cello - CSS
-RANGE: C3 - G6
-POLYPHONY: poly
+INSTRUMENT: Trombone - CSB
+RANGE: G2 - F4
+POLYPHONY: mono
 CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
 ARTICULATIONS (CC58):
-  sustain: 0 - Sustain (Low Latency Legato) [cc1]
-  sustain_expressive: 6 - Sustain (Expressive Legato) [cc1]
-  spiccato: 11 - Spiccato [velocity]
+  sustain: 0 - Sustain / Legato [cc1]
+  repetitions: 11 - Repetitions [velocity]
   staccatissimo: 16 - Staccatissimo [velocity]
   staccato: 21 - Staccato [velocity]
   sforzando: 26 - Sforzando [velocity]
-  pizzicato: 31 - Pizzicato [velocity]
-  bartok_snap: 36 - Bartok Snap [velocity]
-  col_legno: 41 - Col Legno [velocity]
+  mute_short: 31 - Mute Short [velocity]
+  rips: 41 - Rips [velocity]
   trills: 46 - Trills [cc1]
-  harmonics: 51 - Harmonics [cc1]
-  tremolo: 56 - Tremolo [cc1]
-  measured_tremolo: 61 - Measured Tremolo [cc1]
+  flutter: 51 - Flutter Tongue [cc1]
+  mute_long: 56 - Mute Long [cc1]
+  double_tongue: 61 - Double Tongue [velocity]
   marcato: 66 - Marcato [velocity]
-  con_sordino: 86 - Con Sordino [cc1]
   legato: keyswitch Ab1 (vel_on=100, vel_off=1)
 
 ### MUSICAL CONTEXT
 - Key: unknown
-- Tempo: 68.0 BPM, Time: 3/4
-- Length: 15 bars (45.0 quarter notes)
+- Tempo: 112.0 BPM, Time: 3/4
+- Length: 24 bars (72.0 quarter notes)
 
 ### SELECTION (working area)
-- Available range: 15 bars (start_q 0 to 45.0 quarter notes)
+- Available range: 24 bars (start_q 0 to 72.0 quarter notes)
 - Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
 - How much of this range to fill is YOUR creative decision based on user request and context
 - RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
 - Consider using the full selection for complete compositions; shorter portions for fragments or phrases
 - Patterns/repeats can help keep JSON concise for repeating figures
 
-### TEMPORAL POSITION
-This is the BEGINNING of a musical section. There is existing material AFTER the generation area.
-AFTER (following notes) (11 notes, range A#3-A#4): A#3@78.00(v70,ch1) A#3@80.02(v65,ch1) D4@81.98(v75,ch1) C#4@85.98(v68,ch1) A#4@87.98(v80,ch1) D#4@90.00(v72,ch1) A#3@94.00(v68,ch1) A#3@96.00(v64,ch1) ... A#3@96.00(v64,ch1) D4@97.98(v70,ch1) C#4@102.01(v68,ch1) A#4@104.00(v78,ch1)
-First notes after target: A#3, A#3, D4, C#4
-### DYNAMICS CONTEXT
-Velocity range: 64-80 (mp-mf), avg 70.7 (mf), span 16
-Channel usage: ch1:11
-### CC CONTEXT
-Dynamics (CC1): range 40-111, avg 73.2, trend rising (crescendo), events 213
-Expression (CC11): range 70-88, avg 81.1, trend rising (crescendo), events 213
-CC21: range 50-75, avg 62.4, trend rising (crescendo), events 213
-CC58: range 6-6, avg 6.0, trend unknown, events 1
-
 ### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
-You are generating part 2 of 5 for a unified composition.
+You are generating part 2 of 4 for a unified composition.
 Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.
 
 ENSEMBLE INSTRUMENTS (in generation order):
-  1. Bass (Bass - CSS) (strings, role: bass, range: E2-D4) [ALREADY GENERATED]
-  2. Cello (Cello - CSS) (strings, role: rhythm, range: C3-G6) ← YOU ARE GENERATING THIS
-  3. Viola (Viola - CSS) (strings, role: harmony, range: C3-C6)
-  4. Violin 2 (Violin - CSS) (strings, role: countermelody, range: G3-B6)
-  5. Violin 1 (Violin - CSS) (strings, role: melody, range: G3-B6)
+  1. Tuba (Tuba - CSB) (brass, role: bass, range: F2-Bb4) [ALREADY GENERATED]
+  2. Trombone (Trombone - CSB) (brass, role: harmony, range: G2-F4) ← YOU ARE GENERATING THIS
+  3. Horn (Horn - CSB) (brass, role: melody, range: F2-C5)
+  4. Trumpet (Trumpet - CSB) (brass, role: countermelody, range: G3-G5)
 
 ### ANALYSIS OF PREVIOUSLY GENERATED PARTS
 Parts already composed: 1
 
-**Bass - CSS** (role: bass):
-  - Range: MIDI 31-47
-  - Contour: descending, Motion: stepwise
+**Tuba - CSB** (role: bass):
+  - Range: MIDI 41-50
+  - Contour: wave, Motion: disjunct
   - Rhythm: on-beat, Density: sparse
 
 ### RHYTHMIC COORDINATION
 - Ensemble groove: downbeat-heavy
-- Anchor beats (strong pulse points): 0.0
+- Anchor beats (strong pulse points): 0.0, 2.0, 2.5
   ALIGN your accents to these beats for cohesion
-- Common note values: dotted half, 6.0q
+- Common note values: dotted half, 6.0q, half
 - Style: Strong downbeat emphasis - add syncopation carefully
-- Repeating pattern detected - consider complementary ostinato
-
-### REGISTER ALLOCATION
-- OCCUPIED: bass
-- AVAILABLE (prefer these): high (MIDI 84+), high-mid (MIDI 72-84), low-mid (MIDI 48-60)
-
-### YOUR TASK
-Your role: RHYTHM
-1. DO NOT duplicate existing melodies/rhythms
-2. USE a different register from existing parts
-3. FOLLOW the harmonic changes above
-4. ALIGN with the rhythmic pulse
-5. CREATE complementary material that ENHANCES the whole
-
-### PREVIOUSLY GENERATED PARTS (in musical notation)
-Format: Bar.Beat:Note(duration,dynamics)
-
-**Bass - CSS** [bass] (Range: G1-B2):
-  1.1:G2(dh,p), 2.1:G2(dh,p), 3.1:G2(dh,mp), 4.1:G2(dh,p), 5.1:D#2(dh,mp), 6.1:D#2(dh,mp), 7.1:D#2(6.03q,mp), 9.1:B1(dh,mf), 10.1:B1(dh,mf), 11.1:B1(dh,f), 12.1:B1(dh,mf), 13.1:B2(dh,ff), 14.1:B1(dh,ff), 15.1:B1(6.03q,f), 17.1:D2(dh,mf), 18.1:D2(dh,mf), 19.1:D2(6.03q,mp), 21.1:G1(dh,p), 22.1:G1(dh,pp), 23.1:G1(dh,ppp)
-
-ENSEMBLE COORDINATION RULES:
-1. AVOID UNISON: Don't duplicate exact same notes as other instruments
-2. REGISTER SEPARATION: Stay in your instrument's typical register
-3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble
-4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody
-5. CALL & RESPONSE: Create phrases that leave space for other instruments
-6. FOLLOW HARMONY: Play the same chord changes as existing parts
-7. PHRASE TOGETHER: Start and end phrases at similar times
-
-YOUR ROLE (Cello (Cello - CSS)): RHYTHM: Define the pulse. Steady patterns. Don't overshadow melody.
-
-ORCHESTRATION LAYERS:
-  - MELODY layer: Main theme carrier (lead instrument)
-  - HARMONY layer: Chords/sustained notes (support)
-  - BASS layer: Foundation and roots (anchor)
-  - COLOR layer: Countermelodies, fills (embellishment)
-
-
-### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
-A 24-bar cinematic romantic work in G Minor/Major, focusing on emotional swelling and chromatic mediant relationships. The arc begins with a grounded, dark G minor pedal, expanding into lush Bb and D major textures before a climactic shift to B Major (chromatic mediant). Texture moves from a sparse low-end drone to a dense, soaring string quintet. The register spacing is wide to emphasize the 'cinematic' scope, keeping the Bass/Cello in the deep sub-ranges while Violins reach for the B5-A6 range during the climax. Harmonic tension is maintained through sus2 chords and expressive appoggiaturas in the inner voices.
-
-**CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
-```
-Bar.Beat | Chord        | Notes for YOUR range
----------|--------------|---------------------
-1.1       | Gm(add9) (i) | G3, B3, D3, A3
-5.1       | Ebmaj7 (VI)  | D#3, G3, A#3, D3
-9.1       | Bmaj7 (bIII (Chrom. Mediant)) | B3, D#3, F#3, A#3
-17.1       | Dsus4 (V)    | D3, G3, A3
-```
-
-CHORD MAP RULES:
-- BASS: Play ROOT note on beat 1 of each chord
-- MELODY: Use notes from the chord on strong beats
-- HARMONY: Voice-lead smoothly between chords
-- Switch to new chord notes at EXACTLY the Bar.Beat
-
-**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**
-```
-Bar   | Dynamics | Trend
-------|----------|-------
-Bar 1  | p        | → stable
-Bar 9  | mf       | ↗ building
-Bar 13 | ff       | ★ climax
-Bar 21 | pp       | ↘ fading
-```
-DYNAMIC ARC RULES:
-- Match the dynamics level at each bar
-- 'building': gradually increase intensity toward next point
-- 'climax': peak intensity, strongest notes
-- 'fading'/'resolving': decrease intensity
-
-**TEXTURE MAP (WHEN TO PLAY/REST):**
-- Bars 1-8: sparse density → YOU PLAY
-    Texture: pedal
-- Bars 9-16: dense density → YOU PLAY
-    Texture: homophonic
-
-TEXTURE RULES:
-- TACET sections: output empty notes array for those bars
-- 'sparse': leave lots of space, few notes
-- 'full'/'tutti': all instruments active, denser writing
-
-**PHRASE STRUCTURE (BREATHING & CADENCES):**
-- **EXPOSITION** (Bars 1-8)
-    Function: opening
-    Breathe at: Bar 4.3, Bar 8.3
-    Climax: Bar 5 (low)
-- **EXPANSION** (Bars 9-16)
-    Function: development
-    Breathe at: Bar 12.3, Bar 16.1
-    Climax: Bar 13 (high)
-- **RESOLUTION** (Bars 17-24)
-    Function: closing
-    Breathe at: Bar 20.3, Bar 24.1
-    Climax: Bar 17 (medium)
-
-**ACCENT MAP (RHYTHMIC SYNC):**
-- STRONG accents (all instruments): Bar 13.1
-  → Place notes ON these beats, use f-ff dynamics
-- MEDIUM accents (optional): Bar 1.1
-
-**MOTIF BLUEPRINT:**
-- Idea: The 'Yearning' Leap
-- Character: Romantic, sweeping, reaching
-- Notes: D4 → D5 → C5 → Bb4 → A4
-- Intervals: [+12, -2, -2, -1] semitones
-
-MOTIF RULE: MELODY role should establish this motif, others respond/develop it
-
-**SECTION OVERVIEW:**
-- Bars 1-8 | [INTRO/A] | texture: Atmospheric drone | dynamics: p→mp | energy: low
-    Active: Bass, Cello, Viola
-    Tacet: Violin 1
-- Bars 9-16 | [CLIMAX/B] | texture: Full orchestral swell | dynamics: mf→ff | energy: high
-    Active: Violin 1, Violin 2, Viola, Cello, Bass
-
-**ROLE ASSIGNMENTS:**
-- **Bass** → BASS (E2-B2 (low) register)
-    Deep, sustained drones. Use molto vibrato on longer notes.
-    Relationship: Foundation for harmonic shifts
-- **Cello** → RHYTHM (C3-G4 (mid-low) register)
-    Pulsing quarter-note ostinatos on the root and fifth.
-    Relationship: Engine driving the 3/4 feel
-- **Viola** → HARMONY (G3-D5 (mid) register)
-    Rich inner voice playing sus2/sus4 extensions. Smooth voice leading.
-    Relationship: Connects bass to melody
-- **Violin 2** → COUNTERMELODY (G4-E6 (high) register)
-    Expressive descents that provide friction against Violin 1.
-    Relationship: Harmonic support and tension
-- **Violin 1** → MELODY (D5-B6 (very high) register)
-    Sweeping leaps. Use portamento on octave jumps for Romantic feel.
-    Relationship: Primary emotional focus
-
-
-### COMPOSITION RULES
-- ALLOWED RANGE: C3 to G6
-- Suggested note count: 30-120 (adapt based on musical needs)
-- Channel: 1
-- Articulation: legato
-
-### THREE-LAYER DYNAMICS
-1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
-2. EXPRESSION CURVE: GLOBAL section envelope
-3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
-
-### TEMPO/TIME SIGNATURE CHANGES
-Tempo and time signature changes are already defined by an earlier part.
-DO NOT output tempo_markers for this response.
-
-### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
-Musical Style (Cinematic): Focus on evolution and emotion. Harmony: Chromatic mediants (e.g., Cm to Em), sus2/sus4 chords for ambiguity. Texture: Slow harmonic rhythm, pulsing ostinatos, layered dynamics. Bass: Deep drones/pedal points.
-Mood (Romantic): Passion and love. Harmony: Lush extended chords (Maj7, add9, m7b5), chromatic appoggiaturas. Melody: Sweeping, large interval leaps, expressive swells. Rhythm: Flexible, push-and-pull (rubato).
-
-
-INTERPRET USER REQUEST:
-- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
-- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail
-- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)
-- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach
-- If user asks for chords/pads → use sustained notes, minimal articulation changes
-
-### INSTRUMENT CURVES (use these curve names):
-curves.vibrato (CC21)
-
-### OUTPUT (valid JSON only):
-2026-01-11 18:00:51,791 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
-2026-01-11 18:00:51,792 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
-2026-01-11 18:01:03,574 INFO ai_part_generator: OpenRouter response received: 4584 chars
-2026-01-11 18:01:03,574 INFO ai_part_generator: LLM response received: 4584 chars
-2026-01-11 18:01:03,574 INFO ai_part_generator: LLM response preview: ```json
-{
-  "notes": [
-    {"bar": 1, "beat": 1, "note": "G3", "dur": "q", "dyn": "p", "art": "legato", "chan": 1},
-    {"bar": 1, "beat": 2, "note": "D3", "dur": "q", "dyn": "p", "art": "legato", "chan": 1},
-    {"bar": 1, "beat": 3, "note": "G3", "dur": "q", "dyn": "p", "art": "legato", "chan": 1},
-    {"bar": 2, "beat": 1, "note": "G3", "dur": "q", "dyn": "p", "art": "legato", "chan": 1},
-    {"bar": 2, "beat": 2, "note": "D3", "dur": "q", "dyn": "p", "art": "legato", "chan": 1},
-    {"bar": ...(truncated)
-2026-01-11 18:01:03,574 INFO ai_part_generator: build_response: normalizing 39 notes
-2026-01-11 18:01:03,575 INFO ai_part_generator: build_response: normalized to 39 notes
-2026-01-11 18:01:03,579 INFO ai_part_generator: Response built: notes=39 cc_events=1083 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
-INFO:     127.0.0.1:56457 - "POST /generate HTTP/1.1" 200 OK
-2026-01-11 18:01:04,429 INFO ai_part_generator: Generate: profile=viola_css preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Cinematic, Romantic
-2026-01-11 18:01:04,430 INFO ai_part_generator: User prompt to LLM:
-## COMPOSE: HARMONY for Viola - CSS
-
-### YOUR ROLE (from plan): HARMONY
-Register: G3-D5 (mid)
-Rich inner voice playing sus2/sus4 extensions. Smooth voice leading.
-Relationship: Connects bass to melody
-
-### INSTRUMENT PROFILE
-INSTRUMENT: Viola - CSS
-RANGE: C3 - C6
-POLYPHONY: poly
-CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
-ARTICULATIONS (CC58):
-  sustain: 0 - Sustain (Low Latency Legato) [cc1]
-  sustain_expressive: 6 - Sustain (Expressive Legato) [cc1]
-  spiccato: 11 - Spiccato [velocity]
-  staccatissimo: 16 - Staccatissimo [velocity]
-  staccato: 21 - Staccato [velocity]
-  sforzando: 26 - Sforzando [velocity]
-  pizzicato: 31 - Pizzicato [velocity]
-  bartok_snap: 36 - Bartok Snap [velocity]
-  col_legno: 41 - Col Legno [velocity]
-  trills: 46 - Trills [cc1]
-  harmonics: 51 - Harmonics [cc1]
-  tremolo: 56 - Tremolo [cc1]
-  measured_tremolo: 61 - Measured Tremolo [cc1]
-  marcato: 66 - Marcato [velocity]
-  con_sordino: 86 - Con Sordino [cc1]
-  legato: keyswitch Ab1 (vel_on=100, vel_off=1)
-
-### MUSICAL CONTEXT
-- Key: unknown
-- Tempo: 68.0 BPM, Time: 3/4
-- Length: 15 bars (45.0 quarter notes)
-
-### SELECTION (working area)
-- Available range: 15 bars (start_q 0 to 45.0 quarter notes)
-- Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
-- How much of this range to fill is YOUR creative decision based on user request and context
-- RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
-- Consider using the full selection for complete compositions; shorter portions for fragments or phrases
-- Patterns/repeats can help keep JSON concise for repeating figures
-
-### TEMPORAL POSITION
-This is the BEGINNING of a musical section. There is existing material AFTER the generation area.
-AFTER (following notes) (11 notes, range F3-G3): F3@77.99(v65,ch1) F#3@79.99(v60,ch1) F3@81.99(v55,ch1) F3@85.99(v62,ch1) F#3@87.99(v58,ch1) G3@89.99(v60,ch1) F3@93.99(v58,ch1) F#3@95.99(v64,ch1) ... F#3@95.99(v64,ch1) F3@97.99(v55,ch1) F3@101.99(v68,ch1) F3@103.99(v70,ch1)
-First notes after target: F3, F#3, F3, F3
-### DYNAMICS CONTEXT
-Velocity range: 55-70 (mp-mf), avg 61.4 (mp), span 15
-Channel usage: ch1:11
-### CC CONTEXT
-Dynamics (CC1): range 35-73, avg 54.0, trend stable, events 213
-Expression (CC11): range 80-97, avg 88.3, trend rising (crescendo), events 213
-
-### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
-You are generating part 3 of 5 for a unified composition.
-Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.
-
-ENSEMBLE INSTRUMENTS (in generation order):
-  1. Bass (Bass - CSS) (strings, role: bass, range: E2-D4) [ALREADY GENERATED]
-  2. Cello (Cello - CSS) (strings, role: rhythm, range: C3-G6) [ALREADY GENERATED]
-  3. Viola (Viola - CSS) (strings, role: harmony, range: C3-C6) ← YOU ARE GENERATING THIS
-  4. Violin 2 (Violin - CSS) (strings, role: countermelody, range: G3-B6)
-  5. Violin 1 (Violin - CSS) (strings, role: melody, range: G3-B6)
-
-### ANALYSIS OF PREVIOUSLY GENERATED PARTS
-Parts already composed: 2
-
-**Bass - CSS** (role: bass):
-  - Range: MIDI 31-47
-  - Contour: descending, Motion: stepwise
-  - Rhythm: on-beat, Density: sparse
-**Cello - CSS** (role: rhythm):
-  - Range: MIDI 50-59
-  - Contour: wave, Motion: disjunct
-  - Rhythm: on-beat, Density: moderate
-
-### RHYTHMIC COORDINATION
-- Ensemble groove: balanced
-- Anchor beats (strong pulse points): 0.0, 1.0, 2.0
-  ALIGN your accents to these beats for cohesion
-- Common note values: quarter, dotted half, 6.0q
-- Style: Balanced rhythm - maintain the pulse
 - Repeating pattern detected - consider complementary ostinato
 
 ### REGISTER ALLOCATION
@@ -671,11 +342,8 @@ Your role: HARMONY
 ### PREVIOUSLY GENERATED PARTS (in musical notation)
 Format: Bar.Beat:Note(duration,dynamics)
 
-**Bass - CSS** [bass] (Range: G1-B2):
-  1.1:G2(dh,p), 2.1:G2(dh,p), 3.1:G2(dh,mp), 4.1:G2(dh,p), 5.1:D#2(dh,mp), 6.1:D#2(dh,mp), 7.1:D#2(6.03q,mp), 9.1:B1(dh,mf), 10.1:B1(dh,mf), 11.1:B1(dh,f), 12.1:B1(dh,mf), 13.1:B2(dh,ff), 14.1:B1(dh,ff), 15.1:B1(6.03q,f), 17.1:D2(dh,mf), 18.1:D2(dh,mf), 19.1:D2(6.03q,mp), 21.1:G1(dh,p), 22.1:G1(dh,pp), 23.1:G1(dh,ppp)
-
-**Cello - CSS** [rhythm] (Range: D3-B3):
-  1.1:G3(q,p), 1.2:D3(q,p), 1.3:G3(q,p), 2.1:G3(q,p), 2.2:D3(q,p), 2.3:G3(q,p), 3.1:G3(q,mp), 3.2:D3(q,mp), 3.3:G3(q,mp), 4.1:G3(dh,p), 5.1:D#3(q,mp), 5.2:A#3(q,mp), 5.3:D#3(q,mp), 6.1:D#3(q,mp), 6.2:A#3(q,mp), 6.3:D#3(q,mp), 7.1:D#3(q,mp), 7.2:A#3(q,mp), 7.3:D#3(q,mp), 8.1:D#3(dh,p), 9.1:B3(q,mf), 9.2:F#3(q,mf), 9.3:B3(q,mf), 10.1:B3(q,mf), 10.2:F#3(q,mf), 10.3:B3(q,mf), 11.1:B3(q,f), 11.2:F#3(q,f), 11.3:B3(q,f), 12.1:B3(dh,mf), 13.1:B3(q,ff), 13.2:F#3(q,ff), 13.3:B3(q,ff), 14.1:B3(q,ff), 14.2:F#3(q,ff), 14.3:B3(q,ff), 15.1:B3(q,f), 15.2:F#3(q,f), 15.3:B3(q,f)
+**Tuba - CSB** [bass] (Range: F2-D3):
+  1.1:C3(2.53q,pp), 1.3.5:G2(8,pp), 2.1:C3(dh,pp), 3.1:C3(6.03q,p), 5.1:G#2(2.53q,p), 5.3.5:C3(8,p), 6.1:G#2(dh,p), 7.1:G#2(6.03q,mp), 9.1:C3(h,mf), 9.3:G2(q,mf), 10.1:C3(dh,mf), 11.1:C3(6.03q,mf), 13.1:F2(h,mf), 13.3:C3(q,f), 14.1:F2(dh,f), 15.1:F2(6.03q,f), 17.1:G2(h,f), 17.3:D3(q,ff), 18.1:G2(dh,ff), 19.1:G2(6.03q,ff), 21.1:C3(h,ff), 21.3:G2(q,f), 22.1:C3(dh,f), 23.1:C3(h,mf)
 
 ENSEMBLE COORDINATION RULES:
 1. AVOID UNISON: Don't duplicate exact same notes as other instruments
@@ -686,7 +354,7 @@ ENSEMBLE COORDINATION RULES:
 6. FOLLOW HARMONY: Play the same chord changes as existing parts
 7. PHRASE TOGETHER: Start and end phrases at similar times
 
-YOUR ROLE (Viola (Viola - CSS)): HARMONY: Support the melody. Play chord tones. Fill the harmonic space.
+YOUR ROLE (Trombone (Trombone - CSB)): HARMONY: Support the melody. Play chord tones. Fill the harmonic space.
 
 ORCHESTRATION LAYERS:
   - MELODY layer: Main theme carrier (lead instrument)
@@ -696,16 +364,17 @@ ORCHESTRATION LAYERS:
 
 
 ### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
-A 24-bar cinematic romantic work in G Minor/Major, focusing on emotional swelling and chromatic mediant relationships. The arc begins with a grounded, dark G minor pedal, expanding into lush Bb and D major textures before a climactic shift to B Major (chromatic mediant). Texture moves from a sparse low-end drone to a dense, soaring string quintet. The register spacing is wide to emphasize the 'cinematic' scope, keeping the Bass/Cello in the deep sub-ranges while Violins reach for the B5-A6 range during the climax. Harmonic tension is maintained through sus2 chords and expressive appoggiaturas in the inner voices.
+This composition blends cinematic underscore with heroic preparation. The architecture follows a gradual 'gathering' of forces, starting with a sparse Tuba/Trombone foundation and layering upward into a noble Horn-led fanfare. The harmonic language utilizes Neo-Riemannian shifts (moving between minor 9ths and major triads) to evoke the gravity of battle preparation while maintaining a confident, rising trajectory. Texture is managed via 'frequency pocketing'—keeping the mid-range clear for Horns/Trumpets while Tuba/Trombone anchor the low end. The 3/4 time signature is treated as a heavy, deliberate waltz/march, utilizing dotted rhythms to create forward momentum without overwhelming the scene's dialogue capability.
 
 **CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
 ```
 Bar.Beat | Chord        | Notes for YOUR range
 ---------|--------------|---------------------
-1.1       | Gm(add9) (i) | G3, B3, D3, A3
-5.1       | Ebmaj7 (VI)  | D#3, G3, A#3, D3
-9.1       | Bmaj7 (bIII (Chrom. Mediant)) | B3, D#3, F#3, A#3
-17.1       | Dsus4 (V)    | D3, G3, A3
+1.1       | Cm9 (i)      | C3, D#3, G2, A#2, D3
+5.1       | Abmaj7 (VI)  | G#2, C3, D#3, G2
+9.1       | Cmaj (I)     | C3, D#3, G2
+13.1       | Fmaj/C (IV/I) | F3, G#2, C3
+17.1       | Gadd2 (V)    | G2, B2, D3
 ```
 
 CHORD MAP RULES:
@@ -718,10 +387,10 @@ CHORD MAP RULES:
 ```
 Bar   | Dynamics | Trend
 ------|----------|-------
-Bar 1  | p        | → stable
+Bar 1  | pp       | → stable
 Bar 9  | mf       | ↗ building
-Bar 13 | ff       | ★ climax
-Bar 21 | pp       | ↘ fading
+Bar 17 | f        | ★ climax
+Bar 24 | mf       | ↓ resolving
 ```
 DYNAMIC ARC RULES:
 - Match the dynamics level at each bar
@@ -731,9 +400,9 @@ DYNAMIC ARC RULES:
 
 **TEXTURE MAP (WHEN TO PLAY/REST):**
 - Bars 1-8: sparse density → YOU PLAY
-    Texture: pedal
-- Bars 9-16: dense density → YOU PLAY
     Texture: homophonic
+- Bars 17-24: dense density → YOU PLAY
+    Texture: polyphonic
 
 TEXTURE RULES:
 - TACET sections: output empty notes array for those bars
@@ -741,76 +410,74 @@ TEXTURE RULES:
 - 'full'/'tutti': all instruments active, denser writing
 
 **PHRASE STRUCTURE (BREATHING & CADENCES):**
-- **EXPOSITION** (Bars 1-8)
+- **THE CALL (UNDERSCORE)** (Bars 1-8)
     Function: opening
     Breathe at: Bar 4.3, Bar 8.3
     Climax: Bar 5 (low)
-- **EXPANSION** (Bars 9-16)
+- **THE RESOLVE (HEROIC)** (Bars 9-16)
     Function: development
-    Breathe at: Bar 12.3, Bar 16.1
-    Climax: Bar 13 (high)
-- **RESOLUTION** (Bars 17-24)
-    Function: closing
-    Breathe at: Bar 20.3, Bar 24.1
-    Climax: Bar 17 (medium)
-
-**ACCENT MAP (RHYTHMIC SYNC):**
-- STRONG accents (all instruments): Bar 13.1
-  → Place notes ON these beats, use f-ff dynamics
-- MEDIUM accents (optional): Bar 1.1
+    Breathe at: Bar 12.3, Bar 16.3
+    Climax: Bar 13 (medium)
+- **THE ANTHEM (FANFARE)** (Bars 17-24)
+    Function: climax
+    Breathe at: Bar 20.3
+    Climax: Bar 21 (high)
 
 **MOTIF BLUEPRINT:**
-- Idea: The 'Yearning' Leap
-- Character: Romantic, sweeping, reaching
-- Notes: D4 → D5 → C5 → Bb4 → A4
-- Intervals: [+12, -2, -2, -1] semitones
+- Idea: Rising Heroic Preparation Motif
+- Character: Noble, steady, ascending
+- Notes: C3 → G3 → C4 → D4 → E4
+- Intervals: [+7, +5, +2, +2] semitones
 
 MOTIF RULE: MELODY role should establish this motif, others respond/develop it
 
 **SECTION OVERVIEW:**
-- Bars 1-8 | [INTRO/A] | texture: Atmospheric drone | dynamics: p→mp | energy: low
-    Active: Bass, Cello, Viola
-    Tacet: Violin 1
-- Bars 9-16 | [CLIMAX/B] | texture: Full orchestral swell | dynamics: mf→ff | energy: high
-    Active: Violin 1, Violin 2, Viola, Cello, Bass
+- Bars 1-8 | [INTRO] | texture: low-end-focused | dynamics: pp→p | energy: static
+    Active: Tuba, Trombone
+    Tacet: Trumpet, Horn
+- Bars 9-16 | [THEME] | texture: middle-heavy | dynamics: mp→mf | energy: building
+    Active: Tuba, Trombone, Horn
+    Tacet: Trumpet
+- Bars 17-24 | [FANFARE] | texture: full-ensemble | dynamics: f→ff | energy: high
+    Active: Tuba, Trombone, Horn, Trumpet
 
 **ROLE ASSIGNMENTS:**
-- **Bass** → BASS (E2-B2 (low) register)
-    Deep, sustained drones. Use molto vibrato on longer notes.
-    Relationship: Foundation for harmonic shifts
-- **Cello** → RHYTHM (C3-G4 (mid-low) register)
-    Pulsing quarter-note ostinatos on the root and fifth.
-    Relationship: Engine driving the 3/4 feel
-- **Viola** → HARMONY (G3-D5 (mid) register)
-    Rich inner voice playing sus2/sus4 extensions. Smooth voice leading.
-    Relationship: Connects bass to melody
-- **Violin 2** → COUNTERMELODY (G4-E6 (high) register)
-    Expressive descents that provide friction against Violin 1.
-    Relationship: Harmonic support and tension
-- **Violin 1** → MELODY (D5-B6 (very high) register)
-    Sweeping leaps. Use portamento on octave jumps for Romantic feel.
-    Relationship: Primary emotional focus
+- **Tuba** → BASS (F2-C3 (low) register)
+    Anchor the 3/4 pulse with heavy downbeats. Use long, connected notes.
+    Relationship: Foundation for Trombone
+- **Trombone** → HARMONY (G2-D4 (low-mid) register)
+    Provide the 'Neo-Riemannian' shifts. Focus on smooth voice leading.
+    Relationship: Bridge between Tuba and Horn
+- **Horn** → MELODY (G3-C5 (mid) register)
+    Main melodic carrier. Emphasize ascending 4ths and 5ths. Warm and noble.
+    Relationship: Primary voice
+- **Trumpet** → COUNTERMELODY (G4-G5 (high) register)
+    Add brilliance to the final section. Use triplets and dotted rhythms.
+    Relationship: Top-line highlights
 
 
 ### COMPOSITION RULES
-- ALLOWED RANGE: C3 to C6
-- Suggested note count: 30-120 (adapt based on musical needs)
+- ALLOWED RANGE: G2 to F4
+- Suggested note count: 48-192 (adapt based on musical needs)
 - Channel: 1
 - Articulation: legato
+- MAX NOTE DURATION: 4 beats (wind/brass need to breathe - split long notes with rests)
 
 ### THREE-LAYER DYNAMICS
 1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
 2. EXPRESSION CURVE: GLOBAL section envelope
 3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
 
-### TEMPO/TIME SIGNATURE CHANGES
-Tempo and time signature changes are already defined by an earlier part.
-DO NOT output tempo_markers for this response.
+DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)
+
+### TEMPO/TIME SIGNATURE
+Tempo is set by the composition plan: 112 BPM
+DO NOT output tempo_markers - tempo changes are controlled by the plan.
 
 ### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
-Musical Style (Cinematic): Focus on evolution and emotion. Harmony: Chromatic mediants (e.g., Cm to Em), sus2/sus4 chords for ambiguity. Texture: Slow harmonic rhythm, pulsing ostinatos, layered dynamics. Bass: Deep drones/pedal points.
-Mood (Romantic): Passion and love. Harmony: Lush extended chords (Maj7, add9, m7b5), chromatic appoggiaturas. Melody: Sweeping, large interval leaps, expressive swells. Rhythm: Flexible, push-and-pull (rubato).
-
+Musical Style (Film Score): Underscore technique. Harmony: Static or slowly shifting (Neo-Riemannian), minor 9ths, avoidance of perfect cadences. Texture: Sparse, leaves room for dialogue (frequency 'pocketing'). Rhythm: Subtle pulse, not overpowering.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
 
 INTERPRET USER REQUEST:
 - If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
@@ -823,328 +490,60 @@ INTERPRET USER REQUEST:
 curves.vibrato (CC21)
 
 ### OUTPUT (valid JSON only):
-2026-01-11 18:01:04,430 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
-2026-01-11 18:01:04,430 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
-2026-01-11 18:01:14,193 INFO ai_part_generator: OpenRouter response received: 3814 chars
-2026-01-11 18:01:14,195 INFO ai_part_generator: LLM response received: 3814 chars
-2026-01-11 18:01:14,196 INFO ai_part_generator: LLM response preview: ```json
+2026-01-12 01:19:20,046 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:19:20,046 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:19:27,746 INFO ai_part_generator: OpenRouter response received: 3036 chars
+2026-01-12 01:19:27,746 INFO ai_part_generator: LLM response received: 3036 chars
+2026-01-12 01:19:27,746 INFO ai_part_generator: LLM response preview: ```json
 {
   "notes": [
-    {"bar": 1, "beat": 1, "note": "A3", "dur": "dh", "dyn": "p", "art": "sustain_expressive", "chan": 1},
-    {"bar": 2, "beat": 1, "note": "G3", "dur": "dh", "dyn": "p", "art": "sustain_expressive", "chan": 1},
-    {"bar": 3, "beat": 1, "note": "A3", "dur": "dh", "dyn": "mp", "art": "sustain_expressive", "chan": 1},
-    {"bar": 4, "beat": 1, "note": "B3", "dur": "h", "dyn": "p", "art": "sustain_expressive", "chan": 1},
-    {"bar": 5, "beat": 1, "note": "D4", "dur": "dh", ...(truncated)
-2026-01-11 18:01:14,197 INFO ai_part_generator: build_response: normalizing 23 notes
-2026-01-11 18:01:14,197 INFO ai_part_generator: build_response: normalized to 23 notes
-2026-01-11 18:01:14,200 INFO ai_part_generator: Response built: notes=23 cc_events=1083 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
-INFO:     127.0.0.1:56468 - "POST /generate HTTP/1.1" 200 OK
-2026-01-11 18:01:15,023 INFO ai_part_generator: Generate: profile=violin_css preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Cinematic, Romantic
-2026-01-11 18:01:15,023 INFO ai_part_generator: User prompt to LLM:
-## COMPOSE: COUNTERMELODY for Violin - CSS
-
-### YOUR ROLE (from plan): COUNTERMELODY
-Register: G4-E6 (high)
-Expressive descents that provide friction against Violin 1.
-Relationship: Harmonic support and tension
-
-### INSTRUMENT PROFILE
-INSTRUMENT: Violin - CSS
-RANGE: G3 - B6
-POLYPHONY: poly
-CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
-ARTICULATIONS (CC58):
-  sustain: 0 - Sustain (Low Latency Legato) [cc1]
-  sustain_expressive: 6 - Sustain (Expressive Legato) [cc1]
-  spiccato: 11 - Spiccato [velocity]
-  staccatissimo: 16 - Staccatissimo [velocity]
-  staccato: 21 - Staccato [velocity]
-  sforzando: 26 - Sforzando [velocity]
-  pizzicato: 31 - Pizzicato [velocity]
-  bartok_snap: 36 - Bartok Snap [velocity]
-  col_legno: 41 - Col Legno [velocity]
-  trills: 46 - Trills [cc1]
-  harmonics: 51 - Harmonics [cc1]
-  tremolo: 56 - Tremolo [cc1]
-  measured_tremolo: 61 - Measured Tremolo [cc1]
-  marcato: 66 - Marcato [velocity]
-  con_sordino: 86 - Con Sordino [cc1]
-  legato: keyswitch Ab1 (vel_on=100, vel_off=1)
-
-### MUSICAL CONTEXT
-- Key: unknown
-- Tempo: 68.0 BPM, Time: 3/4
-- Length: 15 bars (45.0 quarter notes)
-
-### SELECTION (working area)
-- Available range: 15 bars (start_q 0 to 45.0 quarter notes)
-- Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
-- How much of this range to fill is YOUR creative decision based on user request and context
-- RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
-- Consider using the full selection for complete compositions; shorter portions for fragments or phrases
-- Patterns/repeats can help keep JSON concise for repeating figures
-
-### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
-You are generating part 4 of 5 for a unified composition.
-Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.
-
-ENSEMBLE INSTRUMENTS (in generation order):
-  1. Bass (Bass - CSS) (strings, role: bass, range: E2-D4) [ALREADY GENERATED]
-  2. Cello (Cello - CSS) (strings, role: rhythm, range: C3-G6) [ALREADY GENERATED]
-  3. Viola (Viola - CSS) (strings, role: harmony, range: C3-C6) [ALREADY GENERATED]
-  4. Violin 2 (Violin - CSS) (strings, role: countermelody, range: G3-B6) ← YOU ARE GENERATING THIS
-  5. Violin 1 (Violin - CSS) (strings, role: melody, range: G3-B6)
-
-### ANALYSIS OF PREVIOUSLY GENERATED PARTS
-Parts already composed: 3
-
-**Bass - CSS** (role: bass):
-  - Range: MIDI 31-47
-  - Contour: descending, Motion: stepwise
-  - Rhythm: on-beat, Density: sparse
-**Cello - CSS** (role: rhythm):
-  - Range: MIDI 50-59
-  - Contour: wave, Motion: disjunct
-  - Rhythm: on-beat, Density: moderate
-**Viola - CSS** (role: harmony):
-  - Range: MIDI 50-71
-  - Contour: wave, Motion: mixed
-  - Rhythm: on-beat, Density: moderate
-
-### RHYTHMIC COORDINATION
-- Ensemble groove: downbeat-heavy
-- Anchor beats (strong pulse points): 0.0, 1.0, 2.0, 3.0
-  ALIGN your accents to these beats for cohesion
-- Common note values: quarter, dotted half, 0.0q
-- Style: Strong downbeat emphasis - add syncopation carefully
-- Repeating pattern detected - consider complementary ostinato
-
-### REGISTER ALLOCATION
-- OCCUPIED: bass, mid
-- AVAILABLE (prefer these): high (MIDI 84+), high-mid (MIDI 72-84), low-mid (MIDI 48-60)
-
-### YOUR TASK
-Your role: COUNTERMELODY
-1. DO NOT duplicate existing melodies/rhythms
-2. USE a different register from existing parts
-3. FOLLOW the harmonic changes above
-4. ALIGN with the rhythmic pulse
-5. CREATE complementary material that ENHANCES the whole
-
-### PREVIOUSLY GENERATED PARTS (in musical notation)
-Format: Bar.Beat:Note(duration,dynamics)
-
-**Bass - CSS** [bass] (Range: G1-B2):
-  1.1:G2(dh,p), 2.1:G2(dh,p), 3.1:G2(dh,mp), 4.1:G2(dh,p), 5.1:D#2(dh,mp), 6.1:D#2(dh,mp), 7.1:D#2(6.03q,mp), 9.1:B1(dh,mf), 10.1:B1(dh,mf), 11.1:B1(dh,f), 12.1:B1(dh,mf), 13.1:B2(dh,ff), 14.1:B1(dh,ff), 15.1:B1(6.03q,f), 17.1:D2(dh,mf), 18.1:D2(dh,mf), 19.1:D2(6.03q,mp), 21.1:G1(dh,p), 22.1:G1(dh,pp), 23.1:G1(dh,ppp)
-
-**Cello - CSS** [rhythm] (Range: D3-B3):
-  1.1:G3(q,p), 1.2:D3(q,p), 1.3:G3(q,p), 2.1:G3(q,p), 2.2:D3(q,p), 2.3:G3(q,p), 3.1:G3(q,mp), 3.2:D3(q,mp), 3.3:G3(q,mp), 4.1:G3(dh,p), 5.1:D#3(q,mp), 5.2:A#3(q,mp), 5.3:D#3(q,mp), 6.1:D#3(q,mp), 6.2:A#3(q,mp), 6.3:D#3(q,mp), 7.1:D#3(q,mp), 7.2:A#3(q,mp), 7.3:D#3(q,mp), 8.1:D#3(dh,p), 9.1:B3(q,mf), 9.2:F#3(q,mf), 9.3:B3(q,mf), 10.1:B3(q,mf), 10.2:F#3(q,mf), 10.3:B3(q,mf), 11.1:B3(q,f), 11.2:F#3(q,f), 11.3:B3(q,f), 12.1:B3(dh,mf), 13.1:B3(q,ff), 13.2:F#3(q,ff), 13.3:B3(q,ff), 14.1:B3(q,ff), 14.2:F#3(q,ff), 14.3:B3(q,ff), 15.1:B3(q,f), 15.2:F#3(q,f), 15.3:B3(q,f)
-
-**Viola - CSS** [harmony] (Range: D3-B4):
-  1.1:A3(dh,p), 2.1:G3(dh,p), 3.1:A3(dh,mp), 4.1:B3(dh,p), 5.1:D4(dh,mp), 6.1:A#3(dh,mp), 7.1:G3(dh,mp), 8.1:D3(dh,p), 9.1:A#3(dh,mf), 10.1:F#3(dh,mf), 11.1:D#4(dh,f), 12.1:B3(dh,mf), 13.1:D#4(q,ff), 13.2:F#4(q,ff), 13.3:A#4(q,ff), 14.1:B4(dh,ff), 15.1:A#4(dh,f), 15.3.94:G3(64,mf), 15.3.94:A3(64,mp), 15.3.94:D4(64,mp), 15.3.94:G3(64,p), 15.3.94:G3(64,pp), 15.3.94:G3(64,ppp)
-
-ENSEMBLE COORDINATION RULES:
-1. AVOID UNISON: Don't duplicate exact same notes as other instruments
-2. REGISTER SEPARATION: Stay in your instrument's typical register
-3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble
-4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody
-5. CALL & RESPONSE: Create phrases that leave space for other instruments
-6. FOLLOW HARMONY: Play the same chord changes as existing parts
-7. PHRASE TOGETHER: Start and end phrases at similar times
-
-YOUR ROLE (Violin 2 (Violin - CSS)): STRINGS: Harmony and melody. Sustained chords or lyrical lines.
-
-ORCHESTRATION LAYERS:
-  - MELODY layer: Main theme carrier (lead instrument)
-  - HARMONY layer: Chords/sustained notes (support)
-  - BASS layer: Foundation and roots (anchor)
-  - COLOR layer: Countermelodies, fills (embellishment)
-
-
-### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
-A 24-bar cinematic romantic work in G Minor/Major, focusing on emotional swelling and chromatic mediant relationships. The arc begins with a grounded, dark G minor pedal, expanding into lush Bb and D major textures before a climactic shift to B Major (chromatic mediant). Texture moves from a sparse low-end drone to a dense, soaring string quintet. The register spacing is wide to emphasize the 'cinematic' scope, keeping the Bass/Cello in the deep sub-ranges while Violins reach for the B5-A6 range during the climax. Harmonic tension is maintained through sus2 chords and expressive appoggiaturas in the inner voices.
-
-**CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
-```
-Bar.Beat | Chord        | Notes for YOUR range
----------|--------------|---------------------
-1.1       | Gm(add9) (i) | G3, B3, D4, A3
-5.1       | Ebmaj7 (VI)  | D#4, G3, A#3, D4
-9.1       | Bmaj7 (bIII (Chrom. Mediant)) | B3, D#4, F#4, A#3
-17.1       | Dsus4 (V)    | D4, G3, A3
-```
-
-CHORD MAP RULES:
-- BASS: Play ROOT note on beat 1 of each chord
-- MELODY: Use notes from the chord on strong beats
-- HARMONY: Voice-lead smoothly between chords
-- Switch to new chord notes at EXACTLY the Bar.Beat
-
-**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**
-```
-Bar   | Dynamics | Trend
-------|----------|-------
-Bar 1  | p        | → stable
-Bar 9  | mf       | ↗ building
-Bar 13 | ff       | ★ climax
-Bar 21 | pp       | ↘ fading
-```
-DYNAMIC ARC RULES:
-- Match the dynamics level at each bar
-- 'building': gradually increase intensity toward next point
-- 'climax': peak intensity, strongest notes
-- 'fading'/'resolving': decrease intensity
-
-**TEXTURE MAP (WHEN TO PLAY/REST):**
-- Bars 1-8: sparse density → YOU PLAY
-    Texture: pedal
-- Bars 9-16: dense density → YOU PLAY
-    Texture: homophonic
-
-TEXTURE RULES:
-- TACET sections: output empty notes array for those bars
-- 'sparse': leave lots of space, few notes
-- 'full'/'tutti': all instruments active, denser writing
-
-**PHRASE STRUCTURE (BREATHING & CADENCES):**
-- **EXPOSITION** (Bars 1-8)
-    Function: opening
-    Breathe at: Bar 4.3, Bar 8.3
-    Climax: Bar 5 (low)
-- **EXPANSION** (Bars 9-16)
-    Function: development
-    Breathe at: Bar 12.3, Bar 16.1
-    Climax: Bar 13 (high)
-- **RESOLUTION** (Bars 17-24)
-    Function: closing
-    Breathe at: Bar 20.3, Bar 24.1
-    Climax: Bar 17 (medium)
-
-**ACCENT MAP (RHYTHMIC SYNC):**
-- STRONG accents (all instruments): Bar 13.1
-  → Place notes ON these beats, use f-ff dynamics
-- MEDIUM accents (optional): Bar 1.1
-
-**MOTIF BLUEPRINT:**
-- Idea: The 'Yearning' Leap
-- Character: Romantic, sweeping, reaching
-- Notes: D4 → D5 → C5 → Bb4 → A4
-- Intervals: [+12, -2, -2, -1] semitones
-
-MOTIF RULE: MELODY role should establish this motif, others respond/develop it
-
-**SECTION OVERVIEW:**
-- Bars 1-8 | [INTRO/A] | texture: Atmospheric drone | dynamics: p→mp | energy: low
-    Active: Bass, Cello, Viola
-    Tacet: Violin 1
-- Bars 9-16 | [CLIMAX/B] | texture: Full orchestral swell | dynamics: mf→ff | energy: high
-    Active: Violin 1, Violin 2, Viola, Cello, Bass
-
-**ROLE ASSIGNMENTS:**
-- **Bass** → BASS (E2-B2 (low) register)
-    Deep, sustained drones. Use molto vibrato on longer notes.
-    Relationship: Foundation for harmonic shifts
-- **Cello** → RHYTHM (C3-G4 (mid-low) register)
-    Pulsing quarter-note ostinatos on the root and fifth.
-    Relationship: Engine driving the 3/4 feel
-- **Viola** → HARMONY (G3-D5 (mid) register)
-    Rich inner voice playing sus2/sus4 extensions. Smooth voice leading.
-    Relationship: Connects bass to melody
-- **Violin 2** → COUNTERMELODY (G4-E6 (high) register)
-    Expressive descents that provide friction against Violin 1.
-    Relationship: Harmonic support and tension
-- **Violin 1** → MELODY (D5-B6 (very high) register)
-    Sweeping leaps. Use portamento on octave jumps for Romantic feel.
-    Relationship: Primary emotional focus
-
-
-### COMPOSITION RULES
-- ALLOWED RANGE: G3 to B6
-- Suggested note count: 30-120 (adapt based on musical needs)
-- Channel: 1
-- Articulation: legato
-
-### THREE-LAYER DYNAMICS
-1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
-2. EXPRESSION CURVE: GLOBAL section envelope
-3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
-
-### TEMPO/TIME SIGNATURE CHANGES
-Tempo and time signature changes are already defined by an earlier part.
-DO NOT output tempo_markers for this response.
-
-### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
-Musical Style (Cinematic): Focus on evolution and emotion. Harmony: Chromatic mediants (e.g., Cm to Em), sus2/sus4 chords for ambiguity. Texture: Slow harmonic rhythm, pulsing ostinatos, layered dynamics. Bass: Deep drones/pedal points.
-Mood (Romantic): Passion and love. Harmony: Lush extended chords (Maj7, add9, m7b5), chromatic appoggiaturas. Melody: Sweeping, large interval leaps, expressive swells. Rhythm: Flexible, push-and-pull (rubato).
-
-
-INTERPRET USER REQUEST:
-- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
-- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail
-- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)
-- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach
-- If user asks for chords/pads → use sustained notes, minimal articulation changes
-
-### INSTRUMENT CURVES (use these curve names):
-curves.vibrato (CC21)
-
-### OUTPUT (valid JSON only):
-2026-01-11 18:01:15,024 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
-2026-01-11 18:01:15,024 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
-2026-01-11 18:01:25,245 INFO ai_part_generator: OpenRouter response received: 3556 chars
-2026-01-11 18:01:25,245 INFO ai_part_generator: LLM response received: 3556 chars
-2026-01-11 18:01:25,245 INFO ai_part_generator: LLM response preview: ```json
-{
-  "notes": [
-    {"bar": 1, "beat": 1, "note": "D4", "dur": "dh", "dyn": "p", "art": "legato", "chan": 1},
-    {"bar": 2, "beat": 1, "note": "C4", "dur": "dh", "dyn": "p", "art": "legato", "chan": 1},
-    {"bar": 3, "beat": 1, "note": "D4", "dur": "dh", "dyn": "mp", "art": "legato", "chan": 1},
-    {"bar": 4, "beat": 1, "note": "A3", "dur": "h", "dyn": "p", "art": "legato", "chan": 1},
-    {"bar": 5, "beat": 1, "note": "G4", "dur": "dh", "dyn": "mp", "art": "legato", "chan": 1},
-    {"...(truncated)
-2026-01-11 18:01:25,246 INFO ai_part_generator: build_response: normalizing 22 notes
-2026-01-11 18:01:25,246 INFO ai_part_generator: build_response: normalized to 22 notes
-2026-01-11 18:01:25,248 INFO ai_part_generator: Response built: notes=22 cc_events=1083 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
-INFO:     127.0.0.1:56479 - "POST /generate HTTP/1.1" 200 OK
-2026-01-11 18:01:26,099 INFO ai_part_generator: Generate: profile=violin_css preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Cinematic, Romantic
-2026-01-11 18:01:26,099 INFO ai_part_generator: User prompt to LLM:
-## COMPOSE: MELODY for Violin - CSS
+    {"bar": 1, "beat": 1, "note": "G2", "dur": "dh", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 2, "beat": 1, "note": "D#3", "dur": "dh", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 3, "beat": 1, "note": "D3", "dur": "h", "dyn": "p", "art": "legato", "chan": 1},
+    {"bar": 4, "beat": 1, "note": "A#2", "dur": "h", "dyn": "p", "art": "legato", "chan": 1},
+    {"bar": 5, "beat": 1, "note": "G#2", "dur": "dh", "dyn": "p", "art": "legato", "chan": 1},
+    ...(truncated)
+2026-01-12 01:19:27,747 INFO ai_part_generator: build_response: normalizing 21 notes
+2026-01-12 01:19:27,747 INFO ai_part_generator: build_response: normalized to 21 notes
+2026-01-12 01:19:27,747 INFO ai_part_generator: Dynamics fallback: added 75 breakpoints for 21 sustained notes (model had 7)
+2026-01-12 01:19:27,751 INFO ai_part_generator: Response built: notes=21 cc_events=1731 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
+INFO:     127.0.0.1:57406 - "POST /generate HTTP/1.1" 200 OK
+2026-01-12 01:19:28,692 INFO ai_part_generator: Generate: profile=horn_csb preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Film Score, Heroic
+2026-01-12 01:19:28,692 INFO ai_part_generator: User prompt to LLM:
+## COMPOSE: MELODY for Horn - CSB
 
 ### YOUR ROLE (from plan): MELODY
-Register: D5-B6 (very high)
-Sweeping leaps. Use portamento on octave jumps for Romantic feel.
-Relationship: Primary emotional focus
+Register: G3-C5 (mid)
+Main melodic carrier. Emphasize ascending 4ths and 5ths. Warm and noble.
+Relationship: Primary voice
 
 ### INSTRUMENT PROFILE
-INSTRUMENT: Violin - CSS
-RANGE: G3 - B6
-POLYPHONY: poly
+INSTRUMENT: Horn - CSB
+RANGE: F2 - C5
+POLYPHONY: mono
 CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
 ARTICULATIONS (CC58):
-  sustain: 0 - Sustain (Low Latency Legato) [cc1]
-  sustain_expressive: 6 - Sustain (Expressive Legato) [cc1]
-  spiccato: 11 - Spiccato [velocity]
+  sustain: 0 - Sustain / Legato [cc1]
+  repetitions: 11 - Repetitions [velocity]
   staccatissimo: 16 - Staccatissimo [velocity]
   staccato: 21 - Staccato [velocity]
   sforzando: 26 - Sforzando [velocity]
-  pizzicato: 31 - Pizzicato [velocity]
-  bartok_snap: 36 - Bartok Snap [velocity]
-  col_legno: 41 - Col Legno [velocity]
+  mute_short: 31 - Mute Short [velocity]
+  rips: 41 - Rips [velocity]
   trills: 46 - Trills [cc1]
-  harmonics: 51 - Harmonics [cc1]
-  tremolo: 56 - Tremolo [cc1]
-  measured_tremolo: 61 - Measured Tremolo [cc1]
+  flutter: 51 - Flutter Tongue [cc1]
+  mute_long: 56 - Mute Long [cc1]
+  double_tongue: 61 - Double Tongue [velocity]
   marcato: 66 - Marcato [velocity]
-  con_sordino: 86 - Con Sordino [cc1]
   legato: keyswitch Ab1 (vel_on=100, vel_off=1)
 
 ### MUSICAL CONTEXT
 - Key: unknown
-- Tempo: 68.0 BPM, Time: 3/4
-- Length: 15 bars (45.0 quarter notes)
+- Tempo: 112.0 BPM, Time: 3/4
+- Length: 24 bars (72.0 quarter notes)
 
 ### SELECTION (working area)
-- Available range: 15 bars (start_q 0 to 45.0 quarter notes)
+- Available range: 24 bars (start_q 0 to 72.0 quarter notes)
 - Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
 - How much of this range to fill is YOUR creative decision based on user request and context
 - RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
@@ -1152,47 +551,38 @@ ARTICULATIONS (CC58):
 - Patterns/repeats can help keep JSON concise for repeating figures
 
 ### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
-You are generating part 5 of 5 for a unified composition.
+You are generating part 3 of 4 for a unified composition.
 Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.
 
 ENSEMBLE INSTRUMENTS (in generation order):
-  1. Bass (Bass - CSS) (strings, role: bass, range: E2-D4) [ALREADY GENERATED]
-  2. Cello (Cello - CSS) (strings, role: rhythm, range: C3-G6) [ALREADY GENERATED]
-  3. Viola (Viola - CSS) (strings, role: harmony, range: C3-C6) [ALREADY GENERATED]
-  4. Violin 2 (Violin - CSS) (strings, role: countermelody, range: G3-B6) [ALREADY GENERATED]
-  5. Violin 1 (Violin - CSS) (strings, role: melody, range: G3-B6) ← YOU ARE GENERATING THIS
+  1. Tuba (Tuba - CSB) (brass, role: bass, range: F2-Bb4) [ALREADY GENERATED]
+  2. Trombone (Trombone - CSB) (brass, role: harmony, range: G2-F4) [ALREADY GENERATED]
+  3. Horn (Horn - CSB) (brass, role: melody, range: F2-C5) ← YOU ARE GENERATING THIS
+  4. Trumpet (Trumpet - CSB) (brass, role: countermelody, range: G3-G5)
 
 ### ANALYSIS OF PREVIOUSLY GENERATED PARTS
-Parts already composed: 4
+Parts already composed: 2
 
-**Bass - CSS** (role: bass):
-  - Range: MIDI 31-47
-  - Contour: descending, Motion: stepwise
-  - Rhythm: on-beat, Density: sparse
-**Cello - CSS** (role: rhythm):
-  - Range: MIDI 50-59
+**Tuba - CSB** (role: bass):
+  - Range: MIDI 41-50
   - Contour: wave, Motion: disjunct
-  - Rhythm: on-beat, Density: moderate
-**Viola - CSS** (role: harmony):
-  - Range: MIDI 50-71
-  - Contour: wave, Motion: mixed
-  - Rhythm: on-beat, Density: moderate
-**Violin - CSS** (role: countermelody):
-  - Range: MIDI 55-82
-  - Contour: wave, Motion: stepwise
+  - Rhythm: on-beat, Density: sparse
+**Trombone - CSB** (role: harmony):
+  - Range: MIDI 43-53
+  - Contour: wave, Motion: disjunct
   - Rhythm: on-beat, Density: sparse
 
 ### RHYTHMIC COORDINATION
 - Ensemble groove: downbeat-heavy
-- Anchor beats (strong pulse points): 0.0, 1.0, 2.0, 3.0
+- Anchor beats (strong pulse points): 0.0, 2.0, 2.5, 1.0
   ALIGN your accents to these beats for cohesion
-- Common note values: dotted half, quarter, 0.0q
+- Common note values: dotted half, 6.0q, quarter
 - Style: Strong downbeat emphasis - add syncopation carefully
 - Repeating pattern detected - consider complementary ostinato
 
 ### REGISTER ALLOCATION
-- OCCUPIED: bass, high-mid
-- AVAILABLE (prefer these): high (MIDI 84+), low-mid (MIDI 48-60)
+- OCCUPIED: bass, low-mid
+- AVAILABLE (prefer these): high (MIDI 84+), high-mid (MIDI 72-84)
 
 ### YOUR TASK
 Your role: MELODY
@@ -1205,17 +595,11 @@ Your role: MELODY
 ### PREVIOUSLY GENERATED PARTS (in musical notation)
 Format: Bar.Beat:Note(duration,dynamics)
 
-**Bass - CSS** [bass] (Range: G1-B2):
-  1.1:G2(dh,p), 2.1:G2(dh,p), 3.1:G2(dh,mp), 4.1:G2(dh,p), 5.1:D#2(dh,mp), 6.1:D#2(dh,mp), 7.1:D#2(6.03q,mp), 9.1:B1(dh,mf), 10.1:B1(dh,mf), 11.1:B1(dh,f), 12.1:B1(dh,mf), 13.1:B2(dh,ff), 14.1:B1(dh,ff), 15.1:B1(6.03q,f), 17.1:D2(dh,mf), 18.1:D2(dh,mf), 19.1:D2(6.03q,mp), 21.1:G1(dh,p), 22.1:G1(dh,pp), 23.1:G1(dh,ppp)
+**Tuba - CSB** [bass] (Range: F2-D3):
+  1.1:C3(2.53q,pp), 1.3.5:G2(8,pp), 2.1:C3(dh,pp), 3.1:C3(6.03q,p), 5.1:G#2(2.53q,p), 5.3.5:C3(8,p), 6.1:G#2(dh,p), 7.1:G#2(6.03q,mp), 9.1:C3(h,mf), 9.3:G2(q,mf), 10.1:C3(dh,mf), 11.1:C3(6.03q,mf), 13.1:F2(h,mf), 13.3:C3(q,f), 14.1:F2(dh,f), 15.1:F2(6.03q,f), 17.1:G2(h,f), 17.3:D3(q,ff), 18.1:G2(dh,ff), 19.1:G2(6.03q,ff), 21.1:C3(h,ff), 21.3:G2(q,f), 22.1:C3(dh,f), 23.1:C3(h,mf)
 
-**Cello - CSS** [rhythm] (Range: D3-B3):
-  1.1:G3(q,p), 1.2:D3(q,p), 1.3:G3(q,p), 2.1:G3(q,p), 2.2:D3(q,p), 2.3:G3(q,p), 3.1:G3(q,mp), 3.2:D3(q,mp), 3.3:G3(q,mp), 4.1:G3(dh,p), 5.1:D#3(q,mp), 5.2:A#3(q,mp), 5.3:D#3(q,mp), 6.1:D#3(q,mp), 6.2:A#3(q,mp), 6.3:D#3(q,mp), 7.1:D#3(q,mp), 7.2:A#3(q,mp), 7.3:D#3(q,mp), 8.1:D#3(dh,p), 9.1:B3(q,mf), 9.2:F#3(q,mf), 9.3:B3(q,mf), 10.1:B3(q,mf), 10.2:F#3(q,mf), 10.3:B3(q,mf), 11.1:B3(q,f), 11.2:F#3(q,f), 11.3:B3(q,f), 12.1:B3(dh,mf), 13.1:B3(q,ff), 13.2:F#3(q,ff), 13.3:B3(q,ff), 14.1:B3(q,ff), 14.2:F#3(q,ff), 14.3:B3(q,ff), 15.1:B3(q,f), 15.2:F#3(q,f), 15.3:B3(q,f)
-
-**Viola - CSS** [harmony] (Range: D3-B4):
-  1.1:A3(dh,p), 2.1:G3(dh,p), 3.1:A3(dh,mp), 4.1:B3(dh,p), 5.1:D4(dh,mp), 6.1:A#3(dh,mp), 7.1:G3(dh,mp), 8.1:D3(dh,p), 9.1:A#3(dh,mf), 10.1:F#3(dh,mf), 11.1:D#4(dh,f), 12.1:B3(dh,mf), 13.1:D#4(q,ff), 13.2:F#4(q,ff), 13.3:A#4(q,ff), 14.1:B4(dh,ff), 15.1:A#4(dh,f), 15.3.94:G3(64,mf), 15.3.94:A3(64,mp), 15.3.94:D4(64,mp), 15.3.94:G3(64,p), 15.3.94:G3(64,pp), 15.3.94:G3(64,ppp)
-
-**Violin - CSS** [countermelody] (Range: G3-A#5):
-  1.1:D4(dh,p), 2.1:C4(dh,p), 3.1:D4(dh,mp), 4.1:A3(dh,p), 5.1:G4(dh,mp), 6.1:F4(dh,mp), 7.1:D#4(dh,mp), 8.1:D4(dh,p), 9.1:F#4(q,mf), 9.2:G#4(q,mf), 9.3:A#4(q,mf), 10.1:B4(dh,mf), 11.1:D#5(dh,f), 12.1:F#5(dh,mf), 13.1:A#5(dh,ff), 14.1:G#5(dh,ff), 15.1:F#5(dh,f), 15.3.94:A4(64,mf), 15.3.94:G4(64,mf), 15.3.94:F#4(64,mp), 15.3.94:D4(64,pp), 15.3.94:G3(64,ppp)
+**Trombone - CSB** [harmony] (Range: G2-F3):
+  1.1:G2(dh,pp), 2.1:D#3(dh,pp), 3.1:D3(dh,p), 4.1:A#2(dh,p), 5.1:G#2(dh,p), 6.1:C3(dh,p), 7.1:D#3(6.03q,mp), 9.1:G2(dh,mp), 10.1:D#3(dh,mp), 11.1:C3(6.03q,mf), 13.1:F3(dh,mf), 14.1:C3(dh,mf), 15.1:G#2(6.03q,f), 17.1:G2(q,f), 17.2:B2(q,f), 17.3:D3(q,f), 18.1:G2(dh,ff), 19.1:D3(6.03q,ff), 21.1:C3(dh,ff), 22.1:G2(dh,f), 23.1:C3(dh,mf)
 
 ENSEMBLE COORDINATION RULES:
 1. AVOID UNISON: Don't duplicate exact same notes as other instruments
@@ -1226,7 +610,7 @@ ENSEMBLE COORDINATION RULES:
 6. FOLLOW HARMONY: Play the same chord changes as existing parts
 7. PHRASE TOGETHER: Start and end phrases at similar times
 
-YOUR ROLE (Violin 1 (Violin - CSS)): MELODY: Carry the main theme. Clear, memorable lines. Be the focus.
+YOUR ROLE (Horn (Horn - CSB)): MELODY: Carry the main theme. Clear, memorable lines. Be the focus.
 
 ORCHESTRATION LAYERS:
   - MELODY layer: Main theme carrier (lead instrument)
@@ -1236,16 +620,17 @@ ORCHESTRATION LAYERS:
 
 
 ### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
-A 24-bar cinematic romantic work in G Minor/Major, focusing on emotional swelling and chromatic mediant relationships. The arc begins with a grounded, dark G minor pedal, expanding into lush Bb and D major textures before a climactic shift to B Major (chromatic mediant). Texture moves from a sparse low-end drone to a dense, soaring string quintet. The register spacing is wide to emphasize the 'cinematic' scope, keeping the Bass/Cello in the deep sub-ranges while Violins reach for the B5-A6 range during the climax. Harmonic tension is maintained through sus2 chords and expressive appoggiaturas in the inner voices.
+This composition blends cinematic underscore with heroic preparation. The architecture follows a gradual 'gathering' of forces, starting with a sparse Tuba/Trombone foundation and layering upward into a noble Horn-led fanfare. The harmonic language utilizes Neo-Riemannian shifts (moving between minor 9ths and major triads) to evoke the gravity of battle preparation while maintaining a confident, rising trajectory. Texture is managed via 'frequency pocketing'—keeping the mid-range clear for Horns/Trumpets while Tuba/Trombone anchor the low end. The 3/4 time signature is treated as a heavy, deliberate waltz/march, utilizing dotted rhythms to create forward momentum without overwhelming the scene's dialogue capability.
 
 **CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
 ```
 Bar.Beat | Chord        | Notes for YOUR range
 ---------|--------------|---------------------
-1.1       | Gm(add9) (i) | G3, B3, D4, A3
-5.1       | Ebmaj7 (VI)  | D#4, G3, A#3, D4
-9.1       | Bmaj7 (bIII (Chrom. Mediant)) | B3, D#4, F#4, A#3
-17.1       | Dsus4 (V)    | D4, G3, A3
+1.1       | Cm9 (i)      | C3, D#3, G2, A#2, D3
+5.1       | Abmaj7 (VI)  | G#2, C3, D#3, G2
+9.1       | Cmaj (I)     | C3, D#3, G2
+13.1       | Fmaj/C (IV/I) | F2, G#2, C3
+17.1       | Gadd2 (V)    | G2, B2, D3
 ```
 
 CHORD MAP RULES:
@@ -1258,10 +643,10 @@ CHORD MAP RULES:
 ```
 Bar   | Dynamics | Trend
 ------|----------|-------
-Bar 1  | p        | → stable
+Bar 1  | pp       | → stable
 Bar 9  | mf       | ↗ building
-Bar 13 | ff       | ★ climax
-Bar 21 | pp       | ↘ fading
+Bar 17 | f        | ★ climax
+Bar 24 | mf       | ↓ resolving
 ```
 DYNAMIC ARC RULES:
 - Match the dynamics level at each bar
@@ -1271,9 +656,9 @@ DYNAMIC ARC RULES:
 
 **TEXTURE MAP (WHEN TO PLAY/REST):**
 - Bars 1-8: sparse density → YOU PLAY
-    Texture: pedal
-- Bars 9-16: dense density → YOU PLAY
     Texture: homophonic
+- Bars 17-24: dense density → YOU PLAY
+    Texture: polyphonic
 
 TEXTURE RULES:
 - TACET sections: output empty notes array for those bars
@@ -1281,76 +666,74 @@ TEXTURE RULES:
 - 'full'/'tutti': all instruments active, denser writing
 
 **PHRASE STRUCTURE (BREATHING & CADENCES):**
-- **EXPOSITION** (Bars 1-8)
+- **THE CALL (UNDERSCORE)** (Bars 1-8)
     Function: opening
     Breathe at: Bar 4.3, Bar 8.3
     Climax: Bar 5 (low)
-- **EXPANSION** (Bars 9-16)
+- **THE RESOLVE (HEROIC)** (Bars 9-16)
     Function: development
-    Breathe at: Bar 12.3, Bar 16.1
-    Climax: Bar 13 (high)
-- **RESOLUTION** (Bars 17-24)
-    Function: closing
-    Breathe at: Bar 20.3, Bar 24.1
-    Climax: Bar 17 (medium)
-
-**ACCENT MAP (RHYTHMIC SYNC):**
-- STRONG accents (all instruments): Bar 13.1
-  → Place notes ON these beats, use f-ff dynamics
-- MEDIUM accents (optional): Bar 1.1
+    Breathe at: Bar 12.3, Bar 16.3
+    Climax: Bar 13 (medium)
+- **THE ANTHEM (FANFARE)** (Bars 17-24)
+    Function: climax
+    Breathe at: Bar 20.3
+    Climax: Bar 21 (high)
 
 **MOTIF BLUEPRINT:**
-- Idea: The 'Yearning' Leap
-- Character: Romantic, sweeping, reaching
-- Notes: D4 → D5 → C5 → Bb4 → A4
-- Intervals: [+12, -2, -2, -1] semitones
+- Idea: Rising Heroic Preparation Motif
+- Character: Noble, steady, ascending
+- Notes: C3 → G3 → C4 → D4 → E4
+- Intervals: [+7, +5, +2, +2] semitones
 
 MOTIF RULE: MELODY role should establish this motif, others respond/develop it
 
 **SECTION OVERVIEW:**
-- Bars 1-8 | [INTRO/A] | texture: Atmospheric drone | dynamics: p→mp | energy: low
-    Active: Bass, Cello, Viola
-    Tacet: Violin 1
-- Bars 9-16 | [CLIMAX/B] | texture: Full orchestral swell | dynamics: mf→ff | energy: high
-    Active: Violin 1, Violin 2, Viola, Cello, Bass
+- Bars 1-8 | [INTRO] | texture: low-end-focused | dynamics: pp→p | energy: static
+    Active: Tuba, Trombone
+    Tacet: Trumpet, Horn
+- Bars 9-16 | [THEME] | texture: middle-heavy | dynamics: mp→mf | energy: building
+    Active: Tuba, Trombone, Horn
+    Tacet: Trumpet
+- Bars 17-24 | [FANFARE] | texture: full-ensemble | dynamics: f→ff | energy: high
+    Active: Tuba, Trombone, Horn, Trumpet
 
 **ROLE ASSIGNMENTS:**
-- **Bass** → BASS (E2-B2 (low) register)
-    Deep, sustained drones. Use molto vibrato on longer notes.
-    Relationship: Foundation for harmonic shifts
-- **Cello** → RHYTHM (C3-G4 (mid-low) register)
-    Pulsing quarter-note ostinatos on the root and fifth.
-    Relationship: Engine driving the 3/4 feel
-- **Viola** → HARMONY (G3-D5 (mid) register)
-    Rich inner voice playing sus2/sus4 extensions. Smooth voice leading.
-    Relationship: Connects bass to melody
-- **Violin 2** → COUNTERMELODY (G4-E6 (high) register)
-    Expressive descents that provide friction against Violin 1.
-    Relationship: Harmonic support and tension
-- **Violin 1** → MELODY (D5-B6 (very high) register)
-    Sweeping leaps. Use portamento on octave jumps for Romantic feel.
-    Relationship: Primary emotional focus
+- **Tuba** → BASS (F2-C3 (low) register)
+    Anchor the 3/4 pulse with heavy downbeats. Use long, connected notes.
+    Relationship: Foundation for Trombone
+- **Trombone** → HARMONY (G2-D4 (low-mid) register)
+    Provide the 'Neo-Riemannian' shifts. Focus on smooth voice leading.
+    Relationship: Bridge between Tuba and Horn
+- **Horn** → MELODY (G3-C5 (mid) register)
+    Main melodic carrier. Emphasize ascending 4ths and 5ths. Warm and noble.
+    Relationship: Primary voice
+- **Trumpet** → COUNTERMELODY (G4-G5 (high) register)
+    Add brilliance to the final section. Use triplets and dotted rhythms.
+    Relationship: Top-line highlights
 
 
 ### COMPOSITION RULES
-- ALLOWED RANGE: G3 to B6
-- Suggested note count: 30-120 (adapt based on musical needs)
+- ALLOWED RANGE: F2 to C5
+- Suggested note count: 48-192 (adapt based on musical needs)
 - Channel: 1
 - Articulation: legato
+- MAX NOTE DURATION: 4 beats (wind/brass need to breathe - split long notes with rests)
 
 ### THREE-LAYER DYNAMICS
 1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
 2. EXPRESSION CURVE: GLOBAL section envelope
 3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
 
-### TEMPO/TIME SIGNATURE CHANGES
-Tempo and time signature changes are already defined by an earlier part.
-DO NOT output tempo_markers for this response.
+DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)
+
+### TEMPO/TIME SIGNATURE
+Tempo is set by the composition plan: 112 BPM
+DO NOT output tempo_markers - tempo changes are controlled by the plan.
 
 ### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
-Musical Style (Cinematic): Focus on evolution and emotion. Harmony: Chromatic mediants (e.g., Cm to Em), sus2/sus4 chords for ambiguity. Texture: Slow harmonic rhythm, pulsing ostinatos, layered dynamics. Bass: Deep drones/pedal points.
-Mood (Romantic): Passion and love. Harmony: Lush extended chords (Maj7, add9, m7b5), chromatic appoggiaturas. Melody: Sweeping, large interval leaps, expressive swells. Rhythm: Flexible, push-and-pull (rubato).
-
+Musical Style (Film Score): Underscore technique. Harmony: Static or slowly shifting (Neo-Riemannian), minor 9ths, avoidance of perfect cadences. Texture: Sparse, leaves room for dialogue (frequency 'pocketing'). Rhythm: Subtle pulse, not overpowering.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
 
 INTERPRET USER REQUEST:
 - If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
@@ -1363,19 +746,1293 @@ INTERPRET USER REQUEST:
 curves.vibrato (CC21)
 
 ### OUTPUT (valid JSON only):
-2026-01-11 18:01:26,100 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
-2026-01-11 18:01:26,100 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
-2026-01-11 18:01:32,625 INFO ai_part_generator: OpenRouter response received: 2284 chars
-2026-01-11 18:01:32,625 INFO ai_part_generator: LLM response received: 2284 chars
-2026-01-11 18:01:32,626 INFO ai_part_generator: LLM response preview: ```json
+2026-01-12 01:19:28,693 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:19:28,693 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:19:37,162 INFO ai_part_generator: OpenRouter response received: 2898 chars
+2026-01-12 01:19:37,162 INFO ai_part_generator: LLM response received: 2898 chars
+2026-01-12 01:19:37,162 INFO ai_part_generator: LLM response preview: ```json
 {
   "notes": [
-    {"bar": 9, "beat": 1, "note": "B5", "dur": "dh", "dyn": "mf", "art": "legato", "chan": 1},
-    {"bar": 10, "beat": 1, "note": "A#5", "dur": "q", "dyn": "mf", "art": "legato", "chan": 1},
-    {"bar": 10, "beat": 2, "note": "F#5", "dur": "q", "dyn": "mf", "art": "legato", "chan": 1},
-    {"bar": 10, "beat": 3, "note": "D#5", "dur": "q", "dyn": "mf", "art": "legato", "chan": 1},
-    {"bar": 11, "beat": 1, "note": "B5", "dur": "dh", "dyn": "f", "art": "legato", "chan": 1},...(truncated)
-2026-01-11 18:01:32,626 INFO ai_part_generator: build_response: normalizing 11 notes
-2026-01-11 18:01:32,626 INFO ai_part_generator: build_response: normalized to 11 notes
-2026-01-11 18:01:32,629 INFO ai_part_generator: Response built: notes=11 cc_events=1083 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
-INFO:     127.0.0.1:56489 - "POST /generate HTTP/1.1" 200 OK
+    {"bar": 9, "beat": 1, "note": "G3", "dur": "dq", "dyn": "mp", "chan": 1, "art": "legato"},
+    {"bar": 9, "beat": 2.5, "note": "C4", "dur": "8th", "dyn": "mp", "chan": 1, "art": "legato"},
+    {"bar": 10, "beat": 1, "note": "E4", "dur": "dh", "dyn": "mf", "chan": 1, "art": "legato"},
+    {"bar": 11, "beat": 1, "note": "D4", "dur": "h", "dyn": "mf", "chan": 1, "art": "legato"},
+    {"bar": 11, "beat": 3, "note": "C4", "dur": "q", "dyn": "mp", "chan": 1, "art": "legato"}...(truncated)
+2026-01-12 01:19:37,163 INFO ai_part_generator: build_response: normalizing 19 notes
+2026-01-12 01:19:37,163 INFO ai_part_generator: build_response: normalized to 19 notes
+2026-01-12 01:19:37,164 INFO ai_part_generator: Dynamics fallback: added 54 breakpoints for 17 sustained notes (model had 6)
+2026-01-12 01:19:37,167 INFO ai_part_generator: Response built: notes=19 cc_events=1731 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
+INFO:     127.0.0.1:57416 - "POST /generate HTTP/1.1" 200 OK
+2026-01-12 01:19:38,106 INFO ai_part_generator: Generate: profile=trumpet_csb preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Film Score, Heroic
+2026-01-12 01:19:38,106 INFO ai_part_generator: User prompt to LLM:
+## COMPOSE: COUNTERMELODY for Trumpet - CSB
+
+### YOUR ROLE (from plan): COUNTERMELODY
+Register: G4-G5 (high)
+Add brilliance to the final section. Use triplets and dotted rhythms.
+Relationship: Top-line highlights
+
+### INSTRUMENT PROFILE
+INSTRUMENT: Trumpet - CSB
+RANGE: G3 - G5
+POLYPHONY: mono
+CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
+ARTICULATIONS (CC58):
+  sustain: 0 - Sustain / Legato [cc1]
+  repetitions: 11 - Repetitions [velocity]
+  staccatissimo: 16 - Staccatissimo [velocity]
+  staccato: 21 - Staccato [velocity]
+  sforzando: 26 - Sforzando [velocity]
+  mute_short: 31 - Mute Short [velocity]
+  rips: 41 - Rips [velocity]
+  trills: 46 - Trills [cc1]
+  flutter: 51 - Flutter Tongue [cc1]
+  mute_long: 56 - Mute Long [cc1]
+  double_tongue: 61 - Double Tongue [velocity]
+  marcato: 66 - Marcato [velocity]
+  legato: keyswitch Ab1 (vel_on=100, vel_off=1)
+
+### MUSICAL CONTEXT
+- Key: unknown
+- Tempo: 112.0 BPM, Time: 3/4
+- Length: 24 bars (72.0 quarter notes)
+
+### SELECTION (working area)
+- Available range: 24 bars (start_q 0 to 72.0 quarter notes)
+- Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
+- How much of this range to fill is YOUR creative decision based on user request and context
+- RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
+- Consider using the full selection for complete compositions; shorter portions for fragments or phrases
+- Patterns/repeats can help keep JSON concise for repeating figures
+
+### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
+You are generating part 4 of 4 for a unified composition.
+Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.
+
+ENSEMBLE INSTRUMENTS (in generation order):
+  1. Tuba (Tuba - CSB) (brass, role: bass, range: F2-Bb4) [ALREADY GENERATED]
+  2. Trombone (Trombone - CSB) (brass, role: harmony, range: G2-F4) [ALREADY GENERATED]
+  3. Horn (Horn - CSB) (brass, role: melody, range: F2-C5) [ALREADY GENERATED]
+  4. Trumpet (Trumpet - CSB) (brass, role: countermelody, range: G3-G5) ← YOU ARE GENERATING THIS
+
+### ANALYSIS OF PREVIOUSLY GENERATED PARTS
+Parts already composed: 3
+
+**Tuba - CSB** (role: bass):
+  - Range: MIDI 41-50
+  - Contour: wave, Motion: disjunct
+  - Rhythm: on-beat, Density: sparse
+**Trombone - CSB** (role: harmony):
+  - Range: MIDI 43-53
+  - Contour: wave, Motion: disjunct
+  - Rhythm: on-beat, Density: sparse
+**Horn - CSB** (role: melody):
+  - Range: MIDI 55-72
+  - Contour: wave, Motion: disjunct
+  - Rhythm: on-beat, Density: sparse
+
+### RHYTHMIC COORDINATION
+- Ensemble groove: downbeat-heavy
+- Anchor beats (strong pulse points): 0.0, 2.0, 2.5, 1.5
+  ALIGN your accents to these beats for cohesion
+- Common note values: dotted half, quarter, 6.0q
+- Style: Strong downbeat emphasis - add syncopation carefully
+- Repeating pattern detected - consider complementary ostinato
+
+### REGISTER ALLOCATION
+- OCCUPIED: bass, high-mid
+- AVAILABLE (prefer these): high (MIDI 84+), low-mid (MIDI 48-60)
+
+### YOUR TASK
+Your role: COUNTERMELODY
+1. DO NOT duplicate existing melodies/rhythms
+2. USE a different register from existing parts
+3. FOLLOW the harmonic changes above
+4. ALIGN with the rhythmic pulse
+5. CREATE complementary material that ENHANCES the whole
+
+### PREVIOUSLY GENERATED PARTS (in musical notation)
+Format: Bar.Beat:Note(duration,dynamics)
+
+**Tuba - CSB** [bass] (Range: F2-D3):
+  1.1:C3(2.53q,pp), 1.3.5:G2(8,pp), 2.1:C3(dh,pp), 3.1:C3(6.03q,p), 5.1:G#2(2.53q,p), 5.3.5:C3(8,p), 6.1:G#2(dh,p), 7.1:G#2(6.03q,mp), 9.1:C3(h,mf), 9.3:G2(q,mf), 10.1:C3(dh,mf), 11.1:C3(6.03q,mf), 13.1:F2(h,mf), 13.3:C3(q,f), 14.1:F2(dh,f), 15.1:F2(6.03q,f), 17.1:G2(h,f), 17.3:D3(q,ff), 18.1:G2(dh,ff), 19.1:G2(6.03q,ff), 21.1:C3(h,ff), 21.3:G2(q,f), 22.1:C3(dh,f), 23.1:C3(h,mf)
+
+**Trombone - CSB** [harmony] (Range: G2-F3):
+  1.1:G2(dh,pp), 2.1:D#3(dh,pp), 3.1:D3(dh,p), 4.1:A#2(dh,p), 5.1:G#2(dh,p), 6.1:C3(dh,p), 7.1:D#3(6.03q,mp), 9.1:G2(dh,mp), 10.1:D#3(dh,mp), 11.1:C3(6.03q,mf), 13.1:F3(dh,mf), 14.1:C3(dh,mf), 15.1:G#2(6.03q,f), 17.1:G2(q,f), 17.2:B2(q,f), 17.3:D3(q,f), 18.1:G2(dh,ff), 19.1:D3(6.03q,ff), 21.1:C3(dh,ff), 22.1:G2(dh,f), 23.1:C3(dh,mf)
+
+**Horn - CSB** [melody] (Range: G3-C5):
+  9.1:G3(dq,mp), 9.2.5:C4(dq,mp), 10.1:E4(dh,mf), 11.1:D4(h,mf), 11.3:C4(w,mp), 13.1:A3(dq,mf), 13.2.5:C4(dq,mf), 14.1:F4(dh,f), 15.1:E4(6.03q,f), 17.1:G3(q,f), 17.2:D4(q,f), 17.3:G4(q,ff), 18.1:B4(dh,ff), 19.1:A4(h,f), 19.3:G4(w,f), 21.1:C5(h,ff), 21.3:G4(q,f), 22.1:E4(dh,f), 23.1:C4(h,mf)
+
+ENSEMBLE COORDINATION RULES:
+1. AVOID UNISON: Don't duplicate exact same notes as other instruments
+2. REGISTER SEPARATION: Stay in your instrument's typical register
+3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble
+4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody
+5. CALL & RESPONSE: Create phrases that leave space for other instruments
+6. FOLLOW HARMONY: Play the same chord changes as existing parts
+7. PHRASE TOGETHER: Start and end phrases at similar times
+
+YOUR ROLE (Trumpet (Trumpet - CSB)): BRASS: Power and drama. Heroic melodies or fanfares.
+
+ORCHESTRATION LAYERS:
+  - MELODY layer: Main theme carrier (lead instrument)
+  - HARMONY layer: Chords/sustained notes (support)
+  - BASS layer: Foundation and roots (anchor)
+  - COLOR layer: Countermelodies, fills (embellishment)
+
+
+### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
+This composition blends cinematic underscore with heroic preparation. The architecture follows a gradual 'gathering' of forces, starting with a sparse Tuba/Trombone foundation and layering upward into a noble Horn-led fanfare. The harmonic language utilizes Neo-Riemannian shifts (moving between minor 9ths and major triads) to evoke the gravity of battle preparation while maintaining a confident, rising trajectory. Texture is managed via 'frequency pocketing'—keeping the mid-range clear for Horns/Trumpets while Tuba/Trombone anchor the low end. The 3/4 time signature is treated as a heavy, deliberate waltz/march, utilizing dotted rhythms to create forward momentum without overwhelming the scene's dialogue capability.
+
+**CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
+```
+Bar.Beat | Chord        | Notes for YOUR range
+---------|--------------|---------------------
+1.1       | Cm9 (i)      | C4, D#4, G3, A#3, D4
+5.1       | Abmaj7 (VI)  | G#3, C4, D#4, G3
+9.1       | Cmaj (I)     | C4, D#4, G3
+13.1       | Fmaj/C (IV/I) | F4, G#3, C4
+17.1       | Gadd2 (V)    | G3, B3, D4
+```
+
+CHORD MAP RULES:
+- BASS: Play ROOT note on beat 1 of each chord
+- MELODY: Use notes from the chord on strong beats
+- HARMONY: Voice-lead smoothly between chords
+- Switch to new chord notes at EXACTLY the Bar.Beat
+
+**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**
+```
+Bar   | Dynamics | Trend
+------|----------|-------
+Bar 1  | pp       | → stable
+Bar 9  | mf       | ↗ building
+Bar 17 | f        | ★ climax
+Bar 24 | mf       | ↓ resolving
+```
+DYNAMIC ARC RULES:
+- Match the dynamics level at each bar
+- 'building': gradually increase intensity toward next point
+- 'climax': peak intensity, strongest notes
+- 'fading'/'resolving': decrease intensity
+
+**TEXTURE MAP (WHEN TO PLAY/REST):**
+- Bars 1-8: sparse density → YOU PLAY
+    Texture: homophonic
+- Bars 17-24: dense density → YOU PLAY
+    Texture: polyphonic
+
+TEXTURE RULES:
+- TACET sections: output empty notes array for those bars
+- 'sparse': leave lots of space, few notes
+- 'full'/'tutti': all instruments active, denser writing
+
+**PHRASE STRUCTURE (BREATHING & CADENCES):**
+- **THE CALL (UNDERSCORE)** (Bars 1-8)
+    Function: opening
+    Breathe at: Bar 4.3, Bar 8.3
+    Climax: Bar 5 (low)
+- **THE RESOLVE (HEROIC)** (Bars 9-16)
+    Function: development
+    Breathe at: Bar 12.3, Bar 16.3
+    Climax: Bar 13 (medium)
+- **THE ANTHEM (FANFARE)** (Bars 17-24)
+    Function: climax
+    Breathe at: Bar 20.3
+    Climax: Bar 21 (high)
+
+**MOTIF BLUEPRINT:**
+- Idea: Rising Heroic Preparation Motif
+- Character: Noble, steady, ascending
+- Notes: C3 → G3 → C4 → D4 → E4
+- Intervals: [+7, +5, +2, +2] semitones
+
+MOTIF RULE: MELODY role should establish this motif, others respond/develop it
+
+**SECTION OVERVIEW:**
+- Bars 1-8 | [INTRO] | texture: low-end-focused | dynamics: pp→p | energy: static
+    Active: Tuba, Trombone
+    Tacet: Trumpet, Horn
+- Bars 9-16 | [THEME] | texture: middle-heavy | dynamics: mp→mf | energy: building
+    Active: Tuba, Trombone, Horn
+    Tacet: Trumpet
+- Bars 17-24 | [FANFARE] | texture: full-ensemble | dynamics: f→ff | energy: high
+    Active: Tuba, Trombone, Horn, Trumpet
+
+**ROLE ASSIGNMENTS:**
+- **Tuba** → BASS (F2-C3 (low) register)
+    Anchor the 3/4 pulse with heavy downbeats. Use long, connected notes.
+    Relationship: Foundation for Trombone
+- **Trombone** → HARMONY (G2-D4 (low-mid) register)
+    Provide the 'Neo-Riemannian' shifts. Focus on smooth voice leading.
+    Relationship: Bridge between Tuba and Horn
+- **Horn** → MELODY (G3-C5 (mid) register)
+    Main melodic carrier. Emphasize ascending 4ths and 5ths. Warm and noble.
+    Relationship: Primary voice
+- **Trumpet** → COUNTERMELODY (G4-G5 (high) register)
+    Add brilliance to the final section. Use triplets and dotted rhythms.
+    Relationship: Top-line highlights
+
+
+### COMPOSITION RULES
+- ALLOWED RANGE: G3 to G5
+- Suggested note count: 48-192 (adapt based on musical needs)
+- Channel: 1
+- Articulation: legato
+- MAX NOTE DURATION: 4 beats (wind/brass need to breathe - split long notes with rests)
+
+### THREE-LAYER DYNAMICS
+1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
+2. EXPRESSION CURVE: GLOBAL section envelope
+3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
+
+DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)
+
+### TEMPO/TIME SIGNATURE
+Tempo is set by the composition plan: 112 BPM
+DO NOT output tempo_markers - tempo changes are controlled by the plan.
+
+### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
+Musical Style (Film Score): Underscore technique. Harmony: Static or slowly shifting (Neo-Riemannian), minor 9ths, avoidance of perfect cadences. Texture: Sparse, leaves room for dialogue (frequency 'pocketing'). Rhythm: Subtle pulse, not overpowering.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
+
+INTERPRET USER REQUEST:
+- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
+- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail
+- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)
+- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach
+- If user asks for chords/pads → use sustained notes, minimal articulation changes
+
+### INSTRUMENT CURVES (use these curve names):
+curves.vibrato (CC21)
+
+### OUTPUT (valid JSON only):
+2026-01-12 01:19:38,107 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:19:38,107 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:19:47,526 INFO ai_part_generator: OpenRouter response received: 2608 chars
+2026-01-12 01:19:47,526 INFO ai_part_generator: LLM response received: 2608 chars
+2026-01-12 01:19:47,527 INFO ai_part_generator: LLM response preview: ```json
+{
+  "notes": [
+    {"bar": 17, "beat": 1, "note": "G4", "dur": "8th", "dyn": "f", "art": "legato", "chan": 1},
+    {"bar": 17, "beat": 1.5, "note": "G4", "dur": "8th", "dyn": "f", "art": "legato", "chan": 1},
+    {"bar": 17, "beat": 2, "note": "B4", "dur": "8th", "dyn": "f", "art": "legato", "chan": 1},
+    {"bar": 17, "beat": 2.5, "note": "D5", "dur": "8th", "dyn": "f", "art": "legato", "chan": 1},
+    {"bar": 17, "beat": 3, "note": "G5", "dur": "q", "dyn": "ff", "art": "marcato", "chan...(truncated)
+2026-01-12 01:19:47,527 INFO ai_part_generator: build_response: normalizing 18 notes
+2026-01-12 01:19:47,527 INFO ai_part_generator: build_response: normalized to 18 notes
+2026-01-12 01:19:47,527 INFO ai_part_generator: Dynamics fallback: added 28 breakpoints for 10 sustained notes (model had 6)
+2026-01-12 01:19:47,532 INFO ai_part_generator: Response built: notes=18 cc_events=1731 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
+INFO:     127.0.0.1:57422 - "POST /generate HTTP/1.1" 200 OK
+2026-01-12 01:20:50,108 INFO ai_part_generator: Plan: profile=horn_csb provider=openrouter model=google/gemini-3-flash-preview free_mode=False
+2026-01-12 01:20:50,108 INFO ai_part_generator: Plan prompt to LLM:
+## COMPOSITION PLAN
+Create a detailed musical blueprint for this multi-instrument piece.
+
+### MUSICAL CONTEXT
+- Key: unknown
+- Tempo: 112.0 BPM, Time: 3/4
+- Length: 24 bars (72.0 quarter notes)
+
+### ENSEMBLE TO ORCHESTRATE
+Assign roles and plan how these instruments will work together:
+
+- 1. **Horn (Horn - CSB)** (family: brass, range: F2-C5)
+    Description: Cinematic Studio Brass French Horn. Warm, noble tone with rich overtones. Versatile for both heroic
+- 2. **Trumpet (Trumpet - CSB)** (family: brass, range: G3-G5)
+    Description: Cinematic Studio Brass Trumpet. Bright, brilliant tone with piercing projection. Ideal for heroic fa
+- 3. **Trombone (Trombone - CSB)** (family: brass, range: G2-F4)
+    Description: Cinematic Studio Brass Trombone. Powerful, resonant tone with wide dynamic range. Excellent for bold
+- 4. **Tuba (Tuba - CSB)** (family: brass, range: F2-Bb4)
+    Description: Cinematic Studio Brass Tuba. Deep, resonant bass providing orchestral foundation. Massive low-end po
+
+PLANNING TASKS:
+1. Assign ROLE to each instrument (melody/bass/harmony/rhythm/countermelody/pad)
+2. Define REGISTER allocation to avoid clashes
+3. Plan HARMONIC framework (chord progression style)
+4. Describe MOTIF or musical idea to develop
+5. Order instruments by GENERATION PRIORITY (bass/rhythm first, melody second, etc.)
+
+### USER REQUEST (this is the main creative direction)
+Musical Style (Ambient): Atmosphere over melody. Harmony: Quartal harmony (stacked 4ths), cluster chords, lack of functional resolution. Texture: Long evolving pads, washes of sound, extensive reverb tails. Rhythm: Non-existent or very slow drift.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
+
+Interpret the user's request and plan a composition that fulfills their vision.
+
+### OUTPUT (valid JSON only):
+2026-01-12 01:20:50,108 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:20:50,108 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:20:55,113 ERROR ai_part_generator: OpenRouter connection error: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1032)>
+2026-01-12 01:20:55,113 WARNING ai_part_generator: LLM call failed (attempt 1/3): OpenRouter connection error: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1032)>
+2026-01-12 01:20:56,113 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:21:07,024 INFO ai_part_generator: OpenRouter response received: 5207 chars
+2026-01-12 01:21:07,024 INFO ai_part_generator: LLM plan response received: 5207 chars
+2026-01-12 01:21:07,025 INFO ai_part_generator: LLM plan preview: {
+  "plan_summary": "A 24-bar brass chorale for a pre-battle preparation scene. The piece blends 'Ambient' textures with 'Heroic' intent, utilizing quartal harmony that slowly resolves into a powerful Bb Major tonality. The structure follows an additive 'wash' of sound, beginning with low-register drones and building into a noble, rising fanfare. The 3/4 time signature is used for a stately, march-like feel (staccato accents) against long, shifting pads. Register spacing is wide to ensure the Tu...(truncated)
+INFO:     127.0.0.1:61395 - "POST /plan HTTP/1.1" 200 OK
+2026-01-12 01:21:07,421 INFO ai_part_generator: Generate: profile=tuba_csb preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Ambient, Heroic
+2026-01-12 01:21:07,421 INFO ai_part_generator: User prompt to LLM:
+## COMPOSE: BASS for Tuba - CSB
+
+### YOUR ROLE (from plan): BASS
+Register: F2-Bb3 (low)
+Anchor the quartal stacks. Long, evolving notes with a slight swell on each bar 1.
+Relationship: Foundational support for Trombone
+
+### INSTRUMENT PROFILE
+INSTRUMENT: Tuba - CSB
+RANGE: F2 - Bb4
+POLYPHONY: mono
+CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
+ARTICULATIONS (CC58):
+  sustain: 0 - Sustain / Legato [cc1]
+  repetitions: 11 - Repetitions [velocity]
+  staccatissimo: 16 - Staccatissimo [velocity]
+  staccato: 21 - Staccato [velocity]
+  sforzando: 26 - Sforzando [velocity]
+  mute_short: 31 - Mute Short [velocity]
+  rips: 41 - Rips [velocity]
+  trills: 46 - Trills [cc1]
+  flutter: 51 - Flutter Tongue [cc1]
+  mute_long: 56 - Mute Long [cc1]
+  double_tongue: 61 - Double Tongue [velocity]
+  marcato: 66 - Marcato [velocity]
+  legato: keyswitch Ab1 (vel_on=100, vel_off=1)
+
+### MUSICAL CONTEXT
+- Key: unknown
+- Tempo: 112.0 BPM, Time: 3/4
+- Length: 24 bars (72.0 quarter notes)
+
+### SELECTION (working area)
+- Available range: 24 bars (start_q 0 to 72.0 quarter notes)
+- Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
+- How much of this range to fill is YOUR creative decision based on user request and context
+- RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
+- Consider using the full selection for complete compositions; shorter portions for fragments or phrases
+- Patterns/repeats can help keep JSON concise for repeating figures
+
+### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
+You are generating part 1 of 4 for a unified composition.
+
+ENSEMBLE INSTRUMENTS (in generation order):
+  1. Tuba (Tuba - CSB) (brass, role: bass, range: F2-Bb4) ← YOU ARE GENERATING THIS
+  2. Trombone (Trombone - CSB) (brass, role: harmony, range: G2-F4)
+  3. Horn (Horn - CSB) (brass, role: countermelody, range: F2-C5)
+  4. Trumpet (Trumpet - CSB) (brass, role: melody, range: G3-G5)
+
+ENSEMBLE COORDINATION RULES:
+1. AVOID UNISON: Don't duplicate exact same notes as other instruments
+2. REGISTER SEPARATION: Stay in your instrument's typical register
+3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble
+4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody
+5. CALL & RESPONSE: Create phrases that leave space for other instruments
+6. FOLLOW HARMONY: Play the same chord changes as existing parts
+7. PHRASE TOGETHER: Start and end phrases at similar times
+
+YOUR ROLE (Tuba (Tuba - CSB)): BASS: Harmonic foundation. Play roots and fifths. Define the harmony.
+
+ORCHESTRATION LAYERS:
+  - MELODY layer: Main theme carrier (lead instrument)
+  - HARMONY layer: Chords/sustained notes (support)
+  - BASS layer: Foundation and roots (anchor)
+  - COLOR layer: Countermelodies, fills (embellishment)
+
+
+### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
+A 24-bar brass chorale for a pre-battle preparation scene. The piece blends 'Ambient' textures with 'Heroic' intent, utilizing quartal harmony that slowly resolves into a powerful Bb Major tonality. The structure follows an additive 'wash' of sound, beginning with low-register drones and building into a noble, rising fanfare. The 3/4 time signature is used for a stately, march-like feel (staccato accents) against long, shifting pads. Register spacing is wide to ensure the Tuba provides a massive foundation while the Trumpet pierces the texture at the climax. The arc moves from tension (quartal clusters) to a triumphant resolution.
+
+**CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
+```
+Bar.Beat | Chord        | Notes for YOUR range
+---------|--------------|---------------------
+1.1       | Eb(add4) (IVsus4) | D#3, G2, A#2
+5.1       | Fsus4 (Vsus4) | F2, A#2, C3
+9.1       | Bbmaj9 (I)   | A#2, D3, F2, A2
+17.1       | Bb (I)       | A#2, D3, F2
+```
+
+CHORD MAP RULES:
+- BASS: Play ROOT note on beat 1 of each chord
+- MELODY: Use notes from the chord on strong beats
+- HARMONY: Voice-lead smoothly between chords
+- Switch to new chord notes at EXACTLY the Bar.Beat
+
+**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**
+```
+Bar   | Dynamics | Trend
+------|----------|-------
+Bar 1  | pp       | ↗ building
+Bar 9  | mf       | ↗ building
+Bar 17 | f        | ★ climax
+Bar 21 | ff       | → stable
+```
+DYNAMIC ARC RULES:
+- Match the dynamics level at each bar
+- 'building': gradually increase intensity toward next point
+- 'climax': peak intensity, strongest notes
+- 'fading'/'resolving': decrease intensity
+
+**TEXTURE MAP (WHEN TO PLAY/REST):**
+- Bars 1-8: sparse density → YOU PLAY
+    Texture: pedal
+- Bars 17-24: dense density → YOU PLAY
+    Texture: homophonic
+
+TEXTURE RULES:
+- TACET sections: output empty notes array for those bars
+- 'sparse': leave lots of space, few notes
+- 'full'/'tutti': all instruments active, denser writing
+
+**PHRASE STRUCTURE (BREATHING & CADENCES):**
+- **ANTICIPATION** (Bars 1-8)
+    Function: opening
+    Breathe at: Bar 4.3, Bar 8.3
+    Climax: Bar 5 (low)
+- **RESOLUTION_AND_BUILD** (Bars 9-16)
+    Function: development
+    Breathe at: Bar 12.3, Bar 16.1
+    Climax: Bar 13 (medium)
+- **HEROIC_FANFARE** (Bars 17-24)
+    Function: climax
+    Breathe at: Bar 20.3, Bar 24.1
+    Climax: Bar 21 (high)
+
+**MOTIF BLUEPRINT:**
+- Idea: Rising heroic fourths
+- Character: triumphant, wide
+- Notes: F3 → Bb3 → C4 → D4 → F4
+- Intervals: [+5, +2, +2, +3] semitones
+
+MOTIF RULE: MELODY role should establish this motif, others respond/develop it
+
+**SECTION OVERVIEW:**
+- Bars 1-8 | [AMBIENT_INTRO] | texture: quartal_pads | dynamics: pp→mp | energy: mysterious
+    Active: Tuba, Trombone, Horn
+    Tacet: Trumpet
+- Bars 17-24 | [FANFARE] | texture: rhythmic_unison | dynamics: f→ff | energy: heroic
+    Active: Horn, Trumpet, Trombone, Tuba
+
+**ROLE ASSIGNMENTS:**
+- **Tuba** → BASS (F2-Bb3 (low) register)
+    Anchor the quartal stacks. Long, evolving notes with a slight swell on each bar 1.
+    Relationship: Foundational support for Trombone
+- **Trombone** → HARMONY (G2-F4 (mid-low) register)
+    Provide the 'wash' of sound. Use close-position quartal voicings in bars 1-12.
+    Relationship: Bridges Tuba and Horns
+- **Horn** → COUNTERMELODY (Bb2-C5 (mid) register)
+    Play the rising motif in bars 9-16. Warm, noble tone. Transition to unison with Trumpet at bar 17.
+    Relationship: Primary emotional driver
+- **Trumpet** → MELODY (F4-G5 (high) register)
+    Tacet until bar 13. Enter with brilliance. Play the 'Heroic Fanfare' motif with dotted rhythms and strong accents.
+    Relationship: Leading the climax over the ensemble
+
+
+### COMPOSITION RULES
+- ALLOWED RANGE: F2 to A#4
+- Suggested note count: 48-192 (adapt based on musical needs)
+- Channel: 1
+- Articulation: legato
+- MAX NOTE DURATION: 4 beats (wind/brass need to breathe - split long notes with rests)
+
+### THREE-LAYER DYNAMICS
+1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
+2. EXPRESSION CURVE: GLOBAL section envelope
+3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
+
+DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)
+
+### TEMPO/TIME SIGNATURE
+Tempo is set by the composition plan: 112 BPM
+DO NOT output tempo_markers - tempo changes are controlled by the plan.
+
+### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
+Musical Style (Ambient): Atmosphere over melody. Harmony: Quartal harmony (stacked 4ths), cluster chords, lack of functional resolution. Texture: Long evolving pads, washes of sound, extensive reverb tails. Rhythm: Non-existent or very slow drift.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
+
+INTERPRET USER REQUEST:
+- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
+- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail
+- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)
+- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach
+- If user asks for chords/pads → use sustained notes, minimal articulation changes
+
+### INSTRUMENT CURVES (use these curve names):
+curves.vibrato (CC21)
+
+### OUTPUT (valid JSON only):
+2026-01-12 01:21:07,422 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:21:07,422 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:21:16,461 INFO ai_part_generator: OpenRouter response received: 3776 chars
+2026-01-12 01:21:16,462 INFO ai_part_generator: LLM response received: 3776 chars
+2026-01-12 01:21:16,462 INFO ai_part_generator: LLM response preview: ```json
+{
+  "notes": [
+    {"bar": 1, "beat": 1, "note": "G2", "dur": "dh", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 2, "beat": 1, "note": "G2", "dur": "h", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 3, "beat": 1, "note": "G2", "dur": "dh", "dyn": "p", "art": "legato", "chan": 1},
+    {"bar": 4, "beat": 1, "note": "G2", "dur": "h", "dyn": "p", "art": "legato", "chan": 1},
+    {"bar": 5, "beat": 1, "note": "F2", "dur": "dh", "dyn": "p", "art": "legato", "chan": 1},
+    {"b...(truncated)
+2026-01-12 01:21:16,463 INFO ai_part_generator: build_response: normalizing 28 notes
+2026-01-12 01:21:16,463 INFO ai_part_generator: build_response: normalized to 28 notes
+2026-01-12 01:21:16,464 INFO ai_part_generator: Dynamics fallback: added 95 breakpoints for 28 sustained notes (model had 7)
+2026-01-12 01:21:16,472 INFO ai_part_generator: Response built: notes=28 cc_events=1731 keyswitches=0 program_changes=0 articulation=None motif=no handoff=no
+INFO:     127.0.0.1:61404 - "POST /generate HTTP/1.1" 200 OK
+2026-01-12 01:21:17,392 INFO ai_part_generator: Generate: profile=trombone_csb preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Ambient, Heroic
+2026-01-12 01:21:17,392 INFO ai_part_generator: User prompt to LLM:
+## COMPOSE: HARMONY for Trombone - CSB
+
+### YOUR ROLE (from plan): HARMONY
+Register: G2-F4 (mid-low)
+Provide the 'wash' of sound. Use close-position quartal voicings in bars 1-12.
+Relationship: Bridges Tuba and Horns
+
+### INSTRUMENT PROFILE
+INSTRUMENT: Trombone - CSB
+RANGE: G2 - F4
+POLYPHONY: mono
+CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
+ARTICULATIONS (CC58):
+  sustain: 0 - Sustain / Legato [cc1]
+  repetitions: 11 - Repetitions [velocity]
+  staccatissimo: 16 - Staccatissimo [velocity]
+  staccato: 21 - Staccato [velocity]
+  sforzando: 26 - Sforzando [velocity]
+  mute_short: 31 - Mute Short [velocity]
+  rips: 41 - Rips [velocity]
+  trills: 46 - Trills [cc1]
+  flutter: 51 - Flutter Tongue [cc1]
+  mute_long: 56 - Mute Long [cc1]
+  double_tongue: 61 - Double Tongue [velocity]
+  marcato: 66 - Marcato [velocity]
+  legato: keyswitch Ab1 (vel_on=100, vel_off=1)
+
+### MUSICAL CONTEXT
+- Key: unknown
+- Tempo: 112.0 BPM, Time: 3/4
+- Length: 24 bars (72.0 quarter notes)
+
+### SELECTION (working area)
+- Available range: 24 bars (start_q 0 to 72.0 quarter notes)
+- Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
+- How much of this range to fill is YOUR creative decision based on user request and context
+- RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
+- Consider using the full selection for complete compositions; shorter portions for fragments or phrases
+- Patterns/repeats can help keep JSON concise for repeating figures
+
+### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
+You are generating part 2 of 4 for a unified composition.
+Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.
+
+ENSEMBLE INSTRUMENTS (in generation order):
+  1. Tuba (Tuba - CSB) (brass, role: bass, range: F2-Bb4) [ALREADY GENERATED]
+  2. Trombone (Trombone - CSB) (brass, role: harmony, range: G2-F4) ← YOU ARE GENERATING THIS
+  3. Horn (Horn - CSB) (brass, role: countermelody, range: F2-C5)
+  4. Trumpet (Trumpet - CSB) (brass, role: melody, range: G3-G5)
+
+### ANALYSIS OF PREVIOUSLY GENERATED PARTS
+Parts already composed: 1
+
+**Tuba - CSB** (role: bass):
+  - Range: MIDI 41-46
+  - Contour: static, Motion: stepwise
+  - Rhythm: on-beat, Density: sparse
+
+### RHYTHMIC COORDINATION
+- Ensemble groove: downbeat-heavy
+- Anchor beats (strong pulse points): 0.0, 1.0, 2.0
+  ALIGN your accents to these beats for cohesion
+- Common note values: dotted half, quarter, 6.0q
+- Style: Strong downbeat emphasis - add syncopation carefully
+- Repeating pattern detected - consider complementary ostinato
+
+### REGISTER ALLOCATION
+- OCCUPIED: bass
+- AVAILABLE (prefer these): high (MIDI 84+), high-mid (MIDI 72-84), low-mid (MIDI 48-60)
+
+### YOUR TASK
+Your role: HARMONY
+1. DO NOT duplicate existing melodies/rhythms
+2. USE a different register from existing parts
+3. FOLLOW the harmonic changes above
+4. ALIGN with the rhythmic pulse
+5. CREATE complementary material that ENHANCES the whole
+
+### PREVIOUSLY GENERATED PARTS (in musical notation)
+Format: Bar.Beat:Note(duration,dynamics)
+
+**Tuba - CSB** [bass] (Range: F2-A#2):
+  1.1:G2(dh,pp), 2.1:G2(dh,pp), 3.1:G2(dh,p), 4.1:G2(dh,p), 5.1:F2(dh,p), 6.1:F2(dh,mp), 7.1:F2(dh,mp), 8.1:F2(dh,mp), 9.1:A#2(dh,mf), 10.1:A#2(dh,mf), 11.1:A#2(dh,mf), 12.1:A#2(dh,mf), 13.1:F2(dh,mf), 14.1:F2(dh,mf), 15.1:F2(6.03q,mf), 17.1:A#2(q,f), 17.2:A#2(q,f), 17.3:A#2(q,f), 18.1:A#2(dh,f), 19.1:F2(q,f), 19.2:F2(q,f), 19.3:F2(q,f), 20.1:F2(dh,f), 21.1:A#2(q,ff), 21.2:A#2(q,ff), 21.3:A#2(q,ff), 22.1:A#2(dh,ff), 23.1:A#2(dh,ff)
+
+ENSEMBLE COORDINATION RULES:
+1. AVOID UNISON: Don't duplicate exact same notes as other instruments
+2. REGISTER SEPARATION: Stay in your instrument's typical register
+3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble
+4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody
+5. CALL & RESPONSE: Create phrases that leave space for other instruments
+6. FOLLOW HARMONY: Play the same chord changes as existing parts
+7. PHRASE TOGETHER: Start and end phrases at similar times
+
+YOUR ROLE (Trombone (Trombone - CSB)): HARMONY: Support the melody. Play chord tones. Fill the harmonic space.
+
+ORCHESTRATION LAYERS:
+  - MELODY layer: Main theme carrier (lead instrument)
+  - HARMONY layer: Chords/sustained notes (support)
+  - BASS layer: Foundation and roots (anchor)
+  - COLOR layer: Countermelodies, fills (embellishment)
+
+
+### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
+A 24-bar brass chorale for a pre-battle preparation scene. The piece blends 'Ambient' textures with 'Heroic' intent, utilizing quartal harmony that slowly resolves into a powerful Bb Major tonality. The structure follows an additive 'wash' of sound, beginning with low-register drones and building into a noble, rising fanfare. The 3/4 time signature is used for a stately, march-like feel (staccato accents) against long, shifting pads. Register spacing is wide to ensure the Tuba provides a massive foundation while the Trumpet pierces the texture at the climax. The arc moves from tension (quartal clusters) to a triumphant resolution.
+
+**CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
+```
+Bar.Beat | Chord        | Notes for YOUR range
+---------|--------------|---------------------
+1.1       | Eb(add4) (IVsus4) | D#3, G2, A#2
+5.1       | Fsus4 (Vsus4) | F3, A#2, C3
+9.1       | Bbmaj9 (I)   | A#2, D3, F3, A2
+17.1       | Bb (I)       | A#2, D3, F3
+```
+
+CHORD MAP RULES:
+- BASS: Play ROOT note on beat 1 of each chord
+- MELODY: Use notes from the chord on strong beats
+- HARMONY: Voice-lead smoothly between chords
+- Switch to new chord notes at EXACTLY the Bar.Beat
+
+**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**
+```
+Bar   | Dynamics | Trend
+------|----------|-------
+Bar 1  | pp       | ↗ building
+Bar 9  | mf       | ↗ building
+Bar 17 | f        | ★ climax
+Bar 21 | ff       | → stable
+```
+DYNAMIC ARC RULES:
+- Match the dynamics level at each bar
+- 'building': gradually increase intensity toward next point
+- 'climax': peak intensity, strongest notes
+- 'fading'/'resolving': decrease intensity
+
+**TEXTURE MAP (WHEN TO PLAY/REST):**
+- Bars 1-8: sparse density → YOU PLAY
+    Texture: pedal
+- Bars 17-24: dense density → YOU PLAY
+    Texture: homophonic
+
+TEXTURE RULES:
+- TACET sections: output empty notes array for those bars
+- 'sparse': leave lots of space, few notes
+- 'full'/'tutti': all instruments active, denser writing
+
+**PHRASE STRUCTURE (BREATHING & CADENCES):**
+- **ANTICIPATION** (Bars 1-8)
+    Function: opening
+    Breathe at: Bar 4.3, Bar 8.3
+    Climax: Bar 5 (low)
+- **RESOLUTION_AND_BUILD** (Bars 9-16)
+    Function: development
+    Breathe at: Bar 12.3, Bar 16.1
+    Climax: Bar 13 (medium)
+- **HEROIC_FANFARE** (Bars 17-24)
+    Function: climax
+    Breathe at: Bar 20.3, Bar 24.1
+    Climax: Bar 21 (high)
+
+**MOTIF BLUEPRINT:**
+- Idea: Rising heroic fourths
+- Character: triumphant, wide
+- Notes: F3 → Bb3 → C4 → D4 → F4
+- Intervals: [+5, +2, +2, +3] semitones
+
+MOTIF RULE: MELODY role should establish this motif, others respond/develop it
+
+**SECTION OVERVIEW:**
+- Bars 1-8 | [AMBIENT_INTRO] | texture: quartal_pads | dynamics: pp→mp | energy: mysterious
+    Active: Tuba, Trombone, Horn
+    Tacet: Trumpet
+- Bars 17-24 | [FANFARE] | texture: rhythmic_unison | dynamics: f→ff | energy: heroic
+    Active: Horn, Trumpet, Trombone, Tuba
+
+**ROLE ASSIGNMENTS:**
+- **Tuba** → BASS (F2-Bb3 (low) register)
+    Anchor the quartal stacks. Long, evolving notes with a slight swell on each bar 1.
+    Relationship: Foundational support for Trombone
+- **Trombone** → HARMONY (G2-F4 (mid-low) register)
+    Provide the 'wash' of sound. Use close-position quartal voicings in bars 1-12.
+    Relationship: Bridges Tuba and Horns
+- **Horn** → COUNTERMELODY (Bb2-C5 (mid) register)
+    Play the rising motif in bars 9-16. Warm, noble tone. Transition to unison with Trumpet at bar 17.
+    Relationship: Primary emotional driver
+- **Trumpet** → MELODY (F4-G5 (high) register)
+    Tacet until bar 13. Enter with brilliance. Play the 'Heroic Fanfare' motif with dotted rhythms and strong accents.
+    Relationship: Leading the climax over the ensemble
+
+
+### COMPOSITION RULES
+- ALLOWED RANGE: G2 to F4
+- Suggested note count: 48-192 (adapt based on musical needs)
+- Channel: 1
+- Articulation: legato
+- MAX NOTE DURATION: 4 beats (wind/brass need to breathe - split long notes with rests)
+
+### THREE-LAYER DYNAMICS
+1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
+2. EXPRESSION CURVE: GLOBAL section envelope
+3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
+
+DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)
+
+### TEMPO/TIME SIGNATURE
+Tempo is set by the composition plan: 112 BPM
+DO NOT output tempo_markers - tempo changes are controlled by the plan.
+
+### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
+Musical Style (Ambient): Atmosphere over melody. Harmony: Quartal harmony (stacked 4ths), cluster chords, lack of functional resolution. Texture: Long evolving pads, washes of sound, extensive reverb tails. Rhythm: Non-existent or very slow drift.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
+
+INTERPRET USER REQUEST:
+- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
+- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail
+- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)
+- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach
+- If user asks for chords/pads → use sustained notes, minimal articulation changes
+
+### INSTRUMENT CURVES (use these curve names):
+curves.vibrato (CC21)
+
+### OUTPUT (valid JSON only):
+2026-01-12 01:21:17,393 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:21:17,393 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:21:26,571 INFO ai_part_generator: OpenRouter response received: 3687 chars
+2026-01-12 01:21:26,571 INFO ai_part_generator: LLM response received: 3687 chars
+2026-01-12 01:21:26,572 INFO ai_part_generator: LLM response preview: ```json
+{
+  "notes": [
+    {"bar": 1, "beat": 1, "note": "G2", "dur": "dh", "dyn": "pp", "art": "sustain", "chan": 1},
+    {"bar": 2, "beat": 1, "note": "A#2", "dur": "dh", "dyn": "pp", "art": "sustain", "chan": 1},
+    {"bar": 3, "beat": 1, "note": "D#3", "dur": "dh", "dyn": "p", "art": "sustain", "chan": 1},
+    {"bar": 4, "beat": 1, "note": "G2", "dur": "h", "dyn": "p", "art": "sustain", "chan": 1},
+    {"bar": 5, "beat": 1, "note": "A#2", "dur": "dh", "dyn": "p", "art": "sustain", "chan": 1}...(truncated)
+2026-01-12 01:21:26,572 INFO ai_part_generator: build_response: normalizing 28 notes
+2026-01-12 01:21:26,573 INFO ai_part_generator: build_response: normalized to 28 notes
+2026-01-12 01:21:26,573 INFO ai_part_generator: Dynamics fallback: added 95 breakpoints for 28 sustained notes (model had 7)
+2026-01-12 01:21:26,578 INFO ai_part_generator: Response built: notes=28 cc_events=1731 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
+INFO:     127.0.0.1:61409 - "POST /generate HTTP/1.1" 200 OK
+2026-01-12 01:21:27,508 INFO ai_part_generator: Generate: profile=horn_csb preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Ambient, Heroic
+2026-01-12 01:21:27,508 INFO ai_part_generator: User prompt to LLM:
+## COMPOSE: COUNTERMELODY for Horn - CSB
+
+### YOUR ROLE (from plan): COUNTERMELODY
+Register: Bb2-C5 (mid)
+Play the rising motif in bars 9-16. Warm, noble tone. Transition to unison with Trumpet at bar 17.
+Relationship: Primary emotional driver
+
+### INSTRUMENT PROFILE
+INSTRUMENT: Horn - CSB
+RANGE: F2 - C5
+POLYPHONY: mono
+CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
+ARTICULATIONS (CC58):
+  sustain: 0 - Sustain / Legato [cc1]
+  repetitions: 11 - Repetitions [velocity]
+  staccatissimo: 16 - Staccatissimo [velocity]
+  staccato: 21 - Staccato [velocity]
+  sforzando: 26 - Sforzando [velocity]
+  mute_short: 31 - Mute Short [velocity]
+  rips: 41 - Rips [velocity]
+  trills: 46 - Trills [cc1]
+  flutter: 51 - Flutter Tongue [cc1]
+  mute_long: 56 - Mute Long [cc1]
+  double_tongue: 61 - Double Tongue [velocity]
+  marcato: 66 - Marcato [velocity]
+  legato: keyswitch Ab1 (vel_on=100, vel_off=1)
+
+### MUSICAL CONTEXT
+- Key: unknown
+- Tempo: 112.0 BPM, Time: 3/4
+- Length: 24 bars (72.0 quarter notes)
+
+### SELECTION (working area)
+- Available range: 24 bars (start_q 0 to 72.0 quarter notes)
+- Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
+- How much of this range to fill is YOUR creative decision based on user request and context
+- RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
+- Consider using the full selection for complete compositions; shorter portions for fragments or phrases
+- Patterns/repeats can help keep JSON concise for repeating figures
+
+### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
+You are generating part 3 of 4 for a unified composition.
+Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.
+
+ENSEMBLE INSTRUMENTS (in generation order):
+  1. Tuba (Tuba - CSB) (brass, role: bass, range: F2-Bb4) [ALREADY GENERATED]
+  2. Trombone (Trombone - CSB) (brass, role: harmony, range: G2-F4) [ALREADY GENERATED]
+  3. Horn (Horn - CSB) (brass, role: countermelody, range: F2-C5) ← YOU ARE GENERATING THIS
+  4. Trumpet (Trumpet - CSB) (brass, role: melody, range: G3-G5)
+
+### ANALYSIS OF PREVIOUSLY GENERATED PARTS
+Parts already composed: 2
+
+**Tuba - CSB** (role: bass):
+  - Range: MIDI 41-46
+  - Contour: static, Motion: stepwise
+  - Rhythm: on-beat, Density: sparse
+**Trombone - CSB** (role: harmony):
+  - Range: MIDI 43-58
+  - Contour: ascending, Motion: disjunct
+  - Rhythm: on-beat, Density: sparse
+
+### RHYTHMIC COORDINATION
+- Ensemble groove: downbeat-heavy
+- Anchor beats (strong pulse points): 0.0, 1.0, 2.0
+  ALIGN your accents to these beats for cohesion
+- Common note values: dotted half, quarter, 6.0q
+- Style: Strong downbeat emphasis - add syncopation carefully
+- Repeating pattern detected - consider complementary ostinato
+
+### REGISTER ALLOCATION
+- OCCUPIED: bass, low-mid
+- AVAILABLE (prefer these): high (MIDI 84+), high-mid (MIDI 72-84)
+
+### YOUR TASK
+Your role: COUNTERMELODY
+1. DO NOT duplicate existing melodies/rhythms
+2. USE a different register from existing parts
+3. FOLLOW the harmonic changes above
+4. ALIGN with the rhythmic pulse
+5. CREATE complementary material that ENHANCES the whole
+
+### PREVIOUSLY GENERATED PARTS (in musical notation)
+Format: Bar.Beat:Note(duration,dynamics)
+
+**Tuba - CSB** [bass] (Range: F2-A#2):
+  1.1:G2(dh,pp), 2.1:G2(dh,pp), 3.1:G2(dh,p), 4.1:G2(dh,p), 5.1:F2(dh,p), 6.1:F2(dh,mp), 7.1:F2(dh,mp), 8.1:F2(dh,mp), 9.1:A#2(dh,mf), 10.1:A#2(dh,mf), 11.1:A#2(dh,mf), 12.1:A#2(dh,mf), 13.1:F2(dh,mf), 14.1:F2(dh,mf), 15.1:F2(6.03q,mf), 17.1:A#2(q,f), 17.2:A#2(q,f), 17.3:A#2(q,f), 18.1:A#2(dh,f), 19.1:F2(q,f), 19.2:F2(q,f), 19.3:F2(q,f), 20.1:F2(dh,f), 21.1:A#2(q,ff), 21.2:A#2(q,ff), 21.3:A#2(q,ff), 22.1:A#2(dh,ff), 23.1:A#2(dh,ff)
+
+**Trombone - CSB** [harmony] (Range: G2-A#3):
+  1.1:G2(dh,pp), 2.1:A#2(dh,pp), 3.1:D#3(dh,p), 4.1:G2(dh,p), 5.1:A#2(dh,p), 6.1:C3(dh,mp), 7.1:F3(dh,mp), 8.1:A#2(dh,mp), 9.1:A2(dh,mf), 10.1:D3(dh,mf), 11.1:F3(dh,mf), 12.1:A#2(dh,mf), 13.1:C3(dh,mf), 14.1:F3(dh,mf), 15.1:A#2(6.00q,mf), 17.1:A#2(q,f), 17.2:D3(q,f), 17.3:F3(q,f), 18.1:A#2(dh,f), 19.1:D3(q,f), 19.2:F3(q,f), 19.3:A#3(q,f), 20.1:F3(dh,f), 21.1:A#2(q,ff), 21.2:D3(q,ff), 21.3:F3(q,ff), 22.1:A#3(dh,ff), 23.1:A#2(dh,ff)
+
+ENSEMBLE COORDINATION RULES:
+1. AVOID UNISON: Don't duplicate exact same notes as other instruments
+2. REGISTER SEPARATION: Stay in your instrument's typical register
+3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble
+4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody
+5. CALL & RESPONSE: Create phrases that leave space for other instruments
+6. FOLLOW HARMONY: Play the same chord changes as existing parts
+7. PHRASE TOGETHER: Start and end phrases at similar times
+
+YOUR ROLE (Horn (Horn - CSB)): BRASS: Power and drama. Heroic melodies or fanfares.
+
+ORCHESTRATION LAYERS:
+  - MELODY layer: Main theme carrier (lead instrument)
+  - HARMONY layer: Chords/sustained notes (support)
+  - BASS layer: Foundation and roots (anchor)
+  - COLOR layer: Countermelodies, fills (embellishment)
+
+
+### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
+A 24-bar brass chorale for a pre-battle preparation scene. The piece blends 'Ambient' textures with 'Heroic' intent, utilizing quartal harmony that slowly resolves into a powerful Bb Major tonality. The structure follows an additive 'wash' of sound, beginning with low-register drones and building into a noble, rising fanfare. The 3/4 time signature is used for a stately, march-like feel (staccato accents) against long, shifting pads. Register spacing is wide to ensure the Tuba provides a massive foundation while the Trumpet pierces the texture at the climax. The arc moves from tension (quartal clusters) to a triumphant resolution.
+
+**CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
+```
+Bar.Beat | Chord        | Notes for YOUR range
+---------|--------------|---------------------
+1.1       | Eb(add4) (IVsus4) | D#3, G2, A#2
+5.1       | Fsus4 (Vsus4) | F2, A#2, C3
+9.1       | Bbmaj9 (I)   | A#2, D3, F2, A2
+17.1       | Bb (I)       | A#2, D3, F2
+```
+
+CHORD MAP RULES:
+- BASS: Play ROOT note on beat 1 of each chord
+- MELODY: Use notes from the chord on strong beats
+- HARMONY: Voice-lead smoothly between chords
+- Switch to new chord notes at EXACTLY the Bar.Beat
+
+**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**
+```
+Bar   | Dynamics | Trend
+------|----------|-------
+Bar 1  | pp       | ↗ building
+Bar 9  | mf       | ↗ building
+Bar 17 | f        | ★ climax
+Bar 21 | ff       | → stable
+```
+DYNAMIC ARC RULES:
+- Match the dynamics level at each bar
+- 'building': gradually increase intensity toward next point
+- 'climax': peak intensity, strongest notes
+- 'fading'/'resolving': decrease intensity
+
+**TEXTURE MAP (WHEN TO PLAY/REST):**
+- Bars 1-8: sparse density → YOU PLAY
+    Texture: pedal
+- Bars 17-24: dense density → YOU PLAY
+    Texture: homophonic
+
+TEXTURE RULES:
+- TACET sections: output empty notes array for those bars
+- 'sparse': leave lots of space, few notes
+- 'full'/'tutti': all instruments active, denser writing
+
+**PHRASE STRUCTURE (BREATHING & CADENCES):**
+- **ANTICIPATION** (Bars 1-8)
+    Function: opening
+    Breathe at: Bar 4.3, Bar 8.3
+    Climax: Bar 5 (low)
+- **RESOLUTION_AND_BUILD** (Bars 9-16)
+    Function: development
+    Breathe at: Bar 12.3, Bar 16.1
+    Climax: Bar 13 (medium)
+- **HEROIC_FANFARE** (Bars 17-24)
+    Function: climax
+    Breathe at: Bar 20.3, Bar 24.1
+    Climax: Bar 21 (high)
+
+**MOTIF BLUEPRINT:**
+- Idea: Rising heroic fourths
+- Character: triumphant, wide
+- Notes: F3 → Bb3 → C4 → D4 → F4
+- Intervals: [+5, +2, +2, +3] semitones
+
+MOTIF RULE: MELODY role should establish this motif, others respond/develop it
+
+**SECTION OVERVIEW:**
+- Bars 1-8 | [AMBIENT_INTRO] | texture: quartal_pads | dynamics: pp→mp | energy: mysterious
+    Active: Tuba, Trombone, Horn
+    Tacet: Trumpet
+- Bars 17-24 | [FANFARE] | texture: rhythmic_unison | dynamics: f→ff | energy: heroic
+    Active: Horn, Trumpet, Trombone, Tuba
+
+**ROLE ASSIGNMENTS:**
+- **Tuba** → BASS (F2-Bb3 (low) register)
+    Anchor the quartal stacks. Long, evolving notes with a slight swell on each bar 1.
+    Relationship: Foundational support for Trombone
+- **Trombone** → HARMONY (G2-F4 (mid-low) register)
+    Provide the 'wash' of sound. Use close-position quartal voicings in bars 1-12.
+    Relationship: Bridges Tuba and Horns
+- **Horn** → COUNTERMELODY (Bb2-C5 (mid) register)
+    Play the rising motif in bars 9-16. Warm, noble tone. Transition to unison with Trumpet at bar 17.
+    Relationship: Primary emotional driver
+- **Trumpet** → MELODY (F4-G5 (high) register)
+    Tacet until bar 13. Enter with brilliance. Play the 'Heroic Fanfare' motif with dotted rhythms and strong accents.
+    Relationship: Leading the climax over the ensemble
+
+
+### COMPOSITION RULES
+- ALLOWED RANGE: F2 to C5
+- Suggested note count: 48-192 (adapt based on musical needs)
+- Channel: 1
+- Articulation: legato
+- MAX NOTE DURATION: 4 beats (wind/brass need to breathe - split long notes with rests)
+
+### THREE-LAYER DYNAMICS
+1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
+2. EXPRESSION CURVE: GLOBAL section envelope
+3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
+
+DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)
+
+### TEMPO/TIME SIGNATURE
+Tempo is set by the composition plan: 112 BPM
+DO NOT output tempo_markers - tempo changes are controlled by the plan.
+
+### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
+Musical Style (Ambient): Atmosphere over melody. Harmony: Quartal harmony (stacked 4ths), cluster chords, lack of functional resolution. Texture: Long evolving pads, washes of sound, extensive reverb tails. Rhythm: Non-existent or very slow drift.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
+
+INTERPRET USER REQUEST:
+- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
+- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail
+- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)
+- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach
+- If user asks for chords/pads → use sustained notes, minimal articulation changes
+
+### INSTRUMENT CURVES (use these curve names):
+curves.vibrato (CC21)
+
+### OUTPUT (valid JSON only):
+2026-01-12 01:21:27,509 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:21:27,509 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:21:37,523 INFO ai_part_generator: OpenRouter response received: 4043 chars
+2026-01-12 01:21:37,524 INFO ai_part_generator: LLM response received: 4043 chars
+2026-01-12 01:21:37,524 INFO ai_part_generator: LLM response preview: ```json
+{
+  "notes": [
+    {"bar": 1, "beat": 1, "note": "G3", "dur": "dh", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 2, "beat": 1, "note": "G3", "dur": "dh", "dyn": "pp", "art": "legato", "chan": 1},
+    {"bar": 3, "beat": 1, "note": "G3", "dur": "dh", "dyn": "p", "art": "legato", "chan": 1},
+    {"bar": 4, "beat": 1, "note": "G3", "dur": "h", "dyn": "p", "art": "legato", "chan": 1},
+    {"bar": 5, "beat": 1, "note": "A#3", "dur": "dh", "dyn": "p", "art": "legato", "chan": 1},
+    {...(truncated)
+2026-01-12 01:21:37,524 INFO ai_part_generator: build_response: normalizing 32 notes
+2026-01-12 01:21:37,525 INFO ai_part_generator: build_response: normalized to 32 notes
+2026-01-12 01:21:37,526 INFO ai_part_generator: Dynamics fallback: added 101 breakpoints for 32 sustained notes (model had 7)
+2026-01-12 01:21:37,532 INFO ai_part_generator: Response built: notes=32 cc_events=1731 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
+INFO:     127.0.0.1:61423 - "POST /generate HTTP/1.1" 200 OK
+2026-01-12 01:21:38,478 INFO ai_part_generator: Generate: profile=trumpet_csb preset=None provider=openrouter model=google/gemini-3-flash-preview type=Melody style=Ambient, Heroic
+2026-01-12 01:21:38,479 INFO ai_part_generator: User prompt to LLM:
+## COMPOSE: MELODY for Trumpet - CSB
+
+### YOUR ROLE (from plan): MELODY
+Register: F4-G5 (high)
+Tacet until bar 13. Enter with brilliance. Play the 'Heroic Fanfare' motif with dotted rhythms and strong accents.
+Relationship: Leading the climax over the ensemble
+
+### INSTRUMENT PROFILE
+INSTRUMENT: Trumpet - CSB
+RANGE: G3 - G5
+POLYPHONY: mono
+CONTROLLERS: dynamics=CC1, expression=CC11, vibrato=CC21
+ARTICULATIONS (CC58):
+  sustain: 0 - Sustain / Legato [cc1]
+  repetitions: 11 - Repetitions [velocity]
+  staccatissimo: 16 - Staccatissimo [velocity]
+  staccato: 21 - Staccato [velocity]
+  sforzando: 26 - Sforzando [velocity]
+  mute_short: 31 - Mute Short [velocity]
+  rips: 41 - Rips [velocity]
+  trills: 46 - Trills [cc1]
+  flutter: 51 - Flutter Tongue [cc1]
+  mute_long: 56 - Mute Long [cc1]
+  double_tongue: 61 - Double Tongue [velocity]
+  marcato: 66 - Marcato [velocity]
+  legato: keyswitch Ab1 (vel_on=100, vel_off=1)
+
+### MUSICAL CONTEXT
+- Key: unknown
+- Tempo: 112.0 BPM, Time: 3/4
+- Length: 24 bars (72.0 quarter notes)
+
+### SELECTION (working area)
+- Available range: 24 bars (start_q 0 to 72.0 quarter notes)
+- Time axis: notes use start_q, curves use time_q (quarter notes from selection start)
+- How much of this range to fill is YOUR creative decision based on user request and context
+- RECOMMENDATION: Plan the musical development (intro, theme, resolution) to fit within the available range
+- Consider using the full selection for complete compositions; shorter portions for fragments or phrases
+- Patterns/repeats can help keep JSON concise for repeating figures
+
+### SEQUENTIAL ENSEMBLE GENERATION - BUILDING COHESIVE COMPOSITION
+You are generating part 4 of 4 for a unified composition.
+Previous parts have ALREADY BEEN GENERATED. You MUST complement them, not duplicate.
+
+ENSEMBLE INSTRUMENTS (in generation order):
+  1. Tuba (Tuba - CSB) (brass, role: bass, range: F2-Bb4) [ALREADY GENERATED]
+  2. Trombone (Trombone - CSB) (brass, role: harmony, range: G2-F4) [ALREADY GENERATED]
+  3. Horn (Horn - CSB) (brass, role: countermelody, range: F2-C5) [ALREADY GENERATED]
+  4. Trumpet (Trumpet - CSB) (brass, role: melody, range: G3-G5) ← YOU ARE GENERATING THIS
+
+### ANALYSIS OF PREVIOUSLY GENERATED PARTS
+Parts already composed: 3
+
+**Tuba - CSB** (role: bass):
+  - Range: MIDI 41-46
+  - Contour: static, Motion: stepwise
+  - Rhythm: on-beat, Density: sparse
+**Trombone - CSB** (role: harmony):
+  - Range: MIDI 43-58
+  - Contour: ascending, Motion: disjunct
+  - Rhythm: on-beat, Density: sparse
+**Horn - CSB** (role: countermelody):
+  - Range: MIDI 45-70
+  - Contour: ascending, Motion: mixed
+  - Rhythm: on-beat, Density: sparse
+
+### RHYTHMIC COORDINATION
+- Ensemble groove: downbeat-heavy
+- Anchor beats (strong pulse points): 0.0, 1.0, 2.0
+  ALIGN your accents to these beats for cohesion
+- Common note values: dotted half, quarter, 6.0q
+- Style: Strong downbeat emphasis - add syncopation carefully
+- Repeating pattern detected - consider complementary ostinato
+
+### REGISTER ALLOCATION
+- OCCUPIED: bass, mid
+- AVAILABLE (prefer these): high (MIDI 84+), high-mid (MIDI 72-84), low-mid (MIDI 48-60)
+
+### YOUR TASK
+Your role: MELODY
+1. DO NOT duplicate existing melodies/rhythms
+2. USE a different register from existing parts
+3. FOLLOW the harmonic changes above
+4. ALIGN with the rhythmic pulse
+5. CREATE complementary material that ENHANCES the whole
+
+### PREVIOUSLY GENERATED PARTS (in musical notation)
+Format: Bar.Beat:Note(duration,dynamics)
+
+**Tuba - CSB** [bass] (Range: F2-A#2):
+  1.1:G2(dh,pp), 2.1:G2(dh,pp), 3.1:G2(dh,p), 4.1:G2(dh,p), 5.1:F2(dh,p), 6.1:F2(dh,mp), 7.1:F2(dh,mp), 8.1:F2(dh,mp), 9.1:A#2(dh,mf), 10.1:A#2(dh,mf), 11.1:A#2(dh,mf), 12.1:A#2(dh,mf), 13.1:F2(dh,mf), 14.1:F2(dh,mf), 15.1:F2(6.03q,mf), 17.1:A#2(q,f), 17.2:A#2(q,f), 17.3:A#2(q,f), 18.1:A#2(dh,f), 19.1:F2(q,f), 19.2:F2(q,f), 19.3:F2(q,f), 20.1:F2(dh,f), 21.1:A#2(q,ff), 21.2:A#2(q,ff), 21.3:A#2(q,ff), 22.1:A#2(dh,ff), 23.1:A#2(dh,ff)
+
+**Trombone - CSB** [harmony] (Range: G2-A#3):
+  1.1:G2(dh,pp), 2.1:A#2(dh,pp), 3.1:D#3(dh,p), 4.1:G2(dh,p), 5.1:A#2(dh,p), 6.1:C3(dh,mp), 7.1:F3(dh,mp), 8.1:A#2(dh,mp), 9.1:A2(dh,mf), 10.1:D3(dh,mf), 11.1:F3(dh,mf), 12.1:A#2(dh,mf), 13.1:C3(dh,mf), 14.1:F3(dh,mf), 15.1:A#2(6.00q,mf), 17.1:A#2(q,f), 17.2:D3(q,f), 17.3:F3(q,f), 18.1:A#2(dh,f), 19.1:D3(q,f), 19.2:F3(q,f), 19.3:A#3(q,f), 20.1:F3(dh,f), 21.1:A#2(q,ff), 21.2:D3(q,ff), 21.3:F3(q,ff), 22.1:A#3(dh,ff), 23.1:A#2(dh,ff)
+
+**Horn - CSB** [countermelody] (Range: A2-A#4):
+  1.1:G3(dh,pp), 2.1:G3(dh,pp), 3.1:G3(dh,p), 4.1:G3(dh,p), 5.1:A#3(dh,p), 6.1:A#3(dh,mp), 7.1:C4(dh,mp), 8.1:C4(dh,mp), 9.1:F3(q,mf), 9.2:A#3(q,mf), 9.3:C4(q,mf), 10.1:D4(dh,mf), 11.1:F4(dh,mf), 12.1:F4(dh,mf), 13.1:A2(q,mf), 13.2:D3(q,mf), 13.3:F3(q,mf), 14.1:A3(dh,mf), 15.1:A#3(6.00q,mf), 17.1:A#3(q,f), 17.2:D4(q,f), 17.3:F4(q,f), 18.1:A#4(dh,f), 19.1:D4(q,f), 19.2:F4(q,f), 19.3:A#4(q,f), 20.1:F4(dh,f), 21.1:A#3(q,ff), 21.2:D4(q,ff), 21.3:F4(q,ff), 22.1:A#4(dh,ff), 23.1:A#3(dh,ff)
+
+ENSEMBLE COORDINATION RULES:
+1. AVOID UNISON: Don't duplicate exact same notes as other instruments
+2. REGISTER SEPARATION: Stay in your instrument's typical register
+3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble
+4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody
+5. CALL & RESPONSE: Create phrases that leave space for other instruments
+6. FOLLOW HARMONY: Play the same chord changes as existing parts
+7. PHRASE TOGETHER: Start and end phrases at similar times
+
+YOUR ROLE (Trumpet (Trumpet - CSB)): MELODY: Carry the main theme. Clear, memorable lines. Be the focus.
+
+ORCHESTRATION LAYERS:
+  - MELODY layer: Main theme carrier (lead instrument)
+  - HARMONY layer: Chords/sustained notes (support)
+  - BASS layer: Foundation and roots (anchor)
+  - COLOR layer: Countermelodies, fills (embellishment)
+
+
+### COMPOSITION PLAN (MANDATORY - FOLLOW EXACTLY)
+A 24-bar brass chorale for a pre-battle preparation scene. The piece blends 'Ambient' textures with 'Heroic' intent, utilizing quartal harmony that slowly resolves into a powerful Bb Major tonality. The structure follows an additive 'wash' of sound, beginning with low-register drones and building into a noble, rising fanfare. The 3/4 time signature is used for a stately, march-like feel (staccato accents) against long, shifting pads. Register spacing is wide to ensure the Tuba provides a massive foundation while the Trumpet pierces the texture at the climax. The arc moves from tension (quartal clusters) to a triumphant resolution.
+
+**CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**
+```
+Bar.Beat | Chord        | Notes for YOUR range
+---------|--------------|---------------------
+1.1       | Eb(add4) (IVsus4) | D#4, G3, A#3
+5.1       | Fsus4 (Vsus4) | F4, A#3, C4
+9.1       | Bbmaj9 (I)   | A#3, D4, F4, A3
+17.1       | Bb (I)       | A#3, D4, F4
+```
+
+CHORD MAP RULES:
+- BASS: Play ROOT note on beat 1 of each chord
+- MELODY: Use notes from the chord on strong beats
+- HARMONY: Voice-lead smoothly between chords
+- Switch to new chord notes at EXACTLY the Bar.Beat
+
+**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**
+```
+Bar   | Dynamics | Trend
+------|----------|-------
+Bar 1  | pp       | ↗ building
+Bar 9  | mf       | ↗ building
+Bar 17 | f        | ★ climax
+Bar 21 | ff       | → stable
+```
+DYNAMIC ARC RULES:
+- Match the dynamics level at each bar
+- 'building': gradually increase intensity toward next point
+- 'climax': peak intensity, strongest notes
+- 'fading'/'resolving': decrease intensity
+
+**TEXTURE MAP (WHEN TO PLAY/REST):**
+- Bars 1-8: sparse density → YOU PLAY
+    Texture: pedal
+- Bars 17-24: dense density → YOU PLAY
+    Texture: homophonic
+
+TEXTURE RULES:
+- TACET sections: output empty notes array for those bars
+- 'sparse': leave lots of space, few notes
+- 'full'/'tutti': all instruments active, denser writing
+
+**PHRASE STRUCTURE (BREATHING & CADENCES):**
+- **ANTICIPATION** (Bars 1-8)
+    Function: opening
+    Breathe at: Bar 4.3, Bar 8.3
+    Climax: Bar 5 (low)
+- **RESOLUTION_AND_BUILD** (Bars 9-16)
+    Function: development
+    Breathe at: Bar 12.3, Bar 16.1
+    Climax: Bar 13 (medium)
+- **HEROIC_FANFARE** (Bars 17-24)
+    Function: climax
+    Breathe at: Bar 20.3, Bar 24.1
+    Climax: Bar 21 (high)
+
+**MOTIF BLUEPRINT:**
+- Idea: Rising heroic fourths
+- Character: triumphant, wide
+- Notes: F3 → Bb3 → C4 → D4 → F4
+- Intervals: [+5, +2, +2, +3] semitones
+
+MOTIF RULE: MELODY role should establish this motif, others respond/develop it
+
+**SECTION OVERVIEW:**
+- Bars 1-8 | [AMBIENT_INTRO] | texture: quartal_pads | dynamics: pp→mp | energy: mysterious
+    Active: Tuba, Trombone, Horn
+    Tacet: Trumpet
+- Bars 17-24 | [FANFARE] | texture: rhythmic_unison | dynamics: f→ff | energy: heroic
+    Active: Horn, Trumpet, Trombone, Tuba
+
+**ROLE ASSIGNMENTS:**
+- **Tuba** → BASS (F2-Bb3 (low) register)
+    Anchor the quartal stacks. Long, evolving notes with a slight swell on each bar 1.
+    Relationship: Foundational support for Trombone
+- **Trombone** → HARMONY (G2-F4 (mid-low) register)
+    Provide the 'wash' of sound. Use close-position quartal voicings in bars 1-12.
+    Relationship: Bridges Tuba and Horns
+- **Horn** → COUNTERMELODY (Bb2-C5 (mid) register)
+    Play the rising motif in bars 9-16. Warm, noble tone. Transition to unison with Trumpet at bar 17.
+    Relationship: Primary emotional driver
+- **Trumpet** → MELODY (F4-G5 (high) register)
+    Tacet until bar 13. Enter with brilliance. Play the 'Heroic Fanfare' motif with dotted rhythms and strong accents.
+    Relationship: Leading the climax over the ensemble
+
+
+### COMPOSITION RULES
+- ALLOWED RANGE: G3 to G5
+- Suggested note count: 48-192 (adapt based on musical needs)
+- Channel: 1
+- Articulation: legato
+- MAX NOTE DURATION: 4 beats (wind/brass need to breathe - split long notes with rests)
+
+### THREE-LAYER DYNAMICS
+1. DYNAMICS: Vary dynamics for phrase shaping (peaks: f-ff, between: mf)
+2. EXPRESSION CURVE: GLOBAL section envelope
+3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)
+
+DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)
+
+### TEMPO/TIME SIGNATURE
+Tempo is set by the composition plan: 112 BPM
+DO NOT output tempo_markers - tempo changes are controlled by the plan.
+
+### USER REQUEST (PRIORITY - follow these instructions, they override defaults):
+Musical Style (Ambient): Atmosphere over melody. Harmony: Quartal harmony (stacked 4ths), cluster chords, lack of functional resolution. Texture: Long evolving pads, washes of sound, extensive reverb tails. Rhythm: Non-existent or very slow drift.
+Mood (Heroic): Confident and rising. Harmony: Major key, strong I-V-IV progressions. Melody: Ascending intervals (Perfect 4th/5th), triplets. Orchestration: Brass fanfares, horns in unison. Rhythm: March-like, dotted rhythms.
+музыка для короткой сцены где герои готовяться с сражению
+
+INTERPRET USER REQUEST:
+- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output
+- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail
+- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)
+- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach
+- If user asks for chords/pads → use sustained notes, minimal articulation changes
+
+### INSTRUMENT CURVES (use these curve names):
+curves.vibrato (CC21)
+
+### OUTPUT (valid JSON only):
+2026-01-12 01:21:38,479 INFO ai_part_generator: call_llm: provider=openrouter model=google/gemini-3-flash-preview base_url=https://openrouter.ai/api/v1 has_api_key=True
+2026-01-12 01:21:38,479 INFO ai_part_generator: OpenRouter request: url=https://openrouter.ai/api/v1/chat/completions model=google/gemini-3-flash-preview
+2026-01-12 01:21:44,994 INFO ai_part_generator: OpenRouter response received: 2510 chars
+2026-01-12 01:21:44,994 INFO ai_part_generator: LLM response received: 2510 chars
+2026-01-12 01:21:44,995 INFO ai_part_generator: LLM response preview: ```json
+{
+  "notes": [
+    {"bar": 13, "beat": 1, "note": "F4", "dur": "dq", "dyn": "mf", "art": "sustain", "chan": 1},
+    {"bar": 13, "beat": 2.5, "note": "Bb4", "dur": "8th", "dyn": "mf", "art": "legato", "chan": 1},
+    {"bar": 14, "beat": 1, "note": "C5", "dur": "h", "dyn": "f", "art": "sustain", "chan": 1},
+    {"bar": 15, "beat": 1, "note": "D5", "dur": "dh", "dyn": "f", "art": "sustain", "chan": 1},
+    {"bar": 17, "beat": 1, "note": "F4", "dur": "dq", "dyn": "f", "art": "marcato", "chan...(truncated)
+2026-01-12 01:21:44,995 INFO ai_part_generator: build_response: normalizing 16 notes
+2026-01-12 01:21:44,996 INFO ai_part_generator: build_response: normalized to 16 notes
+2026-01-12 01:21:44,996 INFO ai_part_generator: Dynamics fallback: added 37 breakpoints for 12 sustained notes (model had 5)
+2026-01-12 01:21:45,000 INFO ai_part_generator: Response built: notes=16 cc_events=1731 keyswitches=0 program_changes=0 articulation=legato motif=no handoff=no
+INFO:     127.0.0.1:61429 - "POST /generate HTTP/1.1" 200 OK

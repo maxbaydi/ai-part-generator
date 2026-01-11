@@ -35,7 +35,8 @@
       "measured_tremolo": { "cc_value": 61, "description": "Measured Tremolo", "dynamics": "cc1" },
       "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" },
       "con_sordino": { "cc_value": 86, "description": "Con Sordino", "dynamics": "cc1" },
-      "legato": { "keyswitch": "Ab1", "velocity_on": 100, "velocity_off": 1, "mono_only": true, "description": "Legato transition (mono only)" }
+      "legato": { "cc_value": 76, "description": "Legato On", "dynamics": "cc1" },
+      "legato_off": { "cc_value": 81, "description": "Legato Off", "dynamics": "cc1" }
     }
   },
   "controllers": {

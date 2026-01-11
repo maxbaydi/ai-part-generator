@@ -89,10 +89,51 @@ except ImportError:
 
 MIN_NOTE_DUR_FOR_DYNAMICS = 1.0
 SWELL_PEAK_RATIO = 0.35
-DYNAMICS_BASE_VALUE = 60
-DYNAMICS_SWELL_AMOUNT = 25
+DYNAMICS_BASE_VALUE = 64
+DYNAMICS_SWELL_AMOUNT = 12
+MIN_BREAKPOINTS_TO_TRUST_COMPLETELY = 20
+FALLBACK_COVERAGE_THRESHOLD = 0.5
+
+EXPRESSION_DEFAULT_MIN = 70
+EXPRESSION_DEFAULT_MAX = 100
+EXPRESSION_FALLBACK_POINTS = 5
+
+MAX_DYNAMICS_JUMP = 25
+SMOOTH_TRANSITION_STEP = 0.25
 
 HARMONY_VALIDATION_TOLERANCE_Q = 0.125
+
+
+def smooth_breakpoint_transitions(breakpoints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if len(breakpoints) < 2:
+        return breakpoints
+    
+    sorted_bps = sorted(breakpoints, key=lambda x: float(x.get("time_q", 0)))
+    result = []
+    
+    for i, bp in enumerate(sorted_bps):
+        time_q = float(bp.get("time_q", 0))
+        value = float(bp.get("value", DYNAMICS_BASE_VALUE))
+        
+        if i == 0:
+            result.append({"time_q": time_q, "value": int(value)})
+            continue
+        
+        prev_bp = result[-1]
+        prev_time = float(prev_bp.get("time_q", 0))
+        prev_value = float(prev_bp.get("value", DYNAMICS_BASE_VALUE))
+        
+        time_gap = time_q - prev_time
+        value_jump = abs(value - prev_value)
+        
+        if value_jump > MAX_DYNAMICS_JUMP and time_gap < SMOOTH_TRANSITION_STEP * 2:
+            mid_time = prev_time + time_gap * 0.5
+            mid_value = prev_value + (value - prev_value) * 0.5
+            result.append({"time_q": round(mid_time, 4), "value": int(mid_value)})
+        
+        result.append({"time_q": time_q, "value": int(value)})
+    
+    return result
 
 
 def get_active_chord_at_time(
@@ -222,21 +263,51 @@ def ensure_per_note_dynamics(
     curves: Dict[str, Any],
     notes: List[Dict[str, Any]],
     length_q: float,
+    time_sig: str = "4/4",
 ) -> Dict[str, Any]:
     if not notes:
         return curves
 
     curves = dict(curves) if curves else {}
     dynamics_curve = curves.get("dynamics", {})
-    existing_breakpoints = dynamics_curve.get("breakpoints", [])
+    raw_breakpoints = dynamics_curve.get("breakpoints", [])
+    
+    time_sig_parts = time_sig.split("/") if time_sig else ["4", "4"]
+    try:
+        sig_num = int(time_sig_parts[0])
+        sig_denom = int(time_sig_parts[1])
+        quarters_per_bar = sig_num * (4.0 / sig_denom)
+    except (ValueError, IndexError):
+        quarters_per_bar = 4.0
+    
+    existing_breakpoints = []
+    for bp in raw_breakpoints:
+        if not isinstance(bp, dict):
+            continue
+        if "time_q" in bp:
+            existing_breakpoints.append(bp)
+        elif "bar" in bp:
+            bar = float(bp.get("bar", 1))
+            beat = float(bp.get("beat", 1))
+            beat_q = 4.0 / sig_denom if sig_denom > 0 else 1.0
+            time_q = (bar - 1) * quarters_per_bar + (beat - 1) * beat_q
+            existing_breakpoints.append({"time_q": time_q, "value": bp.get("value", DYNAMICS_BASE_VALUE)})
+        else:
+            existing_breakpoints.append(bp)
+
+    if len(existing_breakpoints) >= MIN_BREAKPOINTS_TO_TRUST_COMPLETELY:
+        if length_q > 0:
+            bp_times = [float(bp.get("time_q", 0)) for bp in existing_breakpoints]
+            coverage = (max(bp_times) - min(bp_times)) / length_q if bp_times else 0
+            if coverage >= FALLBACK_COVERAGE_THRESHOLD:
+                logger.info("Dynamics: trusting model (%d breakpoints, %.0f%% coverage)", 
+                           len(existing_breakpoints), coverage * 100)
+                return curves
 
     sustained_notes = [
         n for n in notes
         if isinstance(n, dict) and float(n.get("dur_q", 0)) >= MIN_NOTE_DUR_FOR_DYNAMICS
     ]
-
-    if not sustained_notes:
-        return curves
 
     def count_breakpoints_in_range(start: float, end: float) -> int:
         count = 0
@@ -269,6 +340,31 @@ def ensure_per_note_dynamics(
 
     new_breakpoints = list(existing_breakpoints)
     
+    all_notes_sorted = sorted(
+        [n for n in notes if isinstance(n, dict)],
+        key=lambda x: float(x.get("start_q", 0))
+    )
+    
+    for note in all_notes_sorted:
+        start_q = float(note.get("start_q", 0))
+        vel = int(note.get("vel", 80))
+        note_dynamics = int(clamp(vel * 1.0, 40, 127))
+        
+        bp_count = count_breakpoints_in_range(start_q, start_q + 0.1)
+        if bp_count == 0:
+            new_breakpoints.append({"time_q": round(start_q, 4), "value": note_dynamics})
+
+    if not sustained_notes:
+        new_breakpoints.sort(key=lambda x: float(x.get("time_q", 0)))
+        added_count = len(new_breakpoints) - len(existing_breakpoints)
+        if added_count > 0:
+            logger.info("Dynamics: added %d note-start breakpoints", added_count)
+        curves["dynamics"] = {
+            "breakpoints": new_breakpoints,
+            "interpolation": dynamics_curve.get("interpolation", "linear"),
+        }
+        return curves
+    
     for note in sustained_notes:
         start_q = float(note.get("start_q", 0))
         dur_q = float(note.get("dur_q", 1))
@@ -276,38 +372,96 @@ def ensure_per_note_dynamics(
         vel = int(note.get("vel", 80))
         
         bp_count = count_breakpoints_in_range(start_q, end_q)
-        min_required = 2 if dur_q < 2.0 else (3 if dur_q < 4.0 else 4)
+        min_required = 1 if dur_q < 2.0 else 2
         
         if bp_count >= min_required:
             continue
         
-        base_value = get_value_at_time(start_q)
-        vel_factor = vel / 80.0
-        swell_amount = int(DYNAMICS_SWELL_AMOUNT * vel_factor)
+        note_dynamics = int(clamp(vel * 1.0, 40, 127))
+        swell_amount = int(DYNAMICS_SWELL_AMOUNT * clamp(vel / 80.0, 0.7, 1.3))
         
         peak_time = start_q + dur_q * SWELL_PEAK_RATIO
-        settle_time = start_q + dur_q * 0.6
+        decay_time = start_q + dur_q * 0.75
         
-        start_value = int(clamp(base_value - 5, MIDI_MIN, MIDI_MAX))
-        peak_value = int(clamp(base_value + swell_amount, MIDI_MIN, MIDI_MAX))
-        settle_value = int(clamp(base_value + swell_amount * 0.6, MIDI_MIN, MIDI_MAX))
-        end_value = int(clamp(base_value - 2, MIDI_MIN, MIDI_MAX))
+        start_value = int(clamp(note_dynamics - swell_amount * 0.2, 40, 127))
+        peak_value = int(clamp(note_dynamics + swell_amount * 0.5, 40, 127))
+        decay_value = int(clamp(note_dynamics - swell_amount * 0.4, 40, 127))
         
         new_breakpoints.append({"time_q": round(start_q, 4), "value": start_value})
         new_breakpoints.append({"time_q": round(peak_time, 4), "value": peak_value})
         
         if dur_q >= 2.0:
-            new_breakpoints.append({"time_q": round(settle_time, 4), "value": settle_value})
-        
-        if dur_q >= 3.0:
-            new_breakpoints.append({"time_q": round(end_q - 0.1, 4), "value": end_value})
+            new_breakpoints.append({"time_q": round(decay_time, 4), "value": decay_value})
 
     new_breakpoints.sort(key=lambda x: float(x.get("time_q", 0)))
+    
+    new_breakpoints = smooth_breakpoint_transitions(new_breakpoints)
+    
+    if new_breakpoints and length_q > 0:
+        last_bp = new_breakpoints[-1]
+        last_time = float(last_bp.get("time_q", 0))
+        last_value = float(last_bp.get("value", DYNAMICS_BASE_VALUE))
+        
+        if last_time < length_q - 1.0 and last_value > DYNAMICS_BASE_VALUE:
+            fade_start = max(last_time + 0.5, length_q - 2.0)
+            fade_end = length_q - 0.25
+            fade_value = int(clamp(last_value * 0.6, 40, DYNAMICS_BASE_VALUE))
+            
+            if fade_start > last_time:
+                new_breakpoints.append({"time_q": round(fade_start, 4), "value": int(last_value * 0.8)})
+            new_breakpoints.append({"time_q": round(fade_end, 4), "value": fade_value})
+            new_breakpoints.sort(key=lambda x: float(x.get("time_q", 0)))
+    
+    added_count = len(new_breakpoints) - len(existing_breakpoints)
+    if added_count > 0:
+        logger.info("Dynamics fallback: added %d breakpoints for %d sustained notes (model had %d)", 
+                   added_count, len(sustained_notes), len(existing_breakpoints))
     
     curves["dynamics"] = {
         "interp": dynamics_curve.get("interp", "cubic"),
         "breakpoints": new_breakpoints,
     }
+    
+    return curves
+
+
+def ensure_expression_baseline(
+    curves: Dict[str, Any],
+    length_q: float,
+) -> Dict[str, Any]:
+    curves = dict(curves) if curves else {}
+    expression_curve = curves.get("expression", {})
+    existing_breakpoints = expression_curve.get("breakpoints", [])
+    
+    if len(existing_breakpoints) >= 2:
+        return curves
+    
+    if length_q <= 0:
+        return curves
+    
+    step = length_q / (EXPRESSION_FALLBACK_POINTS - 1)
+    breakpoints = []
+    mid = EXPRESSION_FALLBACK_POINTS // 2
+    
+    for i in range(EXPRESSION_FALLBACK_POINTS):
+        t = i * step
+        if i < mid:
+            ratio = i / mid
+            value = EXPRESSION_DEFAULT_MIN + (EXPRESSION_DEFAULT_MAX - EXPRESSION_DEFAULT_MIN) * ratio
+        elif i == mid:
+            value = EXPRESSION_DEFAULT_MAX
+        else:
+            ratio = (i - mid) / (EXPRESSION_FALLBACK_POINTS - 1 - mid)
+            value = EXPRESSION_DEFAULT_MAX - (EXPRESSION_DEFAULT_MAX - EXPRESSION_DEFAULT_MIN) * ratio * 0.8
+        breakpoints.append({"time_q": round(t, 4), "value": int(value)})
+    
+    curves["expression"] = {
+        "interp": "cubic",
+        "breakpoints": breakpoints,
+    }
+    
+    logger.info("Expression fallback: created %d breakpoints (model had %d)", 
+                len(breakpoints), len(existing_breakpoints))
     
     return curves
 
@@ -523,19 +677,70 @@ def get_short_articulations(profile: Dict[str, Any]) -> set[str]:
     }
 
 
-def clamp_wind_brass_durations(notes: List[Dict[str, Any]], profile: Dict[str, Any]) -> None:
+def clamp_wind_brass_durations(notes: List[Dict[str, Any]], profile: Dict[str, Any]) -> List[Dict[str, Any]]:
     family = str(profile.get("family", "")).lower()
     if family not in WIND_BRASS_FAMILIES:
-        return
+        logger.info("clamp_wind_brass: skipping, family=%s not in %s", family, WIND_BRASS_FAMILIES)
+        return notes
+    
+    breath_gap = 0.25
+    max_phrase = WIND_BRASS_MAX_NOTE_DUR_Q
+    result = []
+    long_notes_found = 0
+    
     for note in notes:
         if not isinstance(note, dict):
+            result.append(note)
             continue
         try:
             dur_q = float(note.get("dur_q", 0))
+            start_q = float(note.get("start_q", 0))
         except (TypeError, ValueError):
+            result.append(note)
             continue
-        if dur_q > WIND_BRASS_MAX_NOTE_DUR_Q:
-            note["dur_q"] = WIND_BRASS_MAX_NOTE_DUR_Q
+        
+        if dur_q <= max_phrase:
+            result.append(note)
+            continue
+        
+        long_notes_found += 1
+        pitch = note.get("pitch", 60)
+        vel = note.get("vel", 80)
+        chan = note.get("chan", 1)
+        
+        remaining = dur_q
+        current_start = start_q
+        segment_count = 0
+        
+        while remaining > 0:
+            segment_dur = min(max_phrase, remaining)
+            
+            if remaining - segment_dur < breath_gap * 2 and remaining <= max_phrase * 1.5:
+                segment_dur = remaining
+            
+            new_note = {
+                "start_q": round(current_start, 4),
+                "dur_q": round(segment_dur - breath_gap if segment_dur > breath_gap * 2 else segment_dur, 4),
+                "pitch": pitch,
+                "vel": vel,
+                "chan": chan,
+            }
+            result.append(new_note)
+            
+            current_start += segment_dur
+            remaining -= segment_dur
+            segment_count += 1
+            
+            if segment_count > 20:
+                break
+        
+        if segment_count > 1:
+            logger.info("Wind/brass: split %.1fq note into %d segments with breath gaps", dur_q, segment_count)
+    
+    if long_notes_found > 0:
+        logger.info("Wind/brass: processed %d long notes (family=%s)", long_notes_found, family)
+    
+    return result
 
 
 def clamp_short_articulation_durations(
@@ -994,10 +1199,26 @@ def apply_per_note_articulations(
         if note_art and note_art != current_articulation:
             data = art_map.get(note_art)
             if data:
-                if mode == "keyswitch":
+                handled = False
+                
+                if mode == "cc" or "cc_value" in data:
+                    cc_value = get_articulation_cc_value(data)
+                    if cc_value is not None:
+                        cc_num = int(art_cfg.get("cc_number", DEFAULT_ARTICULATION_CC))
+                        chan = normalize_channel(data.get("chan"), default_chan)
+                        cc_time = max(0.0, note["start_q"] - ARTICULATION_PRE_ROLL_Q)
+                        articulation_cc.append({
+                            "time_q": cc_time,
+                            "cc": cc_num,
+                            "value": cc_value,
+                            "chan": chan,
+                        })
+                        handled = True
+                
+                if not handled and (mode == "keyswitch" or "keyswitch" in data):
                     try:
                         pitch = get_keyswitch_pitch(data, art_cfg)
-                        vel = int(clamp(int(data.get("vel", DEFAULT_KEYSWITCH_VELOCITY)), MIDI_VEL_MIN, MIDI_MAX))
+                        vel = int(clamp(int(data.get("vel", data.get("velocity_on", DEFAULT_KEYSWITCH_VELOCITY))), MIDI_VEL_MIN, MIDI_MAX))
                         chan = normalize_channel(data.get("chan"), default_chan)
                         ks_time = max(0.0, note["start_q"] - ARTICULATION_PRE_ROLL_Q)
                         keyswitches.append({
@@ -1007,21 +1228,11 @@ def apply_per_note_articulations(
                             "chan": chan,
                             "dur_q": KEYSWITCH_DUR_Q,
                         })
+                        handled = True
                     except ValueError:
                         pass
-                elif mode == "cc":
-                    cc_num = int(art_cfg.get("cc_number", DEFAULT_ARTICULATION_CC))
-                    cc_value = get_articulation_cc_value(data)
-                    if cc_value is not None:
-                        chan = normalize_channel(data.get("chan"), default_chan)
-                        cc_time = max(0.0, note["start_q"] - ARTICULATION_PRE_ROLL_Q)
-                        articulation_cc.append({
-                            "time_q": cc_time,
-                            "cc": cc_num,
-                            "value": cc_value,
-                            "chan": chan,
-                        })
-                elif mode == "program_change":
+                
+                if not handled and mode == "program_change":
                     program = int(clamp(int(data.get("program", 0)), MIDI_MIN, MIDI_MAX))
                     chan = normalize_channel(data.get("chan"), default_chan)
                     program_changes.append({
@@ -1029,9 +1240,12 @@ def apply_per_note_articulations(
                         "program": program,
                         "chan": chan,
                     })
-                elif mode == "channel":
+                    handled = True
+                
+                if not handled and mode == "channel":
                     chan = normalize_channel(data.get("chan") or data.get("channel"), default_chan)
                     note["chan"] = chan
+                
                 current_articulation = note_art
 
     return notes, keyswitches, program_changes, articulation_cc
@@ -1092,17 +1306,18 @@ def build_response(
 
     if notes_raw:
         clamp_short_articulation_durations(notes_raw, profile, raw.get("articulation"))
-        clamp_wind_brass_durations(notes_raw, profile)
         if arrangement_mode:
             clamp_arrangement_note_durations(notes_raw, time_sig, source_sketch)
 
-    has_per_note_articulations = free_mode and any(
+    has_per_note_articulations = any(
         isinstance(n, dict) and n.get("articulation") for n in notes_raw
     )
 
     logger.info("build_response: normalizing %d notes", len(notes_raw))
     notes = normalize_notes(notes_raw, length_q, default_chan, abs_range, fix_policy, mono, time_sig)
     logger.info("build_response: normalized to %d notes", len(notes))
+    
+    notes = clamp_wind_brass_durations(notes, profile)
     
     if chord_map and not is_drum:
         notes, harmony_corrections = validate_notes_against_harmony(notes, chord_map, abs_range)
@@ -1122,7 +1337,8 @@ def build_response(
         notes.extend(normalize_drums(drums_raw, drum_map, length_q, default_chan))
 
     curves_raw = raw.get("curves", {})
-    curves_raw = ensure_per_note_dynamics(curves_raw, notes, length_q)
+    curves_raw = ensure_per_note_dynamics(curves_raw, notes, length_q, time_sig)
+    curves_raw = ensure_expression_baseline(curves_raw, length_q)
     cc_events = build_cc_events(curves_raw, profile, length_q, default_chan, time_sig)
 
     articulation_cc: List[Dict[str, Any]] = []

@@ -1246,13 +1246,23 @@ def build_prompt(
     pitch_low_note = midi_to_note(pitch_low)
     pitch_high_note = midi_to_note(pitch_high)
     
+    family = str(profile.get("family", "")).lower()
+    is_wind_brass = family in {"woodwinds", "brass", "winds"}
+    max_dur_hint = "- MAX NOTE DURATION: 8 beats (~2 bars) for wind/brass - split longer notes with breath rests" if is_wind_brass else ""
+    
     if request.free_mode:
-        user_prompt_parts.extend([
+        free_mode_rules = [
             f"",
             f"### COMPOSITION RULES",
             f"- ALLOWED RANGE: {pitch_low_note} to {pitch_high_note}",
             f"- Channel: {midi_channel}",
             f"- Generate appropriate number of notes for the part type",
+        ]
+        if max_dur_hint:
+            free_mode_rules.append(max_dur_hint)
+        user_prompt_parts.extend(free_mode_rules)
+        
+        user_prompt_parts.extend([
             f"",
             f"### YOUR CREATIVE CHOICES",
             f"- Choose generation TYPE based on user request or context (Melody, Arpeggio, Chords, Pad, Bass, etc.)",
@@ -1260,38 +1270,41 @@ def build_prompt(
             f"- Articulations: use ONE for simple parts (pads, chords), MULTIPLE only for expressive melodic parts",
             f"",
             f"### THREE-LAYER DYNAMICS",
-            f"1. DYNAMICS (dyn): Note attack - p, mp, mf, f, ff",
-            f"2. EXPRESSION CURVE: GLOBAL section dynamics - phrase/section envelope",
-            f"3. DYNAMICS CURVE: PER-NOTE breathing - CRITICAL for realism!",
+            f"1. DYNAMICS (dyn): Note attack intensity - p, mp, mf, f, ff",
+            f"2. EXPRESSION CURVE: GLOBAL section envelope (CC11)",
+            f"3. DYNAMICS CURVE: Section dynamics shape (CC1)",
             f"",
-            f"DYNAMICS TECHNIQUES FOR SUSTAINED NOTES (half note or longer):",
-            f"- CRESCENDO (<): low→high - for phrase starts, building tension",
-            f"- DECRESCENDO (>): high→low - for phrase ends, resolution",
-            f"- SWELL (<>): rise→fall - most common for whole/half notes",
-            f"",
-            f"DYNAMICS BREAKPOINTS - add for EACH sustained note:",
-            f"- whole notes (4 beats): 4+ breakpoints with full swell",
-            f"- half notes (2 beats): 3+ breakpoints",
-            f"- quarter notes (1 beat): 2+ breakpoints",
-            f"- NEVER flat dynamics on sustained notes - sounds robotic!",
+            f"DYNAMICS CURVE (CC1) - CRITICAL:",
+            f"- Values: 40-127 (40=pp, 64=mp, 80=mf, 100=f, 120=ff)",
+            f"- SMOOTH transitions - max jump 20 between points",
+            f"- 4-8 breakpoints covering the full piece length",
+            f"- Follow DYNAMIC ARC from composition plan",
         ])
     else:
         short_articulations = profile.get("articulations", {}).get("short_articulations", [])
         is_short_art = articulation.lower() in [a.lower() for a in short_articulations]
         velocity_hint = "Use dyn for note-to-note dynamics (accents: f-fff, normal: mf-f, soft: p-mp)" if is_short_art else "Vary dynamics for phrase shaping (peaks: f-ff, between: mf)"
 
-        user_prompt_parts.extend([
+        composition_rules = [
             f"",
             f"### COMPOSITION RULES",
             f"- ALLOWED RANGE: {pitch_low_note} to {pitch_high_note}",
             f"- Suggested note count: {min_notes}-{max_notes} (adapt based on musical needs)",
             f"- Channel: {midi_channel}",
             f"- Articulation: {articulation}",
+        ]
+        if max_dur_hint:
+            composition_rules.append(max_dur_hint)
+        user_prompt_parts.extend(composition_rules)
+        
+        user_prompt_parts.extend([
             f"",
             f"### THREE-LAYER DYNAMICS",
             f"1. DYNAMICS: {velocity_hint}",
             f"2. EXPRESSION CURVE: GLOBAL section envelope",
             f"3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)",
+            f"",
+            f"DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)",
         ])
 
     tempo_guidance = build_tempo_change_guidance(request, length_q)
