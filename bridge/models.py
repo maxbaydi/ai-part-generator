@@ -13,12 +13,14 @@ except ImportError:
 class TimeWindow(BaseModel):
     start_sec: float
     end_sec: float
+    length_bars: Optional[int] = None
 
 
 class MusicInfo(BaseModel):
     bpm: float
     time_sig: str
     key: str = "unknown"
+    original_bpm: Optional[float] = None
 
 
 class TargetInfo(BaseModel):

@@ -609,22 +609,36 @@ def compress_changes(changes: List[Tuple[float, str]]) -> List[str]:
 def build_simplified_midi_map(
     notes: List[Dict[str, Any]],
     max_notes: int = SIMPLIFIED_MIDI_MAP_LIMIT,
-    quantize_to: float = 0.25,
+    time_sig: str = "4/4",
 ) -> str:
     if not notes:
         return ""
+    
+    try:
+        from music_notation import midi_to_note, dur_q_to_name, velocity_to_dynamic, time_q_to_bar_beat
+    except ImportError:
+        from .music_notation import midi_to_note, dur_q_to_name, velocity_to_dynamic, time_q_to_bar_beat
+    
     sorted_notes = sorted(notes, key=lambda n: n.get("start_q", 0))
     limited = sorted_notes[:max_notes]
+    
     entries = []
     for note in limited:
         start_q = note.get("start_q", 0)
         pitch = note.get("pitch", 60)
-        quantized_start = round(start_q / quantize_to) * quantize_to
-        note_name = pitch_to_note(pitch)
-        entries.append(f"{quantized_start:.2f}:{note_name}")
+        dur_q = note.get("dur_q", 1.0)
+        vel = note.get("vel", 80)
+        
+        bar, beat = time_q_to_bar_beat(start_q, time_sig)
+        note_name = midi_to_note(pitch)
+        dur_name = dur_q_to_name(dur_q, abbrev=True)
+        dyn = velocity_to_dynamic(vel)
+        
+        entries.append(f"{bar}.{beat}:{note_name}({dur_name},{dyn})")
+    
     result = ", ".join(entries)
     if len(sorted_notes) > max_notes:
-        result += f" ...({len(sorted_notes) - max_notes} more)"
+        result += f" ... (+{len(sorted_notes) - max_notes} more)"
     return result
 
 
@@ -699,6 +713,11 @@ def generate_synthetic_handoff(
     role: str = "",
     length_q: float = 16.0,
 ) -> Dict[str, Any]:
+    try:
+        from music_notation import midi_to_note
+    except ImportError:
+        from .music_notation import midi_to_note
+    
     if not notes:
         return {
             "musical_function": role or "unknown",
@@ -708,12 +727,20 @@ def generate_synthetic_handoff(
             "gaps_for_others": "entire range available",
             "suggestion_for_next": "Free to play any part",
         }
+    
     pitches = [n.get("pitch", 60) for n in notes]
     min_pitch = min(pitches)
     max_pitch = max(pitches)
-    occupied_range = detect_occupied_range(notes)
+    
+    min_note = midi_to_note(min_pitch)
+    max_note = midi_to_note(max_pitch)
+    
+    range_category = detect_occupied_range(notes)
+    occupied_range = f"{min_note}-{max_note} ({range_category})"
+    
     rhythmic_feel = detect_rhythmic_feel(notes, length_q)
     intensity_curve = detect_intensity_curve(notes)
+    
     musical_function = role.lower() if role and role.lower() != "unknown" else "harmonic_support"
     if rhythmic_feel in ("dense", "steady_pulse", "syncopated"):
         musical_function = "rhythmic_foundation"
@@ -721,26 +748,30 @@ def generate_synthetic_handoff(
         musical_function = "harmonic_pad"
     elif max_pitch > 72 and len(notes) < length_q * 2:
         musical_function = "melodic_lead"
+    
     gaps = []
     if max_pitch < 72:
-        gaps.append("high register open")
+        gaps.append(f"high register open (above {max_note})")
     if min_pitch > 48:
-        gaps.append("low register available")
+        gaps.append(f"low register available (below {min_note})")
     if rhythmic_feel in ("sustained", "sparse"):
         gaps.append("rhythmic space available")
     elif rhythmic_feel in ("dense", "steady_pulse"):
         gaps.append("sustained notes would complement")
     gaps_str = ", ".join(gaps) if gaps else "limited space available"
+    
     suggestions = []
-    if occupied_range in ("low", "low_mid"):
-        suggestions.append("add melodic content in high register")
-    elif occupied_range in ("high", "high_mid"):
-        suggestions.append("add harmonic foundation in low register")
+    if range_category in ("low", "low_mid"):
+        suggestions.append(f"add melody above {max_note}")
+    elif range_category in ("high", "high_mid"):
+        suggestions.append(f"add bass/harmony below {min_note}")
     if rhythmic_feel in ("dense", "syncopated"):
         suggestions.append("play sparser, longer notes")
     elif rhythmic_feel == "sustained":
         suggestions.append("add rhythmic motion")
+    
     suggestion = "; ".join(suggestions) if suggestions else "complement existing part"
+    
     return {
         "musical_function": musical_function,
         "occupied_range": occupied_range,
@@ -942,8 +973,8 @@ def build_ensemble_context(
             parts.append("- If handoff conflicts with plan, FOLLOW THE PLAN")
             parts.append("")
 
-        parts.append("### HARMONIC-RHYTHMIC GRID (previous parts)")
-        parts.append("Simplified note map (time:pitch) - use for harmonic alignment:")
+        parts.append("### PREVIOUSLY GENERATED PARTS (in musical notation)")
+        parts.append("Format: Bar.Beat:Note(duration,dynamics)")
         parts.append("")
 
         for prev_part in ensemble.previously_generated:
@@ -953,10 +984,10 @@ def build_ensemble_context(
                 part_role = ""
             prev_notes = prev_part.get("notes", [])
             role_suffix = f" [{part_role}]" if part_role else ""
-            midi_map = build_simplified_midi_map(prev_notes, SIMPLIFIED_MIDI_MAP_LIMIT)
+            midi_map = build_simplified_midi_map(prev_notes, SIMPLIFIED_MIDI_MAP_LIMIT, time_sig)
             if midi_map:
                 pitches = [n.get("pitch", 60) for n in prev_notes]
-                range_str = f"({pitch_to_note(min(pitches))}-{pitch_to_note(max(pitches))})" if pitches else ""
+                range_str = f"(Range: {pitch_to_note(min(pitches))}-{pitch_to_note(max(pitches))})" if pitches else ""
                 parts.append(f"**{part_name}**{role_suffix} {range_str}:")
                 parts.append(f"  {midi_map}")
                 parts.append("")

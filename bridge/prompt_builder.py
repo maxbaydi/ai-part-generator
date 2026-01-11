@@ -60,6 +60,89 @@ except ImportError:
     from .type import ARTICULATION_HINTS, TYPE_HINTS
     from .utils import safe_format
 
+def bar_to_time_q(bar: int, time_sig: str = "4/4") -> float:
+    try:
+        parts = time_sig.split("/")
+        num = int(parts[0])
+        denom = int(parts[1])
+    except (ValueError, IndexError):
+        num, denom = 4, 4
+    quarters_per_bar = num * (4.0 / denom)
+    return (bar - 1) * quarters_per_bar
+
+
+def bars_range_to_time_q(bars_str: str, time_sig: str = "4/4") -> Tuple[float, float]:
+    try:
+        if "-" in bars_str:
+            parts = bars_str.split("-")
+            start_bar = int(parts[0])
+            end_bar = int(parts[1])
+        else:
+            start_bar = int(bars_str)
+            end_bar = start_bar
+    except (ValueError, IndexError):
+        return 0.0, 0.0
+    
+    start_q = bar_to_time_q(start_bar, time_sig)
+    end_q = bar_to_time_q(end_bar + 1, time_sig)
+    return start_q, end_q
+
+
+def get_chord_tones_from_name(chord_name: str) -> List[int]:
+    chord_name = chord_name.strip()
+    if not chord_name:
+        return []
+    
+    root_map = {
+        "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3,
+        "E": 4, "F": 5, "F#": 6, "Gb": 6, "G": 7, "G#": 8, "Ab": 8,
+        "A": 9, "A#": 10, "Bb": 10, "B": 11,
+    }
+    
+    root_pc = 0
+    suffix = chord_name
+    for root in ["C#", "Db", "D#", "Eb", "F#", "Gb", "G#", "Ab", "A#", "Bb", "C", "D", "E", "F", "G", "A", "B"]:
+        if chord_name.startswith(root):
+            root_pc = root_map[root]
+            suffix = chord_name[len(root):]
+            break
+    
+    suffix_lower = suffix.lower()
+    
+    if "maj7" in suffix_lower or "maj9" in suffix_lower:
+        intervals = [0, 4, 7, 11]
+    elif "m7b5" in suffix_lower or "ø" in suffix:
+        intervals = [0, 3, 6, 10]
+    elif "dim7" in suffix_lower or "°7" in suffix:
+        intervals = [0, 3, 6, 9]
+    elif "dim" in suffix_lower or "°" in suffix:
+        intervals = [0, 3, 6]
+    elif "aug" in suffix_lower or "+" in suffix:
+        intervals = [0, 4, 8]
+    elif "sus4" in suffix_lower:
+        intervals = [0, 5, 7]
+    elif "sus2" in suffix_lower:
+        intervals = [0, 2, 7]
+    elif "add9" in suffix_lower:
+        intervals = [0, 4, 7, 14]
+    elif "add" in suffix_lower and "11" in suffix_lower:
+        intervals = [0, 4, 7, 17]
+    elif "m9" in suffix_lower:
+        intervals = [0, 3, 7, 10, 14]
+    elif "9" in suffix_lower and "m" not in suffix_lower:
+        intervals = [0, 4, 7, 10, 14]
+    elif "m7" in suffix_lower or "min7" in suffix_lower:
+        intervals = [0, 3, 7, 10]
+    elif "7" in suffix_lower:
+        intervals = [0, 4, 7, 10]
+    elif suffix_lower.startswith("m") or "min" in suffix_lower:
+        intervals = [0, 3, 7]
+    else:
+        intervals = [0, 4, 7]
+    
+    return [(root_pc + i) % 12 for i in intervals]
+
+
 def estimate_note_count(length_q: float, bpm: float, time_sig: str, generation_type: str) -> Tuple[int, int, str]:
     """Estimate recommended note count based on musical context."""
     try:
@@ -407,6 +490,16 @@ def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> Li
         return []
 
     if request.ensemble and request.ensemble.is_sequential:
+        plan = request.ensemble.plan or {}
+        initial_bpm = plan.get("initial_bpm")
+        
+        if initial_bpm:
+            return [
+                "### TEMPO/TIME SIGNATURE",
+                f"Tempo is set by the composition plan: {initial_bpm} BPM",
+                "DO NOT output tempo_markers - tempo changes are controlled by the plan.",
+            ]
+        
         generation_order = int(request.ensemble.generation_order or 0)
         if generation_order > 1:
             return [
@@ -781,56 +874,77 @@ def build_prompt(
                 user_prompt_parts.append("- MELODY: Chord tones on downbeats, passing tones resolve to chord tones")
                 user_prompt_parts.append("- ALL: Switch to new chord tones at EXACTLY the time_q specified")
             elif isinstance(chord_map, list) and chord_map:
-                # ... (rest of plan prompt construction) ...
+                try:
+                    from music_notation import midi_to_note
+                except ImportError:
+                    from .music_notation import midi_to_note
+                
                 user_prompt_parts.append("")
-                user_prompt_parts.append("**CHORD MAP (MANDATORY - ALL INSTRUMENTS MUST FOLLOW):**")
+                user_prompt_parts.append("**CHORD MAP (MANDATORY - USE THESE EXACT NOTES):**")
                 user_prompt_parts.append("```")
-                user_prompt_parts.append("time_q | bar.beat | chord | roman | chord_tones (pitch classes)")
+                user_prompt_parts.append("Bar.Beat | Chord        | Notes for YOUR range")
+                user_prompt_parts.append("---------|--------------|---------------------")
                 for chord_entry in chord_map:
                     if not isinstance(chord_entry, dict):
                         continue
-                    time_q = chord_entry.get("time_q", 0)
                     bar = chord_entry.get("bar", 1)
                     beat = chord_entry.get("beat", 1)
                     chord = chord_entry.get("chord", "?")
-                    roman = chord_entry.get("roman", "?")
+                    roman = chord_entry.get("roman", "")
                     chord_tones = chord_entry.get("chord_tones", [])
-                    tones_str = ",".join(str(t) for t in chord_tones) if chord_tones else "?"
-                    user_prompt_parts.append(f"{time_q:6.1f} | {bar}.{beat}     | {chord:5} | {roman:4} | [{tones_str}]")
+                    
+                    if not chord_tones and chord != "?":
+                        chord_tones = get_chord_tones_from_name(chord)
+                    
+                    notes_in_range = []
+                    for pc in chord_tones:
+                        try:
+                            pc_int = int(pc) % 12
+                        except (TypeError, ValueError):
+                            continue
+                        for octave in range(1, 8):
+                            midi_pitch = pc_int + (octave + 1) * 12
+                            if pitch_low <= midi_pitch <= pitch_high:
+                                notes_in_range.append(midi_to_note(midi_pitch))
+                                break
+                    
+                    notes_str = ", ".join(notes_in_range[:6]) if notes_in_range else chord
+                    chord_label = f"{chord} ({roman})" if roman else chord
+                    user_prompt_parts.append(f"{bar}.{beat:<4}    | {chord_label:<12} | {notes_str}")
                 user_prompt_parts.append("```")
+                user_prompt_parts.append("")
                 user_prompt_parts.append("CHORD MAP RULES:")
-                user_prompt_parts.append("- BASS: Play ROOT (first chord_tone) on beat 1 of each chord change")
-                user_prompt_parts.append("- HARMONY: Voice-lead smoothly, prioritize chord_tones on strong beats")
-                user_prompt_parts.append("- MELODY: Chord tones on downbeats, passing tones resolve to chord tones")
-                user_prompt_parts.append("- ALL: Switch to new chord tones at EXACTLY the time_q specified")
+                user_prompt_parts.append("- BASS: Play ROOT note on beat 1 of each chord")
+                user_prompt_parts.append("- MELODY: Use notes from the chord on strong beats")
+                user_prompt_parts.append("- HARMONY: Voice-lead smoothly between chords")
+                user_prompt_parts.append("- Switch to new chord notes at EXACTLY the Bar.Beat")
             
-            # ... (dynamic arc, texture map, etc) ...
             dynamic_arc = plan_data.get("dynamic_arc") if isinstance(plan_data, dict) else None
             if isinstance(dynamic_arc, list) and dynamic_arc:
                 user_prompt_parts.append("")
                 user_prompt_parts.append("**DYNAMIC ARC (MANDATORY - FOLLOW THIS INTENSITY CURVE):**")
                 user_prompt_parts.append("```")
-                user_prompt_parts.append("time_q | bar | level | velocity | trend")
+                user_prompt_parts.append("Bar   | Dynamics | Trend")
+                user_prompt_parts.append("------|----------|-------")
                 for dyn_entry in dynamic_arc:
                     if not isinstance(dyn_entry, dict):
                         continue
-                    time_q = dyn_entry.get("time_q", 0)
                     bar = dyn_entry.get("bar", 1)
                     level = dyn_entry.get("level", "mf")
-                    target_vel = dyn_entry.get("target_velocity", 80)
                     trend = dyn_entry.get("trend", "stable")
-                    user_prompt_parts.append(f"{time_q:6.1f} | {bar:3} | {level:4} | {target_vel:3}      | {trend}")
+                    trend_arrow = {"building": "↗", "climax": "★", "fading": "↘", "resolving": "↓", "stable": "→"}.get(trend, "→")
+                    user_prompt_parts.append(f"Bar {bar:<2} | {level:<8} | {trend_arrow} {trend}")
                 user_prompt_parts.append("```")
                 user_prompt_parts.append("DYNAMIC ARC RULES:")
-                user_prompt_parts.append("- Use target_velocity as BASE for notes at that time_q")
-                user_prompt_parts.append("- 'building': gradually increase velocity toward next point")
-                user_prompt_parts.append("- 'climax': peak intensity, full expression")
-                user_prompt_parts.append("- 'fading'/'resolving': decrease toward next point")
-                user_prompt_parts.append("- Expression curve should follow this arc shape")
+                user_prompt_parts.append("- Match the dynamics level at each bar")
+                user_prompt_parts.append("- 'building': gradually increase intensity toward next point")
+                user_prompt_parts.append("- 'climax': peak intensity, strongest notes")
+                user_prompt_parts.append("- 'fading'/'resolving': decrease intensity")
 
             texture_map = plan_data.get("texture_map") if isinstance(plan_data, dict) else None
             current_inst = request.ensemble.current_instrument if request.ensemble else None
             current_family = (current_inst.get("family", "") if current_inst else "").lower()
+            time_sig = request.music.time_sig if request.music else "4/4"
             if isinstance(texture_map, list) and texture_map:
                 user_prompt_parts.append("")
                 user_prompt_parts.append("**TEXTURE MAP (WHEN TO PLAY/REST):**")
@@ -838,8 +952,6 @@ def build_prompt(
                     if not isinstance(tex_entry, dict):
                         continue
                     tex_bars = tex_entry.get("bars", "")
-                    start_q = tex_entry.get("start_q", 0)
-                    end_q = tex_entry.get("end_q", 0)
                     density = tex_entry.get("density", "medium")
                     active_fam = tex_entry.get("active_families", [])
                     tacet_fam = tex_entry.get("tacet_families", [])
@@ -850,17 +962,17 @@ def build_prompt(
                     is_tacet = current_family in [f.lower() for f in tacet_fam]
 
                     status = "→ YOU PLAY" if is_active and not is_tacet else "→ TACET (rest)"
-                    user_prompt_parts.append(f"- Bars {tex_bars} (time_q {start_q}-{end_q}): {density} density {status}")
+                    user_prompt_parts.append(f"- Bars {tex_bars}: {density} density {status}")
                     if tex_type:
                         user_prompt_parts.append(f"    Texture: {tex_type}")
                     if notes_hint and is_active and not is_tacet:
                         user_prompt_parts.append(f"    Notes per bar: ~{notes_hint}")
                     if is_tacet:
-                        user_prompt_parts.append(f"    → Generate NO NOTES in this section!")
+                        user_prompt_parts.append(f"    → Generate NO NOTES for bars {tex_bars}!")
 
                 user_prompt_parts.append("")
                 user_prompt_parts.append("TEXTURE RULES:")
-                user_prompt_parts.append("- TACET sections: output empty notes array for that time range")
+                user_prompt_parts.append("- TACET sections: output empty notes array for those bars")
                 user_prompt_parts.append("- 'sparse': leave lots of space, few notes")
                 user_prompt_parts.append("- 'full'/'tutti': all instruments active, denser writing")
 
@@ -873,42 +985,61 @@ def build_prompt(
                     name = phrase.get("name", "phrase")
                     bars = phrase.get("bars", "")
                     function = phrase.get("function", "")
-                    start_q = phrase.get("start_q", 0)
-                    end_q = phrase.get("end_q", 0)
                     cadence = phrase.get("cadence", {})
                     breathing = phrase.get("breathing_points", [])
-                    climax = phrase.get("climax_point", {})
+                    breathe_at = phrase.get("breathe_at", [])
+                    climax = phrase.get("climax_point", phrase.get("climax", {}))
 
-                    user_prompt_parts.append(f"- **{name.upper()}** (bars {bars}, time_q {start_q}-{end_q})")
+                    user_prompt_parts.append(f"- **{name.upper()}** (Bars {bars})")
                     if function:
                         user_prompt_parts.append(f"    Function: {function}")
                     if isinstance(cadence, dict) and cadence:
                         cad_type = cadence.get("type", "")
                         cad_bar = cadence.get("bar", "")
                         target = cadence.get("target_degree", "")
-                        user_prompt_parts.append(f"    Cadence: {cad_type} at bar {cad_bar}, end on scale degree {target}")
-                    if breathing:
+                        if cad_type and cad_bar:
+                            user_prompt_parts.append(f"    Cadence: {cad_type} at bar {cad_bar}")
+                    if breathe_at:
+                        breath_str = ", ".join(str(b) for b in breathe_at)
+                        user_prompt_parts.append(f"    Breathe at: {breath_str}")
+                    elif breathing:
                         breath_str = ", ".join(str(b) for b in breathing)
-                        user_prompt_parts.append(f"    BREATHING POINTS (insert 0.25-0.5q rest): time_q [{breath_str}]")
+                        user_prompt_parts.append(f"    Breathe at: {breath_str}")
                     if isinstance(climax, dict) and climax:
-                        climax_q = climax.get("time_q", "")
+                        climax_bar = climax.get("bar", "")
                         intensity = climax.get("intensity", "")
-                        user_prompt_parts.append(f"    CLIMAX: time_q {climax_q}, intensity {intensity}")
+                        if climax_bar:
+                            user_prompt_parts.append(f"    Climax: Bar {climax_bar} ({intensity})")
 
             if isinstance(accent_map, list) and accent_map:
                 user_prompt_parts.append("")
                 user_prompt_parts.append("**ACCENT MAP (RHYTHMIC SYNC):**")
                 strong_accents = [a for a in accent_map if isinstance(a, dict) and a.get("strength") == "strong"]
                 if strong_accents:
-                    strong_times = ", ".join(f"{a.get('time_q', 0):.1f}" for a in strong_accents[:12])
-                    user_prompt_parts.append(f"- STRONG accents (all instruments): time_q [{strong_times}]")
-                    user_prompt_parts.append("  → Place notes ON these times, increase velocity by 15-25")
+                    accent_strs = []
+                    for a in strong_accents[:12]:
+                        bar = a.get("bar", 1)
+                        beat = a.get("beat", 1)
+                        accent_strs.append(f"Bar {bar}.{beat}")
+                    user_prompt_parts.append(f"- STRONG accents (all instruments): {', '.join(accent_strs)}")
+                    user_prompt_parts.append("  → Place notes ON these beats, use f-ff dynamics")
                 medium_accents = [a for a in accent_map if isinstance(a, dict) and a.get("strength") == "medium"]
                 if medium_accents:
-                    medium_times = ", ".join(f"{a.get('time_q', 0):.1f}" for a in medium_accents[:8])
-                    user_prompt_parts.append(f"- MEDIUM accents (optional): time_q [{medium_times}]")
+                    accent_strs = []
+                    for a in medium_accents[:8]:
+                        bar = a.get("bar", 1)
+                        beat = a.get("beat", 1)
+                        accent_strs.append(f"Bar {bar}.{beat}")
+                    user_prompt_parts.append(f"- MEDIUM accents (optional): {', '.join(accent_strs)}")
 
             if isinstance(motif_blueprint, dict) and motif_blueprint:
+                try:
+                    from music_notation import midi_to_note, dur_q_to_name
+                    from midi_utils import note_to_midi
+                except ImportError:
+                    from .music_notation import midi_to_note, dur_q_to_name
+                    from .midi_utils import note_to_midi
+                
                 user_prompt_parts.append("")
                 user_prompt_parts.append("**MOTIF BLUEPRINT:**")
                 description = motif_blueprint.get("description", "")
@@ -917,21 +1048,64 @@ def build_prompt(
                 rhythm = motif_blueprint.get("rhythm_pattern", [])
                 start_pitch = motif_blueprint.get("suggested_start_pitch")
                 techniques = motif_blueprint.get("development_techniques", [])
+                notes_str = motif_blueprint.get("notes", "")
 
                 if description:
                     user_prompt_parts.append(f"- Idea: {description}")
                 if character:
                     user_prompt_parts.append(f"- Character: {character}")
-                if intervals:
-                    int_str = ", ".join(f"{i:+d}" for i in intervals)
-                    user_prompt_parts.append(f"- Intervals (semitones): [{int_str}]")
+                
+                computed_intervals = []
+                if notes_str:
+                    user_prompt_parts.append(f"- Notes: {notes_str}")
+                    note_parts = [n.strip() for n in notes_str.replace("→", ",").replace("->", ",").split(",") if n.strip()]
+                    if len(note_parts) > 1:
+                        try:
+                            midi_notes = [note_to_midi(n) for n in note_parts]
+                            for i in range(1, len(midi_notes)):
+                                computed_intervals.append(midi_notes[i] - midi_notes[i-1])
+                        except (ValueError, TypeError):
+                            pass
+                elif intervals and start_pitch:
+                    try:
+                        motif_notes = []
+                        current_pitch = int(start_pitch)
+                        motif_notes.append(midi_to_note(current_pitch))
+                        for interval in intervals:
+                            current_pitch += int(interval)
+                            motif_notes.append(midi_to_note(current_pitch))
+                        user_prompt_parts.append(f"- Notes: {' → '.join(motif_notes)}")
+                    except (TypeError, ValueError):
+                        pass
+                elif start_pitch:
+                    try:
+                        user_prompt_parts.append(f"- Start note: {midi_to_note(int(start_pitch))}")
+                    except (TypeError, ValueError):
+                        pass
+                
                 if rhythm:
-                    rhythm_str = ", ".join(str(r) for r in rhythm)
-                    user_prompt_parts.append(f"- Rhythm pattern (quarters): [{rhythm_str}]")
-                if start_pitch:
-                    user_prompt_parts.append(f"- Suggested start pitch: MIDI {start_pitch}")
+                    try:
+                        rhythm_names = [dur_q_to_name(float(r), abbrev=False) for r in rhythm]
+                        user_prompt_parts.append(f"- Rhythm: {' → '.join(rhythm_names)}")
+                    except (TypeError, ValueError):
+                        pass
+                
+                final_intervals = computed_intervals if computed_intervals else intervals
+                if final_intervals:
+                    int_vals = []
+                    for i in final_intervals:
+                        try:
+                            int_vals.append(int(i))
+                        except (TypeError, ValueError):
+                            continue
+                    if int_vals:
+                        int_str = ", ".join(f"{v:+d}" for v in int_vals)
+                        user_prompt_parts.append(f"- Intervals: [{int_str}] semitones")
+                
                 if techniques:
                     user_prompt_parts.append(f"- Development: {', '.join(techniques)}")
+                
+                user_prompt_parts.append("")
                 user_prompt_parts.append("MOTIF RULE: MELODY role should establish this motif, others respond/develop it")
 
             if isinstance(section_overview, list) and section_overview:
@@ -1001,26 +1175,50 @@ def build_prompt(
             # ... (motif display code) ...
             motif_notes = generated_motif.get("notes", [])
             if motif_notes:
-                user_prompt_parts.append("**Motif notes (relative to start):**")
+                try:
+                    from music_notation import midi_to_note, dur_q_to_name, velocity_to_dynamic
+                except ImportError:
+                    from .music_notation import midi_to_note, dur_q_to_name, velocity_to_dynamic
+                
+                user_prompt_parts.append("**Motif notes:**")
                 user_prompt_parts.append("```")
-                user_prompt_parts.append("start_q | dur_q | pitch")
+                user_prompt_parts.append("Beat | Note    | Duration  | Dynamics")
+                user_prompt_parts.append("-----|---------|-----------|--------")
                 for note in motif_notes[:12]:
                     if isinstance(note, dict):
                         start_q = note.get("start_q", 0)
                         dur_q = note.get("dur_q", 1.0)
                         pitch = note.get("pitch", 60)
-                        user_prompt_parts.append(f"{start_q:6.2f} | {dur_q:.2f} | {pitch}")
+                        vel = note.get("vel", 80)
+                        note_name = midi_to_note(pitch)
+                        dur_name = dur_q_to_name(dur_q, abbrev=False)
+                        dyn = velocity_to_dynamic(vel)
+                        user_prompt_parts.append(f"{start_q:4.1f} | {note_name:<7} | {dur_name:<9} | {dyn}")
                 user_prompt_parts.append("```")
 
             intervals = generated_motif.get("intervals", [])
             if intervals:
-                int_str = ", ".join(f"{i:+d}" for i in intervals)
-                user_prompt_parts.append(f"**Intervals:** [{int_str}]")
+                int_vals = []
+                for i in intervals:
+                    try:
+                        int_vals.append(int(i))
+                    except (TypeError, ValueError):
+                        continue
+                if int_vals:
+                    int_str = ", ".join(f"{v:+d}" for v in int_vals)
+                    user_prompt_parts.append(f"**Intervals:** [{int_str}] semitones")
 
             rhythm = generated_motif.get("rhythm_pattern", [])
             if rhythm:
-                rhythm_str = ", ".join(f"{r:.2f}" for r in rhythm)
-                user_prompt_parts.append(f"**Rhythm:** [{rhythm_str}]")
+                try:
+                    from music_notation import dur_q_to_name
+                except ImportError:
+                    from .music_notation import dur_q_to_name
+                try:
+                    rhythm_names = [dur_q_to_name(float(r), abbrev=False) for r in rhythm]
+                    user_prompt_parts.append(f"**Rhythm:** {' → '.join(rhythm_names)}")
+                except (TypeError, ValueError):
+                    pass
 
             character = generated_motif.get("character", "")
             if character:
@@ -1040,12 +1238,19 @@ def build_prompt(
                 user_prompt_parts.append("YOUR TASK: Complement this motif - don't duplicate it, respond to it.")
             user_prompt_parts.append("")
 
+    try:
+        from music_notation import midi_to_note
+    except ImportError:
+        from .music_notation import midi_to_note
+    
+    pitch_low_note = midi_to_note(pitch_low)
+    pitch_high_note = midi_to_note(pitch_high)
+    
     if request.free_mode:
         user_prompt_parts.extend([
             f"",
             f"### COMPOSITION RULES",
-            f"- ALLOWED PITCHES (use ONLY these): {valid_pitches_str}",
-            f"- Pitch range: MIDI {pitch_low}-{pitch_high}",
+            f"- ALLOWED RANGE: {pitch_low_note} to {pitch_high_note}",
             f"- Channel: {midi_channel}",
             f"- Generate appropriate number of notes for the part type",
             f"",
@@ -1055,38 +1260,36 @@ def build_prompt(
             f"- Articulations: use ONE for simple parts (pads, chords), MULTIPLE only for expressive melodic parts",
             f"",
             f"### THREE-LAYER DYNAMICS",
-            f"1. VELOCITY (vel): Note attack intensity. Accent: 100-127, normal: 70-90, soft: 40-60",
-            f"2. EXPRESSION (curves.expression): GLOBAL section dynamics - phrase/section envelope",
-            f"3. DYNAMICS (curves.dynamics): PER-NOTE breathing - CRITICAL for realism!",
+            f"1. DYNAMICS (dyn): Note attack - p, mp, mf, f, ff",
+            f"2. EXPRESSION CURVE: GLOBAL section dynamics - phrase/section envelope",
+            f"3. DYNAMICS CURVE: PER-NOTE breathing - CRITICAL for realism!",
             f"",
-            f"DYNAMICS TECHNIQUES FOR SUSTAINED NOTES (dur_q >= 1.0):",
+            f"DYNAMICS TECHNIQUES FOR SUSTAINED NOTES (half note or longer):",
             f"- CRESCENDO (<): low→high - for phrase starts, building tension",
             f"- DECRESCENDO (>): high→low - for phrase ends, resolution",
             f"- SWELL (<>): rise→fall - most common for whole/half notes",
             f"",
             f"DYNAMICS BREAKPOINTS - add for EACH sustained note:",
-            f"- dur_q >= 4.0 (whole): 4+ breakpoints with full swell",
-            f"- dur_q >= 2.0 (half): 3+ breakpoints",
-            f"- dur_q >= 1.0 (quarter): 2+ breakpoints",
+            f"- whole notes (4 beats): 4+ breakpoints with full swell",
+            f"- half notes (2 beats): 3+ breakpoints",
+            f"- quarter notes (1 beat): 2+ breakpoints",
             f"- NEVER flat dynamics on sustained notes - sounds robotic!",
         ])
     else:
         short_articulations = profile.get("articulations", {}).get("short_articulations", [])
         is_short_art = articulation.lower() in [a.lower() for a in short_articulations]
-        velocity_hint = "Use velocity for note-to-note dynamics (accents: 100-120, normal: 75-95, soft: 50-70)" if is_short_art else "Vary velocity for phrase shaping (phrase peaks: 90-100, between: 70-85)"
+        velocity_hint = "Use dyn for note-to-note dynamics (accents: f-fff, normal: mf-f, soft: p-mp)" if is_short_art else "Vary dynamics for phrase shaping (peaks: f-ff, between: mf)"
 
         user_prompt_parts.extend([
             f"",
             f"### COMPOSITION RULES",
-            # removed style_hint here as it is now in GENERATION TARGET
-            f"- ALLOWED PITCHES (use ONLY these): {valid_pitches_str}",
-            f"- Suggested note range: {min_notes}-{max_notes} (adapt based on musical needs)",
-            f"- Pitch range: MIDI {pitch_low}-{pitch_high}",
+            f"- ALLOWED RANGE: {pitch_low_note} to {pitch_high_note}",
+            f"- Suggested note count: {min_notes}-{max_notes} (adapt based on musical needs)",
             f"- Channel: {midi_channel}",
             f"- Articulation: {articulation}",
             f"",
             f"### THREE-LAYER DYNAMICS",
-            f"1. VELOCITY: {velocity_hint}",
+            f"1. DYNAMICS: {velocity_hint}",
             f"2. EXPRESSION CURVE: GLOBAL section envelope",
             f"3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)",
         ])

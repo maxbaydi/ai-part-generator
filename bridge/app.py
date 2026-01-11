@@ -31,6 +31,24 @@ except ImportError:
 app = FastAPI(title=APP_NAME)
 
 
+def calculate_length_q(time_window, music_info) -> float:
+    length_sec = time_window.end_sec - time_window.start_sec
+    
+    if time_window.length_bars is not None:
+        time_sig = music_info.time_sig
+        try:
+            parts = time_sig.split("/")
+            num = int(parts[0])
+            denom = int(parts[1])
+            quarters_per_bar = num * (4.0 / denom)
+        except (ValueError, IndexError):
+            quarters_per_bar = 4.0
+        return max(0.0, float(time_window.length_bars) * quarters_per_bar)
+    
+    bpm_for_calc = music_info.original_bpm or music_info.bpm
+    return max(0.0, length_sec * float(bpm_for_calc) / SECONDS_PER_MINUTE)
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -46,9 +64,7 @@ def generate(request: GenerateRequest) -> JSONResponse:
         profile = deep_merge(profile, request.target.profile_overrides)
 
     preset_name, preset_settings = resolve_preset(profile, request.target.preset_name)
-    length_sec = request.time.end_sec - request.time.start_sec
-    length_q = length_sec * float(request.music.bpm) / SECONDS_PER_MINUTE
-    length_q = max(0.0, length_q)
+    length_q = calculate_length_q(request.time, request.music)
 
     system_prompt, user_prompt = build_prompt(request, profile, preset_name, preset_settings, length_q)
     messages = build_chat_messages(system_prompt, user_prompt)
@@ -162,9 +178,7 @@ def plan(request: GenerateRequest) -> JSONResponse:
     if request.target.profile_overrides:
         profile = deep_merge(profile, request.target.profile_overrides)
 
-    length_sec = request.time.end_sec - request.time.start_sec
-    length_q = length_sec * float(request.music.bpm) / SECONDS_PER_MINUTE
-    length_q = max(0.0, length_q)
+    length_q = calculate_length_q(request.time, request.music)
 
     system_prompt, user_prompt = build_plan_prompt(request, length_q)
     messages = build_chat_messages(system_prompt, user_prompt)
@@ -225,9 +239,7 @@ def arrange_plan(request: ArrangeRequest) -> JSONResponse:
     if not request.source_sketch or not request.source_sketch.notes:
         raise HTTPException(status_code=400, detail="Source sketch with notes is required")
 
-    length_sec = request.time.end_sec - request.time.start_sec
-    length_q = length_sec * float(request.music.bpm) / SECONDS_PER_MINUTE
-    length_q = max(0.0, length_q)
+    length_q = calculate_length_q(request.time, request.music)
 
     system_prompt, user_prompt = build_arrange_plan_prompt(request, length_q)
     messages = build_chat_messages(system_prompt, user_prompt)

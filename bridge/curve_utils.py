@@ -167,11 +167,46 @@ def build_sustain_pedal_cc_events(
     return events
 
 
+def bar_beat_to_time_q(bar: Any, beat: Any, time_sig: str = "4/4") -> float:
+    try:
+        parts = time_sig.split("/")
+        num = int(parts[0])
+        denom = int(parts[1])
+    except (ValueError, IndexError):
+        num, denom = 4, 4
+    
+    quarters_per_bar = num * (4.0 / denom)
+    beat_q = 4.0 / denom
+    
+    try:
+        bar_num = int(bar)
+        beat_num = float(beat)
+    except (TypeError, ValueError):
+        return 0.0
+    
+    return (bar_num - 1) * quarters_per_bar + (beat_num - 1) * beat_q
+
+
+def convert_breakpoint(point: Dict[str, Any], time_sig: str = "4/4") -> Dict[str, float]:
+    if "time_q" in point:
+        time_q = float(point.get("time_q", 0.0))
+    elif "bar" in point and "beat" in point:
+        time_q = bar_beat_to_time_q(point["bar"], point["beat"], time_sig)
+    elif "bar" in point:
+        time_q = bar_beat_to_time_q(point["bar"], 1, time_sig)
+    else:
+        time_q = 0.0
+    
+    value = float(point.get("value", 0.0))
+    return {"time_q": time_q, "value": value}
+
+
 def build_cc_events(
     curves: Dict[str, Any],
     profile: Dict[str, Any],
     length_q: float,
     default_chan: int,
+    time_sig: str = "4/4",
 ) -> List[Dict[str, Any]]:
     controller_cfg = profile.get("controllers", {})
     semantic_to_cc = controller_cfg.get("semantic_to_cc", controller_cfg)
@@ -195,8 +230,9 @@ def build_cc_events(
         points: List[Dict[str, float]] = []
         for point in raw_points:
             try:
-                time_q = float(point.get("time_q", 0.0))
-                value = float(point.get("value", 0.0))
+                converted = convert_breakpoint(point, time_sig)
+                time_q = converted["time_q"]
+                value = converted["value"]
             except (TypeError, ValueError):
                 continue
             time_q = clamp(time_q, 0.0, max(0.0, length_q))

@@ -36,6 +36,144 @@ except ImportError:
 
 NOTE_RE = re.compile(r"^([A-Ga-g])([#b]?)(-?\d+)$")
 
+DURATION_NAME_TO_Q = {
+    "whole": 4.0, "w": 4.0,
+    "dotted-half": 3.0, "dh": 3.0, "dotted half": 3.0,
+    "half": 2.0, "h": 2.0,
+    "dotted-quarter": 1.5, "dq": 1.5, "dotted quarter": 1.5,
+    "quarter": 1.0, "q": 1.0,
+    "dotted-8th": 0.75, "d8": 0.75, "dotted 8th": 0.75, "dotted-eighth": 0.75,
+    "8th": 0.5, "8": 0.5, "eighth": 0.5,
+    "dotted-16th": 0.375, "d16": 0.375, "dotted 16th": 0.375,
+    "16th": 0.25, "16": 0.25, "sixteenth": 0.25,
+    "32nd": 0.125, "32": 0.125,
+    "64th": 0.0625, "64": 0.0625,
+}
+
+DYNAMIC_TO_VELOCITY = {
+    "ppp": 16, "pianississimo": 16,
+    "pp": 33, "pianissimo": 33,
+    "p": 49, "piano": 49,
+    "mp": 64, "mezzo-piano": 64, "mezzo piano": 64,
+    "mf": 80, "mezzo-forte": 80, "mezzo forte": 80,
+    "f": 96, "forte": 96,
+    "ff": 112, "fortissimo": 112,
+    "fff": 124, "fortississimo": 124,
+}
+
+
+def parse_duration(dur: Any) -> float:
+    if isinstance(dur, (int, float)):
+        return float(dur)
+    if isinstance(dur, str):
+        dur_lower = dur.lower().strip()
+        if dur_lower in DURATION_NAME_TO_Q:
+            return DURATION_NAME_TO_Q[dur_lower]
+        try:
+            return float(dur)
+        except ValueError:
+            pass
+    return MIN_NOTE_DUR_Q
+
+
+def parse_dynamic(dyn: Any) -> int:
+    if isinstance(dyn, int):
+        return dyn
+    if isinstance(dyn, float):
+        return int(dyn)
+    if isinstance(dyn, str):
+        dyn_lower = dyn.lower().strip()
+        if dyn_lower in DYNAMIC_TO_VELOCITY:
+            return DYNAMIC_TO_VELOCITY[dyn_lower]
+        try:
+            return int(dyn)
+        except ValueError:
+            pass
+    return DEFAULT_VELOCITY
+
+
+def bar_beat_to_start_q(bar: Any, beat: Any, time_sig: str = "4/4") -> float:
+    try:
+        parts = time_sig.split("/")
+        num = int(parts[0])
+        denom = int(parts[1])
+    except (ValueError, IndexError):
+        num, denom = 4, 4
+    
+    quarters_per_bar = num * (4.0 / denom)
+    beat_q = 4.0 / denom
+    
+    try:
+        bar_num = int(bar)
+        beat_num = float(beat)
+    except (TypeError, ValueError):
+        return 0.0
+    
+    return (bar_num - 1) * quarters_per_bar + (beat_num - 1) * beat_q
+
+
+def convert_musical_note_format(note: Dict[str, Any], time_sig: str = "4/4") -> Dict[str, Any]:
+    if "start_q" in note and "pitch" in note:
+        return note
+    
+    converted = {}
+    
+    if "bar" in note and "beat" in note:
+        converted["start_q"] = bar_beat_to_start_q(note["bar"], note["beat"], time_sig)
+    elif "start_q" in note:
+        converted["start_q"] = float(note.get("start_q", 0))
+    elif "time_q" in note:
+        converted["start_q"] = float(note.get("time_q", 0))
+    else:
+        converted["start_q"] = 0.0
+    
+    if "note" in note:
+        try:
+            converted["pitch"] = note_to_midi(note["note"])
+        except ValueError:
+            converted["pitch"] = DEFAULT_PITCH
+    elif "pitch" in note:
+        try:
+            converted["pitch"] = note_to_midi(note["pitch"])
+        except ValueError:
+            converted["pitch"] = DEFAULT_PITCH
+    else:
+        converted["pitch"] = DEFAULT_PITCH
+    
+    if "dur" in note:
+        converted["dur_q"] = parse_duration(note["dur"])
+    elif "dur_q" in note:
+        converted["dur_q"] = float(note.get("dur_q", MIN_NOTE_DUR_Q))
+    elif "duration" in note:
+        converted["dur_q"] = parse_duration(note["duration"])
+    else:
+        converted["dur_q"] = MIN_NOTE_DUR_Q
+    
+    if "dyn" in note:
+        converted["vel"] = parse_dynamic(note["dyn"])
+    elif "vel" in note:
+        converted["vel"] = int(note.get("vel", DEFAULT_VELOCITY))
+    elif "velocity" in note:
+        converted["vel"] = int(note.get("velocity", DEFAULT_VELOCITY))
+    elif "dynamic" in note:
+        converted["vel"] = parse_dynamic(note["dynamic"])
+    elif "dynamics" in note:
+        converted["vel"] = parse_dynamic(note["dynamics"])
+    else:
+        converted["vel"] = DEFAULT_VELOCITY
+    
+    if "chan" in note:
+        converted["chan"] = note["chan"]
+    elif "channel" in note:
+        converted["chan"] = note["channel"]
+    
+    if "art" in note:
+        converted["articulation"] = note["art"]
+    elif "articulation" in note:
+        converted["articulation"] = note["articulation"]
+    
+    return converted
+
 
 def note_to_midi(note: Any) -> int:
     if isinstance(note, int):
@@ -111,15 +249,21 @@ def normalize_notes(
     abs_range: Optional[Tuple[int, int]],
     fix_policy: str,
     mono: bool,
+    time_sig: str = "4/4",
 ) -> List[Dict[str, Any]]:
     normalized: List[Dict[str, Any]] = []
     for note in notes:
+        if not isinstance(note, dict):
+            continue
+        
+        converted = convert_musical_note_format(note, time_sig)
+        
         try:
-            start_q = float(note.get("start_q", 0.0))
-            dur_q = float(note.get("dur_q", MIN_NOTE_DUR_Q))
-            pitch = int(note.get("pitch", DEFAULT_PITCH))
-            vel = int(note.get("vel", DEFAULT_VELOCITY))
-            chan = normalize_channel(note.get("chan"), default_chan)
+            start_q = float(converted.get("start_q", 0.0))
+            dur_q = float(converted.get("dur_q", MIN_NOTE_DUR_Q))
+            pitch = int(converted.get("pitch", DEFAULT_PITCH))
+            vel = int(converted.get("vel", DEFAULT_VELOCITY))
+            chan = normalize_channel(converted.get("chan"), default_chan)
         except (TypeError, ValueError):
             continue
 
@@ -132,15 +276,18 @@ def normalize_notes(
         pitch = int(clamp(pitch, MIDI_MIN, MIDI_MAX))
         vel = int(clamp(vel, MIDI_VEL_MIN, MIDI_MAX))
 
-        normalized.append(
-            {
-                "start_q": start_q,
-                "dur_q": dur_q,
-                "pitch": pitch,
-                "vel": vel,
-                "chan": chan,
-            }
-        )
+        result_note = {
+            "start_q": start_q,
+            "dur_q": dur_q,
+            "pitch": pitch,
+            "vel": vel,
+            "chan": chan,
+        }
+        
+        if "articulation" in converted:
+            result_note["articulation"] = converted["articulation"]
+        
+        normalized.append(result_note)
 
     if not mono:
         return normalized

@@ -401,7 +401,15 @@ local function get_key_tracks()
   return tracks
 end
 
-local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan)
+local function calculate_length_bars(start_sec, end_sec, num, denom)
+  local start_qn = reaper.TimeMap2_timeToQN(0, start_sec)
+  local end_qn = reaper.TimeMap2_timeToQN(0, end_sec)
+  local length_q = end_qn - start_qn
+  local quarters_per_bar = num * (4.0 / denom)
+  return math.floor(length_q / quarters_per_bar + 0.5)
+end
+
+local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan, original_bpm)
   local provider = const.DEFAULT_MODEL_PROVIDER
   local model_name = const.DEFAULT_MODEL_NAME
   local base_url = const.DEFAULT_MODEL_BASE_URL
@@ -430,8 +438,10 @@ local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_i
     effective_style = generation_style or const.DEFAULT_GENERATION_STYLE
   end
 
+  local length_bars = calculate_length_bars(start_sec, end_sec, num, denom)
+
   local request = {
-    time = { start_sec = start_sec, end_sec = end_sec },
+    time = { start_sec = start_sec, end_sec = end_sec, length_bars = length_bars },
     music = { bpm = bpm, time_sig = string.format("%d/%d", num, denom), key = key },
     target = { profile_id = profile_id, articulation = articulation_name },
     generation_type = effective_type,
@@ -447,6 +457,11 @@ local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_i
       api_key = api_key,
     },
   }
+  
+  if original_bpm and original_bpm ~= bpm then
+    request.music.original_bpm = original_bpm
+  end
+  
   if ctx then
     request.context = ctx
   end
@@ -597,7 +612,7 @@ local function apply_step()
   utils.log("apply_step WARNING: unknown phase=" .. tostring(phase))
 end
 
-local function begin_apply(response, profile_id, profile, articulation_name, target_track, start_sec, end_sec, tempo_markers, on_tempo_applied)
+local function begin_apply(response, profile_id, profile, articulation_name, target_track, start_sec, end_sec, tempo_markers, on_tempo_applied, skip_tempo_markers)
   utils.log("begin_apply: starting...")
 
   if not reaper.ValidatePtr(target_track, "MediaTrack*") then
@@ -609,12 +624,14 @@ local function begin_apply(response, profile_id, profile, articulation_name, tar
   reaper.Undo_BeginBlock()
 
   local applied_bpm = nil
-  if tempo_markers and type(tempo_markers) == "table" and #tempo_markers > 0 then
+  if not skip_tempo_markers and tempo_markers and type(tempo_markers) == "table" and #tempo_markers > 0 then
     local success, first_bpm = apply_tempo_markers(tempo_markers, start_sec, end_sec)
     if success and first_bpm then
       applied_bpm = first_bpm
       utils.log("begin_apply: tempo markers applied, first BPM=" .. tostring(first_bpm))
     end
+  elseif skip_tempo_markers and tempo_markers and #tempo_markers > 0 then
+    utils.log("begin_apply: skipping tempo markers (compose mode - will apply after all parts)")
   end
 
   if on_tempo_applied and applied_bpm then
@@ -813,6 +830,8 @@ local function run_generation_after_bridge(state, profiles_by_id, start_sec, end
     api_settings,
     state.free_mode or false,
     state.allow_tempo_changes or false,
+    nil,
+    false,
     nil
   )
 
@@ -893,8 +912,8 @@ local function apply_compose_result_and_continue()
     end
     
     begin_apply(current.response, current.profile_id, current.profile, current.articulation_name, current.target_track,
-      compose_state.start_sec, compose_state.end_sec, current.tempo_markers, on_tempo_applied)
-    
+      compose_state.start_sec, compose_state.end_sec, current.tempo_markers, on_tempo_applied, true)
+
     table.insert(compose_state.generated_parts, {
       track_name = current.track_name,
       profile_name = current.profile_name,
@@ -911,11 +930,45 @@ local function apply_compose_result_and_continue()
   compose_state.current_index = compose_state.current_index + 1
   if compose_state.current_index > compose_state.total_tracks then
     utils.log("Compose: ALL COMPLETE!")
+    
+    if compose_state.deferred_tempo_markers and #compose_state.deferred_tempo_markers > 0 then
+      utils.log(string.format("Compose: applying %d deferred tempo markers...", #compose_state.deferred_tempo_markers))
+      local markers_to_apply = {}
+      local quarters_per_bar = compose_state.num * (4.0 / compose_state.denom)
+      for _, tm in ipairs(compose_state.deferred_tempo_markers) do
+        if tm.bar and tm.bar > 1 and tm.bpm then
+          local time_q = (tm.bar - 1) * quarters_per_bar
+          table.insert(markers_to_apply, {
+            time_q = time_q,
+            bpm = tm.bpm,
+            linear = tm.linear or false,
+          })
+        end
+      end
+      if #markers_to_apply > 0 then
+        apply_tempo_markers(markers_to_apply, compose_state.start_sec, compose_state.end_sec)
+        utils.log("Compose: deferred tempo markers applied successfully")
+      end
+    end
+    
     compose_state = nil
     return
   end
   
   reaper.defer(start_next_compose_generation)
+end
+
+local function apply_initial_bpm(bpm, start_sec, num, denom)
+  if not bpm or bpm <= 0 then
+    return false
+  end
+  
+  local idx = find_tempo_marker_index(start_sec)
+  reaper.SetTempoTimeSigMarker(0, idx or -1, start_sec, -1, -1, bpm, num, denom, false)
+  reaper.UpdateTimeline()
+  reaper.UpdateArrange()
+  utils.log(string.format("apply_initial_bpm: set initial tempo to %.1f BPM at %.2f sec", bpm, start_sec))
+  return true
 end
 
 local function poll_compose_plan()
@@ -945,6 +998,23 @@ local function poll_compose_plan()
     if compose_state.plan_summary ~= "" then
       utils.log("Compose plan summary: " .. compose_state.plan_summary)
     end
+    
+    if compose_state.plan then
+      local initial_bpm = compose_state.plan.initial_bpm
+      if initial_bpm and initial_bpm > 0 then
+        apply_initial_bpm(initial_bpm, compose_state.start_sec, compose_state.num, compose_state.denom)
+        compose_state.bpm = initial_bpm
+        compose_state.original_bpm = initial_bpm
+        utils.log(string.format("Compose: initial_bpm from plan = %.1f", initial_bpm))
+      end
+      
+      local tempo_map = compose_state.plan.tempo_map
+      if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
+        compose_state.deferred_tempo_markers = tempo_map
+        utils.log(string.format("Compose: saved %d deferred tempo markers for later", #tempo_map))
+      end
+    end
+    
     local ordered, applied = apply_plan_order(compose_state.plan, compose_state.tracks)
     if applied then
       compose_state.tracks = ordered
@@ -1023,7 +1093,8 @@ local function start_compose_plan()
     compose_state.free_mode,
     false,
     ensemble_info,
-    true
+    true,
+    nil
   )
 
   utils.log(string.format("Compose: using plan model '%s'", request.model.model_name))
@@ -1174,7 +1245,9 @@ function start_next_compose_generation()
     compose_state.api_settings,
     compose_state.free_mode,
     compose_state.allow_tempo_changes or false,
-    ensemble_info
+    ensemble_info,
+    false,
+    compose_state.original_bpm
   )
   
   local handle, err = http.begin_request(const.DEFAULT_BRIDGE_URL, request)
@@ -1419,7 +1492,7 @@ local function apply_arrange_result_and_continue()
     end
 
     begin_apply(current.response, current.profile_id, current.profile, current.articulation_name, current.target_track,
-      arrange_state.start_sec, arrange_state.end_sec, tempo_markers, on_tempo_applied)
+      arrange_state.start_sec, arrange_state.end_sec, tempo_markers, on_tempo_applied, true)
 
     table.insert(arrange_state.generated_parts, {
       track_name = current.track_name,
@@ -1437,6 +1510,27 @@ local function apply_arrange_result_and_continue()
   arrange_state.current_index = arrange_state.current_index + 1
   if arrange_state.current_index > arrange_state.total_tracks then
     utils.log("Arrange: ALL COMPLETE!")
+    
+    if arrange_state.deferred_tempo_markers and #arrange_state.deferred_tempo_markers > 0 then
+      utils.log(string.format("Arrange: applying %d deferred tempo markers...", #arrange_state.deferred_tempo_markers))
+      local markers_to_apply = {}
+      local quarters_per_bar = arrange_state.num * (4.0 / arrange_state.denom)
+      for _, tm in ipairs(arrange_state.deferred_tempo_markers) do
+        if tm.bar and tm.bar > 1 and tm.bpm then
+          local time_q = (tm.bar - 1) * quarters_per_bar
+          table.insert(markers_to_apply, {
+            time_q = time_q,
+            bpm = tm.bpm,
+            linear = tm.linear or false,
+          })
+        end
+      end
+      if #markers_to_apply > 0 then
+        apply_tempo_markers(markers_to_apply, arrange_state.start_sec, arrange_state.end_sec)
+        utils.log("Arrange: deferred tempo markers applied successfully")
+      end
+    end
+    
     arrange_state = nil
     return
   end
@@ -1615,7 +1709,9 @@ function start_next_arrange_generation()
     arrange_state.api_settings,
     arrange_state.free_mode,
     arrange_state.allow_tempo_changes or false,
-    ensemble_info
+    ensemble_info,
+    false,
+    arrange_state.original_bpm
   )
   
   local handle, err = http.begin_request(const.DEFAULT_BRIDGE_URL, request)
@@ -1660,6 +1756,22 @@ local function poll_arrange_plan()
     for i, a in ipairs(arrange_state.arrangement_assignments) do
       utils.log(string.format("  Assignment %d: instrument='%s', role='%s', verbatim='%s'",
         i, a.instrument or "?", a.role or "?", a.verbatim_level or "?"))
+    end
+    
+    if arrange_state.plan then
+      local initial_bpm = arrange_state.plan.initial_bpm
+      if initial_bpm and initial_bpm > 0 then
+        apply_initial_bpm(initial_bpm, arrange_state.start_sec, arrange_state.num, arrange_state.denom)
+        arrange_state.bpm = initial_bpm
+        arrange_state.original_bpm = initial_bpm
+        utils.log(string.format("Arrange: initial_bpm from plan = %.1f", initial_bpm))
+      end
+      
+      local tempo_map = arrange_state.plan.tempo_map
+      if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
+        arrange_state.deferred_tempo_markers = tempo_map
+        utils.log(string.format("Arrange: saved %d deferred tempo markers for later", #tempo_map))
+      end
     end
     
     if arrange_state.plan_summary ~= "" then
@@ -1862,6 +1974,7 @@ local function run_arrange(state, profile_list, profiles_by_id)
     start_sec = start_sec,
     end_sec = end_sec,
     bpm = bpm,
+    original_bpm = bpm,
     num = num,
     denom = denom,
     key = key,
@@ -1967,6 +2080,7 @@ local function run_compose(state, profile_list, profiles_by_id)
     start_sec = start_sec,
     end_sec = end_sec,
     bpm = bpm,
+    original_bpm = bpm,
     num = num,
     denom = denom,
     key = key,

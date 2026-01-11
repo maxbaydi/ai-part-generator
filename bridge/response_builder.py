@@ -705,11 +705,57 @@ def rearticulate_long_notes(
     return out
 
 
-def expand_pattern_notes(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
+def expand_pattern_notes(raw: Dict[str, Any], time_sig: str = "4/4") -> List[Dict[str, Any]]:
+    try:
+        from midi_utils import bar_beat_to_start_q, parse_duration
+    except ImportError:
+        from .midi_utils import bar_beat_to_start_q, parse_duration
+    
     patterns = raw.get("patterns", [])
     repeats = raw.get("repeats", [])
     if not isinstance(patterns, list) or not isinstance(repeats, list):
         return []
+
+    try:
+        parts = time_sig.split("/")
+        num = int(parts[0])
+        denom = int(parts[1])
+    except (ValueError, IndexError):
+        num, denom = 4, 4
+    quarters_per_bar = num * (4.0 / denom)
+
+    def get_note_start_q(note: Dict[str, Any]) -> float:
+        if "bar" in note and "beat" in note:
+            bar = note.get("bar", 1)
+            beat = note.get("beat", 1)
+            try:
+                bar_int = int(bar)
+                beat_float = float(beat)
+            except (TypeError, ValueError):
+                return 0.0
+            return (bar_int - 1) * quarters_per_bar + (beat_float - 1) * (4.0 / denom)
+        
+        if "start_q" in note:
+            try:
+                return float(note["start_q"])
+            except (TypeError, ValueError):
+                return 0.0
+        if "time_q" in note:
+            try:
+                return float(note["time_q"])
+            except (TypeError, ValueError):
+                return 0.0
+        return 0.0
+
+    def get_note_dur_q(note: Dict[str, Any]) -> float:
+        if "dur" in note:
+            return parse_duration(note["dur"])
+        if "dur_q" in note:
+            try:
+                return float(note["dur_q"])
+            except (TypeError, ValueError):
+                return 0.25
+        return 0.25
 
     pattern_map: Dict[str, Dict[str, Any]] = {}
     for pattern in patterns:
@@ -719,27 +765,36 @@ def expand_pattern_notes(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
         notes = pattern.get("notes", [])
         if not pattern_id or not isinstance(notes, list):
             continue
+        
         length_q = None
-        if "length_q" in pattern:
+        length_bars = pattern.get("length_bars")
+        if length_bars is not None:
+            try:
+                length_q = float(length_bars) * quarters_per_bar
+            except (TypeError, ValueError):
+                pass
+        
+        if length_q is None and "length_q" in pattern:
             try:
                 length_q = float(pattern.get("length_q"))
             except (TypeError, ValueError):
-                length_q = None
+                pass
+        
         if length_q is None:
-            max_end = None
+            max_end = 0.0
             for note in notes:
                 if not isinstance(note, dict):
                     continue
-                try:
-                    start_q = float(note.get("start_q", note.get("time_q", 0.0)))
-                    dur_q = float(note.get("dur_q", 0.0))
-                except (TypeError, ValueError):
-                    continue
-                end_q = start_q + dur_q
-                if max_end is None or end_q > max_end:
+                note_start = get_note_start_q(note)
+                dur_q = get_note_dur_q(note)
+                end_q = note_start + dur_q
+                if end_q > max_end:
                     max_end = end_q
-            if max_end is not None:
+            if max_end > 0:
                 length_q = max_end
+            else:
+                length_q = quarters_per_bar
+        
         pattern_map[pattern_id] = {"notes": notes, "length_q": length_q}
 
     expanded: List[Dict[str, Any]] = []
@@ -759,33 +814,38 @@ def expand_pattern_notes(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
             continue
         if times <= 0:
             continue
-        try:
-            start_q = float(repeat.get("start_q", 0.0))
-        except (TypeError, ValueError):
-            start_q = 0.0
+        
+        start_q = 0.0
+        if "start_bar" in repeat:
+            try:
+                start_bar = int(repeat["start_bar"])
+                start_q = (start_bar - 1) * quarters_per_bar
+            except (TypeError, ValueError):
+                pass
+        elif "start_q" in repeat:
+            try:
+                start_q = float(repeat["start_q"])
+            except (TypeError, ValueError):
+                pass
+        
         step_q = repeat.get("step_q")
         if step_q is None:
             step_q = pattern_data.get("length_q")
         try:
             step_q = float(step_q)
         except (TypeError, ValueError):
-            step_q = None
-        if step_q is None:
-            continue
+            step_q = quarters_per_bar
 
         for i in range(times):
             offset = start_q + (i * step_q)
             for note in pattern_data.get("notes", []):
                 if not isinstance(note, dict):
                     continue
-                try:
-                    note_start = float(note.get("start_q", note.get("time_q", 0.0)))
-                except (TypeError, ValueError):
-                    note_start = 0.0
+                note_start = get_note_start_q(note)
                 new_note = dict(note)
                 new_note["start_q"] = offset + note_start
-                if "time_q" in new_note:
-                    new_note.pop("time_q", None)
+                for key in ["bar", "beat", "time_q"]:
+                    new_note.pop(key, None)
                 expanded.append(new_note)
 
     return expanded
@@ -1018,7 +1078,7 @@ def build_response(
     if not isinstance(notes_raw, list):
         notes_raw = []
 
-    pattern_notes = expand_pattern_notes(raw)
+    pattern_notes = expand_pattern_notes(raw, time_sig)
     if pattern_notes:
         notes_raw = notes_raw + pattern_notes
 
@@ -1041,7 +1101,7 @@ def build_response(
     )
 
     logger.info("build_response: normalizing %d notes", len(notes_raw))
-    notes = normalize_notes(notes_raw, length_q, default_chan, abs_range, fix_policy, mono)
+    notes = normalize_notes(notes_raw, length_q, default_chan, abs_range, fix_policy, mono, time_sig)
     logger.info("build_response: normalized to %d notes", len(notes))
     
     if chord_map and not is_drum:
@@ -1063,7 +1123,7 @@ def build_response(
 
     curves_raw = raw.get("curves", {})
     curves_raw = ensure_per_note_dynamics(curves_raw, notes, length_q)
-    cc_events = build_cc_events(curves_raw, profile, length_q, default_chan)
+    cc_events = build_cc_events(curves_raw, profile, length_q, default_chan, time_sig)
 
     articulation_cc: List[Dict[str, Any]] = []
 
