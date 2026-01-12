@@ -1,1 +1,30 @@
-__pycache__
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+
+# Logs
+*.log
+console_log.txt
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor/IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*.bak
+*.tmp
+*.orig
+*.rej
