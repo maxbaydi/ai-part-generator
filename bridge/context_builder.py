@@ -61,18 +61,18 @@ POSITION_DESCRIPTIONS = {
 }
 
 ROLE_HINTS = {
-    "melody": "MELODY: Carry the main theme. Clear, memorable lines. Be the focus.",
-    "lead": "LEAD: Carry the main theme. Clear, memorable lines. Be the focus.",
-    "bass": "BASS: Harmonic foundation. Play roots and fifths. Define the harmony.",
-    "harmony": "HARMONY: Support the melody. Play chord tones. Fill the harmonic space.",
-    "accompaniment": "ACCOMPANIMENT: Support the melody. Rhythmic patterns, arpeggios, sustained chords.",
-    "rhythm": "RHYTHM: Define the pulse. Steady patterns. Don't overshadow melody.",
-    "pad": "PAD: Sustained background. Long notes. Smooth dynamics.",
-    "fill": "FILL: Ornamental passages. Fill gaps between phrases.",
-    "strings": "STRINGS: Harmony and melody. Sustained chords or lyrical lines.",
-    "woodwinds": "WOODWINDS: Color and melody. Lyrical countermelodies.",
-    "brass": "BRASS: Power and drama. Heroic melodies or fanfares.",
-    "drums": "PERCUSSION: Rhythm foundation. Define the groove.",
+    "melody": "Primary melodic voice in this context",
+    "lead": "Primary melodic voice in this context",
+    "bass": "Lower register foundation",
+    "harmony": "Harmonic support layer",
+    "accompaniment": "Supportive accompaniment",
+    "rhythm": "Rhythmic element",
+    "pad": "Sustained textural element",
+    "fill": "Decorative/transitional element",
+    "strings": "String section",
+    "woodwinds": "Woodwind section",
+    "brass": "Brass section",
+    "drums": "Percussion section",
 }
 
 CC_TREND_WINDOW_RATIO = 0.2
@@ -992,14 +992,11 @@ def build_ensemble_context(
                 parts.append(f"  {midi_map}")
                 parts.append("")
 
-    parts.append("ENSEMBLE COORDINATION RULES:")
-    parts.append("1. AVOID UNISON: Don't duplicate exact same notes as other instruments")
-    parts.append("2. REGISTER SEPARATION: Stay in your instrument's typical register")
-    parts.append("3. RHYTHMIC VARIETY: Mix long and short notes across the ensemble")
-    parts.append("4. HARMONIC ROLES: Bass=roots, mid=3rds/5ths, high=melody")
-    parts.append("5. CALL & RESPONSE: Create phrases that leave space for other instruments")
-    parts.append("6. FOLLOW HARMONY: Play the same chord changes as existing parts")
-    parts.append("7. PHRASE TOGETHER: Start and end phrases at similar times")
+    parts.append("ENSEMBLE AWARENESS:")
+    parts.append("- You can see all previously generated parts above")
+    parts.append("- Make musical decisions based on what you see and the requested style/genre")
+    parts.append("- Consider how instruments typically interact in this musical context")
+    parts.append("- The composition plan provides harmonic and structural guidance")
     parts.append("")
 
     current_inst = ensemble.current_instrument

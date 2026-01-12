@@ -60,6 +60,40 @@ except ImportError:
     from .type import ARTICULATION_HINTS, TYPE_HINTS
     from .utils import safe_format
 
+def build_generation_progress(ensemble: Any, current_profile_name: str) -> str:
+    if not ensemble or not ensemble.is_sequential:
+        return ""
+    
+    instruments = ensemble.instruments or []
+    previously_generated = ensemble.previously_generated or []
+    generation_order = ensemble.generation_order or 1
+    
+    completed_names = [p.get("profile_name") or p.get("track_name") or "?" for p in previously_generated]
+    
+    remaining = []
+    for inst in instruments:
+        inst_name = inst.profile_name or inst.track_name or ""
+        if inst.index > generation_order and inst_name not in completed_names:
+            remaining.append(inst_name)
+    
+    lines = ["### GENERATION PROGRESS"]
+    lines.append(f"Step {generation_order} of {len(instruments)}")
+    
+    if completed_names:
+        lines.append(f"Completed: {', '.join(completed_names)}")
+    
+    lines.append(f"Current: {current_profile_name}")
+    
+    if remaining:
+        lines.append(f"Remaining: {', '.join(remaining)}")
+    
+    lines.append("")
+    lines.append("You have full context of what was generated above.")
+    lines.append("Make musical decisions based on the style/genre and what you see.")
+    
+    return "\n".join(lines)
+
+
 def bar_to_time_q(bar: int, time_sig: str = "4/4") -> float:
     try:
         parts = time_sig.split("/")
@@ -847,7 +881,11 @@ def build_prompt(
             )
 
     if request.ensemble:
-        # ... (plan handling code remains same) ...
+        generation_progress = build_generation_progress(request.ensemble, profile.get("name", ""))
+        if generation_progress:
+            user_prompt_parts.append("")
+            user_prompt_parts.append(generation_progress)
+        
         plan_summary = (request.ensemble.plan_summary or "").strip()
         section_overview = plan_data.get("section_overview") if isinstance(plan_data, dict) else None
         role_guidance = plan_data.get("role_guidance") if isinstance(plan_data, dict) else None
@@ -867,12 +905,8 @@ def build_prompt(
                 user_prompt_parts.append("")
                 user_prompt_parts.append("**CHORD MAP (AUTO-DETECTED FROM SKETCH - MANDATORY):**")
                 user_prompt_parts.append(sketch_chord_map_str)
-                user_prompt_parts.append("CHORD MAP RULES:")
-                user_prompt_parts.append("- This CHORD MAP is auto-detected from the source sketch - follow it EXACTLY")
-                user_prompt_parts.append("- BASS: Play ROOT on beat 1 of each chord change")
-                user_prompt_parts.append("- HARMONY: Voice-lead smoothly, prioritize chord_tones on strong beats")
-                user_prompt_parts.append("- MELODY: Chord tones on downbeats, passing tones resolve to chord tones")
-                user_prompt_parts.append("- ALL: Switch to new chord tones at EXACTLY the time_q specified")
+                user_prompt_parts.append("This harmonic structure was detected from the source sketch.")
+                user_prompt_parts.append("Use it as the harmonic foundation for your arrangement.")
             elif isinstance(chord_map, list) and chord_map:
                 try:
                     from music_notation import midi_to_note
@@ -913,11 +947,7 @@ def build_prompt(
                     user_prompt_parts.append(f"{bar}.{beat:<4}    | {chord_label:<12} | {notes_str}")
                 user_prompt_parts.append("```")
                 user_prompt_parts.append("")
-                user_prompt_parts.append("CHORD MAP RULES:")
-                user_prompt_parts.append("- BASS: Play ROOT note on beat 1 of each chord")
-                user_prompt_parts.append("- MELODY: Use notes from the chord on strong beats")
-                user_prompt_parts.append("- HARMONY: Voice-lead smoothly between chords")
-                user_prompt_parts.append("- Switch to new chord notes at EXACTLY the Bar.Beat")
+                user_prompt_parts.append("Use this harmonic structure. How you use it depends on the musical context and style.")
             
             dynamic_arc = plan_data.get("dynamic_arc") if isinstance(plan_data, dict) else None
             if isinstance(dynamic_arc, list) and dynamic_arc:

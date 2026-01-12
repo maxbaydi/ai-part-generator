@@ -114,12 +114,11 @@ HUMAN PERFORMANCE:
 PHRASING:
 - Climax points should be earned and placed meaningfully
 - Resolution after tension
-- Match phrase boundaries with ensemble
 
 ENSEMBLE AWARENESS:
-- Complement, don't compete with other parts
-- Different registers avoid clashes
-- Follow the CHORD MAP exactly
+- You can see what other parts are doing in the context
+- Make musical decisions based on genre, style, and what you see
+- The relationship between instruments depends on the musical context
 
 === CRITICAL RULES ===
 
@@ -199,16 +198,13 @@ For repetitive content:
   "repeats": [{"pattern": "beat", "start_bar": 1, "times": 8}]
 }
 
-=== ENSEMBLE COMPLIANCE ===
+=== ENSEMBLE CONTEXT ===
 
-If CHORD_MAP provided:
-- BASS: Play root on beat 1 of each chord
-- MELODY/HARMONY: Chord tones on strong beats
-- Follow chord changes at EXACT bar.beat specified
-
-If PHRASE_STRUCTURE provided:
-- Insert rests at BREATHING_POINTS
-- Build intensity to CLIMAX_POINT
+When generating for ensemble:
+- You will see PREVIOUSLY GENERATED PARTS in full musical notation
+- You will see the COMPOSITION PLAN with harmonic/dynamic structure
+- Make musical decisions based on what you see and the requested style/genre
+- The plan provides guidance, not strict rules - interpret it musically
 
 === HANDOFF PROTOCOL ===
 
@@ -334,21 +330,24 @@ OUTPUT VALID JSON ONLY (no markdown). Do NOT output notes or MIDI data.
   "role_guidance": [
     {
       "instrument": "Bass",
-      "role": "bass",
       "register": "E2-G3 (low)",
-      "guidance": "Sustained pedal on roots. Deep, grounded.",
-      "relationship": "Foundation for ensemble",
+      "musical_intent": "What this instrument should contribute to the texture",
       "entry_bar": 1
     },
     {
       "instrument": "Violin 1",
-      "role": "melody",
       "register": "G4-E6 (high)",
-      "guidance": "Carry the main motif. Soaring, expressive.",
-      "relationship": "Lead voice above all",
+      "musical_intent": "What this instrument should contribute to the texture",
       "entry_bar": 5
     }
-  ]
+  ],
+  
+  "generation_progress": {
+    "completed": ["Bass", "Cello"],
+    "current": "Violin 1",
+    "remaining": ["Violin 2", "Viola"],
+    "notes": "What has been established so far and what needs to happen next"
+  }
 }
 
 === CHORD_MAP RULES ===
@@ -385,7 +384,16 @@ IMPORTANT: Write the motif as ACTUAL NOTES, not abstract intervals!
 === ROLE_GUIDANCE ===
 
 - register: Use note names "E2-G3 (low)" not MIDI numbers
-- Be specific about what each instrument should play
+- musical_intent: Describe the musical contribution, not fixed roles
+- The actual behavior depends on genre/style context
+
+=== GENERATION_PROGRESS ===
+
+Track what has been generated and what remains:
+- completed: Instruments already generated
+- current: Instrument being generated now
+- remaining: Instruments still to generate
+- notes: Brief summary of musical state and next steps
 
 === TEMPO CONTROL ===
 
