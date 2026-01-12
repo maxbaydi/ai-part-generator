@@ -38,7 +38,7 @@
     "damping": 67
   },
   "ai": {
-    "system_prompt_template": "Sustain pedal (CC64): interp hold, values 0 or 127 only. Damping (CC67): 0=open, 127=fully muted.",
+    "system_prompt_template": "Sustain pedal (CC64): interp hold, values 0 or 127 only. Damping (CC67): 0=open, 127=fully muted. ",
     "user_prompt_template": ""
   }
 }

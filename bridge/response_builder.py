@@ -1310,7 +1310,7 @@ def build_response(
             clamp_arrangement_note_durations(notes_raw, time_sig, source_sketch)
 
     has_per_note_articulations = any(
-        isinstance(n, dict) and n.get("articulation") for n in notes_raw
+        isinstance(n, dict) and (n.get("articulation") or n.get("art")) for n in notes_raw
     )
 
     logger.info("build_response: normalizing %d notes", len(notes_raw))
@@ -1346,7 +1346,7 @@ def build_response(
     if has_per_note_articulations:
         for idx, note_raw in enumerate(notes_raw):
             if isinstance(note_raw, dict) and idx < len(notes):
-                art = note_raw.get("articulation")
+                art = note_raw.get("articulation") or note_raw.get("art")
                 if art:
                     notes[idx]["articulation"] = art
         notes, keyswitches, program_changes, articulation_cc = apply_per_note_articulations(

@@ -120,13 +120,27 @@ ENSEMBLE AWARENESS:
 - Make musical decisions based on genre, style, and what you see
 - The relationship between instruments depends on the musical context
 
+=== VELOCITY HUMANIZATION (MANDATORY) ===
+
+NEVER use identical velocities for consecutive notes! Real musicians ALWAYS vary dynamics.
+
+BAD (robotic):  mf, mf, mf, mf, mf, mf
+GOOD (human):   mf, f, mf, mp, mf, f
+
+RULES:
+- Vary velocity by ±5-15 around the target dynamic level
+- Downbeats slightly louder than upbeats
+- Phrase peaks louder, phrase ends softer
+- Never repeat the exact same dynamic marking more than 2 times in a row
+
 === CRITICAL RULES ===
 
 1. Use ONLY notes from ALLOWED RANGE (provided in prompt)
 2. FOLLOW the CHORD MAP - play chord tones on strong beats
 3. Curves required for melodic instruments
 4. Wind instruments MUST breathe (max 4 beat note)
-5. Output valid JSON only"""
+5. HUMANIZE velocities - no robotic identical values
+6. Output valid JSON only"""
 
 REPAIR_SYSTEM_PROMPT = (
     "Return valid JSON only. Do not include any extra text or markdown."
@@ -215,13 +229,21 @@ For ensemble: provide handoff object to guide next instrument:
 - gaps_for_others: What space you left for others
 - suggestion_for_next: Direct advice (max 100 chars)
 
+=== VELOCITY HUMANIZATION (MANDATORY) ===
+
+NEVER use identical velocities! Real musicians ALWAYS vary dynamics.
+- Vary by ±5-15 around target level (mf → f, mp, mf, f, mf...)
+- Downbeats louder, upbeats softer
+- Never repeat same dynamic more than 2 times in a row
+
 === RULES ===
 
 1. Use ONLY notes from ALLOWED RANGE
 2. FOLLOW CHORD MAP exactly
 3. Curves required (except percussion)
 4. Wind instruments MUST breathe (max 4 beat note)
-5. Valid JSON with generation_type, generation_style"""
+5. HUMANIZE velocities - no robotic identical values
+6. Valid JSON with generation_type, generation_style"""
 
 COMPOSITION_PLAN_SYSTEM_PROMPT = """You are a composition planner. Create a coordination blueprint using MUSICAL NOTATION.
 

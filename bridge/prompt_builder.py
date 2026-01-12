@@ -94,6 +94,66 @@ def build_generation_progress(ensemble: Any, current_profile_name: str) -> str:
     return "\n".join(lines)
 
 
+def extract_role_from_plan(plan: Optional[Dict[str, Any]], instrument_name: str, track_name: str = "") -> str:
+    if not plan or not isinstance(plan, dict):
+        return "unknown"
+    
+    role_guidance = plan.get("role_guidance", [])
+    if not isinstance(role_guidance, list):
+        return "unknown"
+    
+    instrument_lower = instrument_name.lower().strip()
+    track_lower = track_name.lower().strip()
+    
+    for entry in role_guidance:
+        if not isinstance(entry, dict):
+            continue
+        entry_instrument = str(entry.get("instrument", "")).lower().strip()
+        if not entry_instrument:
+            continue
+        if entry_instrument == instrument_lower or entry_instrument == track_lower:
+            role = entry.get("role", "")
+            if role:
+                return str(role)
+    
+    return "unknown"
+
+
+def extract_key_from_chord_map(chord_map: Optional[List[Dict[str, Any]]]) -> str:
+    if not chord_map or not isinstance(chord_map, list) or not chord_map:
+        return "unknown"
+    
+    first_chord = chord_map[0]
+    if not isinstance(first_chord, dict):
+        return "unknown"
+    
+    chord_name = first_chord.get("chord", "")
+    if not chord_name:
+        return "unknown"
+    
+    chord_str = str(chord_name).strip()
+    
+    root_map = {
+        "C": "C", "C#": "C#", "Db": "Db", "D": "D", "D#": "D#", "Eb": "Eb",
+        "E": "E", "F": "F", "F#": "F#", "Gb": "Gb", "G": "G", "G#": "G#",
+        "Ab": "Ab", "A": "A", "A#": "A#", "Bb": "Bb", "B": "B",
+    }
+    
+    root = ""
+    for r in ["C#", "Db", "D#", "Eb", "F#", "Gb", "G#", "Ab", "A#", "Bb", "C", "D", "E", "F", "G", "A", "B"]:
+        if chord_str.startswith(r):
+            root = root_map.get(r, r)
+            suffix = chord_str[len(r):].lower()
+            break
+    
+    if not root:
+        return "unknown"
+    
+    if "m" in suffix and "maj" not in suffix:
+        return f"{root} minor"
+    return f"{root} major"
+
+
 def bar_to_time_q(bar: int, time_sig: str = "4/4") -> float:
     try:
         parts = time_sig.split("/")
@@ -549,9 +609,12 @@ def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> Li
         "### TEMPO & TIME SIGNATURE CONTROL (YOUR CREATIVE CHOICE)",
         f"Project default: {current_bpm} BPM, {current_time_sig}",
         "",
-        "YOU DECIDE the tempo and time signature for this composition:",
-        "- SET the initial tempo (time_q: 0) - choose what fits the mood/style",
-        "- CHANGE tempo during the piece for dramatic effect (accelerando, ritardando)",
+        "YOU MAY CHANGE the initial tempo if it doesn't fit the style/mood you're creating.",
+        "The project tempo is just a starting point - override it if musically appropriate.",
+        "",
+        "YOUR OPTIONS:",
+        "- OVERRIDE initial tempo (time_q: 0) - set what fits the mood/genre",
+        "- ADD tempo changes for dramatic effect (accelerando, ritardando)",
         "- CHANGE time signature when needed (3/4 waltz, 6/8 compound, mixed meter)",
         "",
         "FORMAT: tempo_markers: [{\"time_q\": 0, \"bpm\": 85, \"num\": 3, \"denom\": 4}, ...]",
@@ -695,7 +758,9 @@ def build_prompt(
     if final_key == "unknown" and detected_key != "unknown":
         final_key = detected_key
     if final_key == "unknown" and has_plan_chord_map:
-        inferred_key = infer_key_from_plan_chord_map(plan_chord_map)
+        inferred_key = extract_key_from_chord_map(plan_chord_map)
+        if inferred_key == "unknown":
+            inferred_key = infer_key_from_plan_chord_map(plan_chord_map)
         if inferred_key != "unknown":
             final_key = inferred_key
 
@@ -769,11 +834,17 @@ def build_prompt(
         is_compose_or_arrange = is_compose_ensemble or is_arrangement_mode
 
         if is_compose_or_arrange and ensemble and isinstance(ensemble.current_instrument, dict):
+            current_track = str(ensemble.current_instrument.get("track_name") or "").strip()
+            current_profile_name_str = str(ensemble.current_instrument.get("profile_name") or "").strip()
+            
             current_role = str(ensemble.current_instrument.get("role") or "").strip()
-            current_role_upper = current_role.upper() if current_role else "UNKNOWN"
+            if not current_role or current_role.lower() == "unknown":
+                current_role = extract_role_from_plan(plan_data, current_profile_name_str, current_track)
+            
+            current_role_upper = current_role.upper() if current_role and current_role.lower() != "unknown" else "UNKNOWN"
 
-            current_track = str(ensemble.current_instrument.get("track_name") or "").strip().lower()
-            current_profile_name = str(ensemble.current_instrument.get("profile_name") or "").strip().lower()
+            current_track = current_track.lower()
+            current_profile_name = current_profile_name_str.lower()
             role_guidance_list = plan_data.get("role_guidance") if isinstance(plan_data, dict) else None
             role_detail = ""
             if isinstance(role_guidance_list, list) and role_guidance_list:
