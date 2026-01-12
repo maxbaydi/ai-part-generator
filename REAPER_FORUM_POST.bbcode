@@ -1,54 +1,53 @@
-[b]AI Part Generator[/b] - ReaScript для REAPER, который генерирует и аранжирует MIDI-партии с помощью ИИ.
+[b]AI Part Generator[/b] - ReaScript for REAPER that generates and arranges MIDI parts using AI.
 
 [hr]
-[b]Что это[/b]
-Скрипт работает через локальный Python-мост (bridge) и профили инструментов. Подходит для быстрых набросков, оркестровки по скетчу и генерации ансамбля с нуля.
+[b]What is it[/b]
+The script works via a local Python bridge and instrument profiles. It is suitable for quick sketches, orchestration from a sketch, and generating ensembles from scratch.
 
-[b]Возможности[/b]
+[b]Features[/b]
 [list]
-[*]Generate: одиночная партия по профилю, типу, стилю и настроению.
-[*]Arrange: оркестровка по MIDI-скетчу (распределение материала по инструментам).
-[*]Compose: многодорожечная генерация с нуля.
-[*]Prompt Enhancer: расширение текстового запроса с учетом контекста.
-[*]Профили инструментов с артикуляциями (CC/keyswitch/none) и диапазонами.
+[*]Generate: Single part based on profile, type, style, and mood.
+[*]Arrange: Orchestration from a MIDI sketch (distributing material to instruments).
+[*]Compose: Multi-track generation from scratch.
+[*]Prompt Enhancer: Expand text prompts considering context.
+[*]Instrument profiles with articulations (CC/keyswitch/none) and ranges.
 [/list]
 
-[b]Требования[/b]
+[b]Requirements[/b]
 [list]
-[*]REAPER с поддержкой ReaScript.
-[*]ReaImGui для полноценного интерфейса (иначе будет упрощенный диалог).
-[*]Python + зависимости моста: fastapi, uvicorn.
-[*]Доступ к модели: Local (LM Studio) или OpenRouter (нужен API-ключ).
+[*]REAPER with ReaScript support.
+[*]ReaImGui for the full interface (otherwise a simplified dialog is used).
+[*]Python + bridge dependencies: fastapi, uvicorn.
+[*]Model access: Local (LM Studio) or OpenRouter (API key required).
 [/list]
 
-[b]Установка[/b]
+[b]Installation[/b]
 [list=1]
-[*]Скопируйте папки [b]ReaScript[/b], [b]Profiles[/b] и [b]bridge[/b] рядом друг с другом (структура важна).
-[*]В REAPER: Actions -> Show action list -> ReaScript: Load... -> выберите ReaScript/AI Part Generator.lua.
-[*]Установите зависимости моста: python -m pip install -r bridge/requirements.txt
-[*]Запустите мост: bridge/start.ps1 (Windows) или bridge/start.sh (macOS/Linux).
+[*]Copy the [b]ReaScript[/b], [b]Profiles[/b], and [b]bridge[/b] folders next to each other (structure is important).
+[*]In REAPER: Actions -> Show action list -> ReaScript: Load... -> select ReaScript/AI Part Generator.lua.
+[*]Install bridge dependencies: python -m pip install -r bridge/requirements.txt
+[*]Start the bridge: bridge/start.ps1 (Windows) or bridge/start.sh (macOS/Linux).
 [/list]
 
-[b]Быстрый старт[/b]
+[b]Quick Start[/b]
 [list=1]
-[*]Сделайте Time Selection.
-[*]Выберите MIDI-трек/и для контекста(если есть) и откройте скрипт.
-[*]Вкладка Generate: выберите профиль/тип/стиль/настроение (или Free Mode).
-[*]Нажмите GENERATE PART.
+[*]Make a Time Selection.
+[*]Select MIDI track(s) for context (if any) and open the script.
+[*]Generate tab: select profile/type/style/mood (or Free Mode).
+[*]Click GENERATE PART.
 [/list]
 
-[b]Примечания[/b]
+[b]Notes[/b]
 [list]
-[*]Если есть MIDI-материал для контекста, выделите нужные итемы и включите Use Selected Items as Context.
-[*]Для оркестровки по скетчу используйте Arrange и задайте Source.
-[*]Для ансамбля без скетча выберите 2+ трека и используйте Compose.
+[*]If you have MIDI material for context, select the relevant items and enable Use Selected Items as Context.
+[*]For orchestration from a sketch, use Arrange and set the Source.
+[*]For an ensemble without a sketch, select 2+ tracks and use Compose.
 [/list]
 
-[b]Скриншоты[/b]
-[img]ССЫЛКА_НА_СКРИНШОТ[/img]
+[b]Screenshots[/b]
+[img]LINK_TO_SCREENSHOT[/img]
 
-[b]Ссылки[/b]
+[b]Links[/b]
 [list]
-[*][url=ССЫЛКА_НА_РЕПОЗИТОРИЙ]Репозиторий / загрузка[/url]
+[*][url=LINK_TO_REPOSITORY]Repository / Download[/url]
 [/list]
-

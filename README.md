@@ -1,29 +1,29 @@
-# AI Part Generator для REAPER
+# AI Part Generator for REAPER
 
-AI Part Generator - это ReaScript, который генерирует и аранжирует MIDI-партии в выбранном диапазоне с помощью ИИ. Скрипт работает через локальный Python-мост (bridge) и набор профилей инструментов.
+AI Part Generator is a ReaScript that generates and arranges MIDI parts within a selected range using AI. The script operates via a local Python bridge and a set of instrument profiles.
 
-## Возможности
-- Генерация одной партии по выбранному профилю, типу, стилю и настроению.
-- Arrange: оркестровка по MIDI-скетчу (перенос материала на несколько инструментов).
-- Compose: многодорожечная генерация с нуля (без исходного скетча).
-- Prompt Enhancer: расширение текстового запроса с учетом контекста и инструментов.
-- Профили инструментов с артикуляциями (CC/keyswitch/none), каналами и диапазонами.
-- Контекст из выбранных MIDI-итемов и горизонтальный контекст вокруг выделения.
-- Автоопределение тональности и опциональные изменения темпа/размера.
+## Features
+- Generate a single part based on selected profile, type, style, and mood.
+- Arrange: Orchestration from a MIDI sketch (distributing material to multiple instruments).
+- Compose: Multi-track generation from scratch (without a source sketch).
+- Prompt Enhancer: Expands text prompts considering context and instruments.
+- Instrument profiles with articulations (CC/keyswitch/none), channels, and ranges.
+- Context from selected MIDI items and horizontal context surrounding the selection.
+- Key detection and optional tempo/time signature changes.
 
-## Требования
-- REAPER с поддержкой ReaScript.
-- ReaImGui для полноценного интерфейса (без него будет упрощенный диалог).
-- Python и зависимости моста: `fastapi`, `uvicorn`.
-- Доступ к модели:
-  - Local (LM Studio) через OpenAI-совместимый API.
-  - OpenRouter (нужен API-ключ).
-- HTTP-клиент: `curl` (если есть) или PowerShell на Windows.
+## Requirements
+- REAPER with ReaScript support.
+- ReaImGui for the full interface (a simplified dialog is used without it).
+- Python and bridge dependencies: `fastapi`, `uvicorn`.
+- Model access:
+  - Local (LM Studio) via OpenAI-compatible API.
+  - OpenRouter (requires API key).
+- HTTP client: `curl` (if available) or PowerShell on Windows.
 
-## Установка
-1) Скопируйте папки `ReaScript`, `Profiles` и `bridge` рядом друг с другом. Скрипт ищет профили по пути `../Profiles` относительно `ReaScript`.
+## Installation
+1) Copy the `ReaScript`, `Profiles`, and `bridge` folders next to each other. The script searches for profiles in `../Profiles` relative to `ReaScript`.
 
-Пример структуры:
+Example structure:
 ```
 AI Part Generator/
   Profiles/
@@ -35,11 +35,11 @@ AI Part Generator/
   bridge/
 ```
 
-2) В REAPER: `Actions` -> `Show action list` -> `ReaScript: Load...` -> выберите `ReaScript/AI Part Generator.lua`.
+2) In REAPER: `Actions` -> `Show action list` -> `ReaScript: Load...` -> select `ReaScript/AI Part Generator.lua`.
 
-3) ReaImGui (для полноценного UI):
-   - Распространяется через ReaPack (см. репозиторий ReaImGui).
-   - Если собираете из исходников, в README ReaImGui указаны шаги через Meson:
+3) ReaImGui (for full UI):
+   - Distributed via ReaPack (see ReaImGui repository).
+   - If building from source, ReaImGui's README lists steps via Meson:
      ```
      meson setup build
      cd build
@@ -47,74 +47,73 @@ AI Part Generator/
      meson install --tags runtime
      ```
 
-4) Установите зависимости Python-моста:
+4) Install Python bridge dependencies:
 ```
 python -m pip install -r bridge/requirements.txt
 ```
 
-5) Запустите мост (или дайте скрипту сделать это автоматически):
+5) Start the bridge (or let the script do it automatically):
 ```
 bridge/start.ps1    # Windows
 bridge/start.sh     # macOS/Linux
 ```
 
-Если Python не в PATH, в `start.ps1`/`start.sh` можно задать переменную `AI_PART_GENERATOR_PYTHON`.
+If Python is not in PATH, you can set the `AI_PART_GENERATOR_PYTHON` variable in `start.ps1`/`start.sh`.
 
-## Быстрый старт (Generate)
-1) В REAPER выделите диапазон времени (Time Selection).
-2) Выберите MIDI-трек и запустите скрипт.
-3) Вкладка `Generate`: выберите профиль, тип, стиль и настроение (или включите Free Mode).
-4) По желанию отметьте `Use Selected Items as Context`, выделив нужные MIDI-итемы.
-5) Нажмите `GENERATE PART`.
+## Quick Start (Generate)
+1) In REAPER, make a time selection.
+2) Select a MIDI track and run the script.
+3) In the `Generate` tab: select profile, type, style, and mood (or enable Free Mode).
+4) Optionally check `Use Selected Items as Context` after selecting relevant MIDI items.
+5) Click `GENERATE PART`.
 
-## Режимы работы
-### Generate (одиночная партия)
-Подходит для быстрого создания мелодии, баса, падов или ритма в активном треке (или в новом треке - переключатель `Insert To`).
+## Modes
+### Generate (Single Part)
+Suitable for quickly creating melodies, basslines, pads, or rhythms on the active track (or a new track - toggle `Insert To`).
 
-### Arrange (по скетчу)
-1) Выберите MIDI-итем со скетчем и нажмите `Set Selected Item as Source`.
-2) Выделите целевые треки (минимум один, кроме трека-источника).
-3) При необходимости вручную выберите профили инструментов в таблице.
-4) Нажмите `ARRANGE (From Source)`.
+### Arrange (From Sketch)
+1) Select a MIDI item with the sketch and click `Set Selected Item as Source`.
+2) Select target tracks (at least one, excluding the source track).
+3) Manually select instrument profiles in the table if needed.
+4) Click `ARRANGE (From Source)`.
 
-### Compose (с нуля)
-1) Выделите 2+ трека для генерации ансамбля.
-2) Нажмите `COMPOSE (Scratch)`.
-3) Скрипт сначала строит план, затем генерирует партии по очереди.
+### Compose (From Scratch)
+1) Select 2+ tracks to generate an ensemble.
+2) Click `COMPOSE (Scratch)`.
+3) The script first builds a plan, then generates parts sequentially.
 
 ### Prompt Enhancer
-Как использовать: введите запрос и нажмите `Enhance Prompt with AI`. Запрос будет расширен с учетом темпа, тональности и выбранных инструментов.
+How to use: enter a prompt and click `Enhance Prompt with AI`. The prompt will be expanded considering tempo, key, and selected instruments.
 
-## Настройки API (вкладка Settings)
-- Provider: `Local (LM Studio)` или `OpenRouter (Cloud)`.
-- Base URL: по умолчанию `http://127.0.0.1:1234/v1` (local) или `https://openrouter.ai/api/v1`.
-- Model Name: задайте модель, доступную в вашем провайдере.
-- API Key: нужен только для OpenRouter.
+## API Settings (Settings Tab)
+- Provider: `Local (LM Studio)` or `OpenRouter (Cloud)`.
+- Base URL: default `http://127.0.0.1:1234/v1` (local) or `https://openrouter.ai/api/v1`.
+- Model Name: set a model available in your provider.
+- API Key: required only for OpenRouter.
 
-## Профили инструментов
-Профили находятся в `Profiles/*.json`. Они описывают инструмент, диапазоны, MIDI-канал и артикуляции. Скрипт:
-- автоматически подбирает профиль по названию трека,
-- сохраняет выбранный профиль в атрибут трека,
-- использует артикуляции и контроллеры для корректной генерации.
+## Instrument Profiles
+Profiles are located in `Profiles/*.json`. They describe the instrument, ranges, MIDI channel, and articulations. The script:
+- Automatically matches a profile based on the track name,
+- Saves the selected profile to a track attribute,
+- Uses articulations and controllers for correct generation.
 
-Посмотрите примеры:
+Check examples:
 - `Profiles/Cello - CSS.json`
 - `Profiles/Drums - GM.json`
 - `Profiles/Bass - EZBass.json`
 
-## Как действовать в разных ситуациях
-- **Нужно быстро набросать идею:** включите Free Mode, введите короткий запрос, нажмите `GENERATE PART`.
-- **Есть гармония/ритм на других дорожках:** выделите эти MIDI-итемы и оставьте `Use Selected Items as Context`.
-- **Есть фортепианный скетч:** используйте `Arrange` и распределите материал по инструментам.
-- **Хотите ансамбль "с нуля":** выберите 2+ трека и используйте `Compose`.
-- **Нужен стабильный темп:** оставьте `Allow Tempo Changes` выключенным.
-- **Нужны выразительные изменения темпа/размера:** включите `Allow Tempo/Time Sig Changes` и проверяйте результат.
+## Scenarios
+- **Need a quick idea:** enable Free Mode, enter a short prompt, click `GENERATE PART`.
+- **Have harmony/rhythm on other tracks:** select those MIDI items and keep `Use Selected Items as Context` checked.
+- **Have a piano sketch:** use `Arrange` and distribute material across instruments.
+- **Want an ensemble from scratch:** select 2+ tracks and use `Compose`.
+- **Need stable tempo:** keep `Allow Tempo Changes` disabled.
+- **Need expressive tempo/time sig changes:** enable `Allow Tempo/Time Sig Changes` and check results.
 
-## Частые проблемы
-- **"No time selection set."** - задайте Time Selection.
-- **"No profiles found in Profiles/ directory."** - проверьте структуру папок.
-- **"ReaImGui not found..."** - установите ReaImGui или используйте упрощенный диалог.
-- **"Bridge dependencies not found (fastapi/uvicorn)."** - выполните `python -m pip install -r bridge/requirements.txt`.
-- **"Bridge server did not start..."** - запустите `bridge/start.ps1` или `bridge/start.sh` вручную.
-- **"No arrange source set..."** - выберите MIDI-итем и нажмите `Set Selected Item as Source`.
-
+## Common Issues
+- **"No time selection set."** - Set a Time Selection.
+- **"No profiles found in Profiles/ directory."** - Check folder structure.
+- **"ReaImGui not found..."** - Install ReaImGui or use the simplified dialog.
+- **"Bridge dependencies not found (fastapi/uvicorn)."** - Run `python -m pip install -r bridge/requirements.txt`.
+- **"Bridge server did not start..."** - Run `bridge/start.ps1` or `bridge/start.sh` manually.
+- **"No arrange source set..."** - Select a MIDI item and click `Set Selected Item as Source`.
