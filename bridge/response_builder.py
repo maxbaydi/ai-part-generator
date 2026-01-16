@@ -39,6 +39,7 @@ try:
     from context_builder import generate_synthetic_handoff, get_quarters_per_bar, validate_and_fix_handoff
     from curve_utils import build_cc_events
     from midi_utils import (
+        bar_beat_to_start_q,
         normalize_channel,
         normalize_drums,
         normalize_notes,
@@ -77,6 +78,7 @@ except ImportError:
     from .context_builder import generate_synthetic_handoff, get_quarters_per_bar, validate_and_fix_handoff
     from .curve_utils import build_cc_events
     from .midi_utils import (
+        bar_beat_to_start_q,
         normalize_channel,
         normalize_drums,
         normalize_notes,
@@ -495,6 +497,82 @@ def safe_float(value: Any) -> Optional[float]:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def parse_bar_beat_string(value: Any) -> Optional[Tuple[int, float]]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    parts = text.split(".")
+    if len(parts) < 2:
+        return None
+    try:
+        bar = int(parts[0])
+    except ValueError:
+        return None
+    beat_str = ".".join(parts[1:])
+    try:
+        beat = float(beat_str)
+    except ValueError:
+        return None
+    return bar, beat
+
+
+def parse_articulation_change_time(change: Dict[str, Any], time_sig: str) -> Optional[float]:
+    time_q = safe_float(change.get("time_q") or change.get("start_q") or change.get("time"))
+    if time_q is not None:
+        return time_q
+
+    bar = safe_int(change.get("bar"))
+    beat = safe_float(change.get("beat"))
+    if bar is not None and beat is not None:
+        return bar_beat_to_start_q(bar, beat, time_sig)
+
+    parsed = parse_bar_beat_string(change.get("bar_beat") or change.get("position"))
+    if parsed:
+        return bar_beat_to_start_q(parsed[0], parsed[1], time_sig)
+    return None
+
+
+def normalize_articulation_changes(raw_changes: Any, time_sig: str) -> List[Dict[str, Any]]:
+    if not raw_changes:
+        return []
+    if isinstance(raw_changes, dict):
+        raw_changes = [raw_changes]
+    if not isinstance(raw_changes, list):
+        return []
+
+    changes: List[Dict[str, Any]] = []
+    for change in raw_changes:
+        if not isinstance(change, dict):
+            continue
+        name = change.get("articulation") or change.get("art") or change.get("name")
+        if not name:
+            continue
+        time_q = parse_articulation_change_time(change, time_sig)
+        if time_q is None:
+            continue
+        changes.append({
+            "time_q": max(0.0, float(time_q)),
+            "articulation": str(name).strip(),
+        })
+
+    if not changes:
+        return []
+
+    changes.sort(key=lambda c: c["time_q"])
+    deduped: List[Dict[str, Any]] = []
+    for change in changes:
+        if not deduped:
+            deduped.append(change)
+            continue
+        if change["articulation"] == deduped[-1]["articulation"]:
+            continue
+        deduped.append(change)
+
+    return deduped
 
 
 def extract_context_cc_events(context: Optional[Any]) -> List[Dict[str, Any]]:
@@ -1176,6 +1254,118 @@ def apply_articulation(
     return notes, [], [], [], articulation
 
 
+def resolve_articulation_data(
+    name: str,
+    art_map: Dict[str, Any],
+) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
+    if name in art_map:
+        data = art_map.get(name)
+        return name, data if isinstance(data, dict) else None
+    name_lower = str(name).lower()
+    for key, data in art_map.items():
+        if str(key).lower() == name_lower and isinstance(data, dict):
+            return key, data
+    return None, None
+
+
+def apply_articulation_changes(
+    changes: List[Dict[str, Any]],
+    profile: Dict[str, Any],
+    notes: List[Dict[str, Any]],
+    default_chan: int,
+) -> Tuple[
+    List[Dict[str, Any]],
+    List[Dict[str, Any]],
+    List[Dict[str, Any]],
+    List[Dict[str, Any]],
+    Optional[str],
+    List[Dict[str, Any]],
+]:
+    if not changes:
+        return notes, [], [], [], None, []
+
+    art_cfg = profile.get("articulations", {})
+    mode = str(art_cfg.get("mode", "none")).lower()
+    art_map = art_cfg.get("map", {})
+    if mode == "none" or not isinstance(art_map, dict) or not art_map:
+        return notes, [], [], [], None, []
+
+    keyswitches: List[Dict[str, Any]] = []
+    program_changes: List[Dict[str, Any]] = []
+    articulation_cc: List[Dict[str, Any]] = []
+    applied_changes: List[Dict[str, Any]] = []
+
+    if mode == "channel":
+        for change in changes:
+            name = change.get("articulation")
+            if not name:
+                continue
+            resolved, data = resolve_articulation_data(str(name), art_map)
+            if not data:
+                continue
+            chan = normalize_channel(data.get("chan") or data.get("channel"), default_chan)
+            for note in notes:
+                note["chan"] = chan
+            applied_changes.append({"time_q": change.get("time_q", 0.0), "articulation": resolved})
+            break
+    else:
+        for change in changes:
+            name = change.get("articulation")
+            if not name:
+                continue
+            resolved, data = resolve_articulation_data(str(name), art_map)
+            if not data:
+                continue
+            time_q = float(change.get("time_q", 0.0))
+            if mode == "keyswitch":
+                try:
+                    pitch = get_keyswitch_pitch(data, art_cfg)
+                except ValueError:
+                    continue
+                vel = int(clamp(int(data.get("vel", data.get("velocity_on", DEFAULT_KEYSWITCH_VELOCITY))), MIDI_VEL_MIN, MIDI_MAX))
+                chan = normalize_channel(data.get("chan"), default_chan)
+                ks_time = max(0.0, time_q - ARTICULATION_PRE_ROLL_Q)
+                keyswitches.append({
+                    "time_q": ks_time,
+                    "pitch": pitch,
+                    "vel": vel,
+                    "chan": chan,
+                    "dur_q": KEYSWITCH_DUR_Q,
+                })
+            elif mode == "cc":
+                cc_value = get_articulation_cc_value(data)
+                if cc_value is None:
+                    continue
+                cc_num = int(art_cfg.get("cc_number", DEFAULT_ARTICULATION_CC))
+                chan = normalize_channel(data.get("chan"), default_chan)
+                cc_time = max(0.0, time_q - ARTICULATION_PRE_ROLL_Q)
+                articulation_cc.append({
+                    "time_q": cc_time,
+                    "cc": cc_num,
+                    "value": cc_value,
+                    "chan": chan,
+                })
+            elif mode == "program_change":
+                program = int(clamp(int(data.get("program", 0)), MIDI_MIN, MIDI_MAX))
+                chan = normalize_channel(data.get("chan"), default_chan)
+                program_changes.append({
+                    "time_q": time_q,
+                    "program": program,
+                    "chan": chan,
+                })
+            applied_changes.append({"time_q": time_q, "articulation": resolved})
+
+    art_name: Optional[str] = None
+    if applied_changes:
+        unique = {c.get("articulation", "").lower() for c in applied_changes if c.get("articulation")}
+        if len(unique) == 1:
+            art_name = applied_changes[0].get("articulation")
+        else:
+            art_name = "mixed"
+
+    return notes, keyswitches, program_changes, articulation_cc, art_name, applied_changes
+
+
 def apply_per_note_articulations(
     notes: List[Dict[str, Any]],
     profile: Dict[str, Any],
@@ -1251,6 +1441,30 @@ def apply_per_note_articulations(
     return notes, keyswitches, program_changes, articulation_cc
 
 
+def make_keyswitches_legato(
+    keyswitches: List[Dict[str, Any]],
+    length_q: float,
+    profile: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    art_cfg = profile.get("articulations", {})
+    if not art_cfg.get("send_keyswitch_on_every_change", False):
+        return keyswitches
+    
+    if not keyswitches:
+        return keyswitches
+    
+    keyswitches = sorted(keyswitches, key=lambda ks: ks.get("time_q", 0.0))
+    
+    for i, ks in enumerate(keyswitches):
+        if i < len(keyswitches) - 1:
+            next_ks = keyswitches[i + 1]
+            ks["dur_q"] = max(MIN_NOTE_DUR_Q, next_ks["time_q"] - ks["time_q"])
+        else:
+            ks["dur_q"] = max(MIN_NOTE_DUR_Q, length_q - ks["time_q"])
+    
+    return keyswitches
+
+
 def extract_handoff(
     raw: Dict[str, Any],
     notes: List[Dict[str, Any]],
@@ -1303,6 +1517,19 @@ def build_response(
                 if isinstance(note, dict):
                     note.pop("articulation", None)
             raw["articulation"] = lock_articulation
+            raw["articulation_changes"] = [{"time_q": 0.0, "articulation": lock_articulation}]
+
+    articulation_changes = normalize_articulation_changes(raw.get("articulation_changes"), time_sig)
+    if articulation_changes:
+        if articulation_changes[0]["time_q"] > 0:
+            articulation_changes.insert(0, {
+                "time_q": 0.0,
+                "articulation": articulation_changes[0]["articulation"],
+            })
+        for note in notes_raw:
+            if isinstance(note, dict):
+                note.pop("articulation", None)
+                note.pop("art", None)
 
     if notes_raw:
         clamp_short_articulation_durations(notes_raw, profile, raw.get("articulation"))
@@ -1343,7 +1570,12 @@ def build_response(
 
     articulation_cc: List[Dict[str, Any]] = []
 
-    if has_per_note_articulations:
+    if articulation_changes:
+        notes, keyswitches, program_changes, articulation_cc, art_name, applied_changes = apply_articulation_changes(
+            articulation_changes, profile, notes, default_chan
+        )
+        articulation_changes = applied_changes
+    elif has_per_note_articulations:
         for idx, note_raw in enumerate(notes_raw):
             if isinstance(note_raw, dict) and idx < len(notes):
                 art = note_raw.get("articulation") or note_raw.get("art")
@@ -1361,6 +1593,8 @@ def build_response(
 
     all_cc_events = articulation_cc + cc_events
 
+    keyswitches = make_keyswitches_legato(keyswitches, length_q, profile)
+
     response = {
         "notes": notes,
         "cc_events": all_cc_events,
@@ -1370,6 +1604,8 @@ def build_response(
         "generation_type": raw.get("generation_type"),
         "generation_style": raw.get("generation_style"),
     }
+    if articulation_changes:
+        response["articulation_changes"] = articulation_changes
 
     if allow_tempo_changes:
         tempo_markers = normalize_tempo_markers(raw.get("tempo_markers"), length_q)

@@ -18,15 +18,15 @@
     "mode": "keyswitch",
     "default": "bass_drum",
     "map": {
-      "bass_drum": { "pitch": 24, "description": "Bass drum" },
-      "snare_drum": { "pitch": 30, "description": "Snare drum" },
-      "piatti": { "pitch": 36, "description": "Piatti (crash cymbals)" },
-      "gong": { "pitch": 42, "description": "Gong" },
-      "tam_tam": { "pitch": 48, "description": "Tam-tam" },
-      "cymbal": { "pitch": 54, "description": "Suspended cymbal" },
-      "cymbal_cresc_quarter": { "pitch": 60, "description": "Cymbal crescendo (1/4 note)" },
-      "cymbal_cresc_eighth": { "pitch": 61, "description": "Cymbal crescendo (1/8 note)" },
-      "cymbal_cresc_bar": { "pitch": 65, "description": "Cymbal crescendo (1 bar)" }
+      "bass_drum": { "pitch": 24, "description": "bass drum" },
+      "snare_drum": { "pitch": 30, "description": "snare drum" },
+      "piatti": { "pitch": 36, "description": "piatti crash cymbals" },
+      "gong": { "pitch": 42, "description": "gong" },
+      "tam_tam": { "pitch": 48, "description": "tam tam" },
+      "cymbal": { "pitch": 54, "description": "suspended cymbal" },
+      "cymbal_cresc_quarter": { "pitch": 60, "description": "cymbal crescendo 1/4 note" },
+      "cymbal_cresc_eighth": { "pitch": 61, "description": "cymbal crescendo 1/8 note" },
+      "cymbal_cresc_bar": { "pitch": 65, "description": "cymbal crescendo 1 bar" }
     }
   },
   "controllers": {},

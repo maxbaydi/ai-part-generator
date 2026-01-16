@@ -1,0 +1,37 @@
+{
+  "id": "3_trumpets_nucleus",
+  "name": "3 Trumpets - Nucleus",
+  "family": "brass",
+  "vendor": "Audio Imperia",
+  "description": "Audio Imperia Nucleus 3 Trumpets ensemble. Bright, brilliant tone with piercing projection. Ideal for heroic fanfares, powerful melodic lines, and cinematic brass sections.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "poly",
+    "is_drum": false
+  },
+  "range": {
+    "absolute": ["E3", "Bb5"],
+    "preferred": ["G3", "G5"]
+  },
+  "fix_policy": "octave_shift_to_fit",
+  "articulations": {
+    "mode": "keyswitch",
+    "default": "legato",
+    "short_articulations": ["staccatissimo"],
+    "send_keyswitch_on_every_change": true,
+    "map": {
+      "legato": { "pitch": 12, "description": "legato", "dynamics": "cc1" },
+      "sustained": { "pitch": 13, "description": "sustained", "dynamics": "cc1" },
+      "staccatissimo": { "pitch": 14, "description": "staccatissimo", "dynamics": "velocity" }
+    }
+  },
+  "controllers": {
+    "dynamics": 1,
+    "expression": 11
+  },
+  "ai": {
+    "system_prompt_template": "IMPORTANT: Always list articulation_changes BEFORE every articulation change (with exact time). Always specify current articulation explicitly. If starting with legato - add an articulation change entry, switching to staccatissimo - add an articulation change entry, if long notes appear within short notes section - switch to sustained/legato, then back to staccatissimo. Never assume previous articulation persists - always add an articulation change entry when articulation type changes. Ensemble trumpets (3 players). CC1 controls dynamics for legato and sustained. Use velocity for staccatissimo.",
+    "user_prompt_template": ""
+  }
+}
+

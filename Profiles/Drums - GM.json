@@ -18,19 +18,19 @@
     "mode": "keyswitch",
     "default": "kick",
     "map": {
-      "kick": { "pitch": 36, "description": "Kick drum" },
-      "snare": { "pitch": 38, "description": "Snare" },
-      "rim": { "pitch": 37, "description": "Rim shot" },
-      "clap": { "pitch": 39, "description": "Hand clap" },
-      "hihat_closed": { "pitch": 42, "description": "Hi-hat closed" },
-      "hihat_open": { "pitch": 46, "description": "Hi-hat open" },
-      "hihat_pedal": { "pitch": 44, "description": "Hi-hat pedal" },
-      "tom_low": { "pitch": 41, "description": "Tom low" },
-      "tom_mid": { "pitch": 45, "description": "Tom mid" },
-      "tom_high": { "pitch": 48, "description": "Tom high" },
-      "ride": { "pitch": 51, "description": "Ride cymbal" },
-      "crash": { "pitch": 49, "description": "Crash cymbal" },
-      "splash": { "pitch": 55, "description": "Splash cymbal" }
+      "kick": { "pitch": 36, "description": "kick drum" },
+      "snare": { "pitch": 38, "description": "snare" },
+      "rim": { "pitch": 37, "description": "rim shot" },
+      "clap": { "pitch": 39, "description": "hand clap" },
+      "hihat_closed": { "pitch": 42, "description": "hihat closed" },
+      "hihat_open": { "pitch": 46, "description": "hihat open" },
+      "hihat_pedal": { "pitch": 44, "description": "hihat pedal" },
+      "tom_low": { "pitch": 41, "description": "tom low" },
+      "tom_mid": { "pitch": 45, "description": "tom mid" },
+      "tom_high": { "pitch": 48, "description": "tom high" },
+      "ride": { "pitch": 51, "description": "ride cymbal" },
+      "crash": { "pitch": 49, "description": "crash cymbal" },
+      "splash": { "pitch": 55, "description": "splash cymbal" }
     }
   },
   "controllers": {

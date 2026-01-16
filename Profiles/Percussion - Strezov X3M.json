@@ -18,17 +18,17 @@
     "mode": "keyswitch",
     "default": "juggernaut",
     "map": {
-      "juggernaut": { "pitch": 24, "description": "Juggernaut - massive low-end impact" },
-      "juggernaut_accent": { "pitch": 25, "description": "Juggernaut accent" },
-      "low_tom_ens": { "pitch": 30, "description": "Low tom ensemble (8 toms)" },
-      "low_tom_ens_accent": { "pitch": 31, "description": "Low tom ensemble accent" },
-      "mid_tom_ens": { "pitch": 36, "description": "Mid tom ensemble (4 toms)" },
-      "mid_tom_ens_accent": { "pitch": 37, "description": "Mid tom ensemble accent" },
-      "taiko_ens": { "pitch": 42, "description": "Taiko ensemble" },
-      "taiko_ens_accent": { "pitch": 43, "description": "Taiko ensemble accent" },
-      "juggernaut_roll": { "pitch": 48, "description": "Juggernaut roll (CC1 intensity)" },
-      "low_tom_ens_roll": { "pitch": 54, "description": "Low tom ensemble roll (CC1 intensity)" },
-      "mid_tom_ens_roll": { "pitch": 60, "description": "Mid tom ensemble roll (CC1 intensity)" }
+      "juggernaut": { "pitch": 24, "description": "juggernaut massive low end impact" },
+      "juggernaut_accent": { "pitch": 25, "description": "juggernaut accent" },
+      "low_tom_ens": { "pitch": 30, "description": "low tom ensemble 8 toms" },
+      "low_tom_ens_accent": { "pitch": 31, "description": "low tom ensemble accent" },
+      "mid_tom_ens": { "pitch": 36, "description": "mid tom ensemble 4 toms" },
+      "mid_tom_ens_accent": { "pitch": 37, "description": "mid tom ensemble accent" },
+      "taiko_ens": { "pitch": 42, "description": "taiko ensemble" },
+      "taiko_ens_accent": { "pitch": 43, "description": "taiko ensemble accent" },
+      "juggernaut_roll": { "pitch": 48, "description": "juggernaut roll cc1 intensity" },
+      "low_tom_ens_roll": { "pitch": 54, "description": "low tom ensemble roll cc1 intensity" },
+      "mid_tom_ens_roll": { "pitch": 60, "description": "mid tom ensemble roll cc1 intensity" }
     }
   },
   "controllers": {

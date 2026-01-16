@@ -1,0 +1,38 @@
+{
+  "id": "2_oboes_nucleus",
+  "name": "2 Oboes - Nucleus",
+  "family": "woodwinds",
+  "vendor": "Audio Imperia",
+  "description": "Audio Imperia Nucleus 2 Oboes ensemble. Distinctive reedy tone with poignant expressiveness. Excellent for pastoral themes, lyrical melodies, and providing orchestral color.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "poly",
+    "is_drum": false
+  },
+  "range": {
+    "absolute": ["Bb3", "A6"],
+    "preferred": ["C4", "F6"]
+  },
+  "fix_policy": "octave_shift_to_fit",
+  "articulations": {
+    "mode": "keyswitch",
+    "default": "sustained",
+    "short_articulations": ["staccatissimo"],
+    "send_keyswitch_on_every_change": true,
+    "map": {
+      "sustained": { "pitch": 12, "description": "sustained", "dynamics": "cc1" },
+      "staccatissimo": { "pitch": 13, "description": "staccatissimo", "dynamics": "velocity" },
+      "trill_ht": { "pitch": 14, "description": "trill half tone", "dynamics": "cc1" },
+      "trill_wt": { "pitch": 15, "description": "trill whole tone", "dynamics": "cc1" }
+    }
+  },
+  "controllers": {
+    "dynamics": 1,
+    "expression": 11
+  },
+  "ai": {
+    "system_prompt_template": "IMPORTANT: Always list articulation_changes BEFORE every articulation change (with exact time). Always specify current articulation explicitly. If starting with sustained - add an articulation change entry, switching to staccatissimo - add an articulation change entry, if long notes appear within short notes section - switch to sustained, then back to staccatissimo. For trills use trill_ht (half tone) or trill_wt (whole tone). Never assume previous articulation persists - always add an articulation change entry when articulation type changes. Ensemble oboes (2 players). CC1 controls dynamics for sustained and trills. Use velocity for staccatissimo.",
+    "user_prompt_template": ""
+  }
+}
+

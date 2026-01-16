@@ -409,7 +409,7 @@ local function calculate_length_bars(start_sec, end_sec, num, denom)
   return math.floor(length_q / quarters_per_bar + 0.5)
 end
 
-local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan, original_bpm)
+local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan, original_bpm, length_bars_override)
   local provider = const.DEFAULT_MODEL_PROVIDER
   local model_name = const.DEFAULT_MODEL_NAME
   local base_url = const.DEFAULT_MODEL_BASE_URL
@@ -438,7 +438,12 @@ local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_i
     effective_style = generation_style or const.DEFAULT_GENERATION_STYLE
   end
 
-  local length_bars = calculate_length_bars(start_sec, end_sec, num, denom)
+  local length_bars = length_bars_override
+  if type(length_bars) ~= "number" or length_bars <= 0 then
+    length_bars = calculate_length_bars(start_sec, end_sec, num, denom)
+  else
+    length_bars = math.floor(length_bars + 0.5)
+  end
 
   local request = {
     time = { start_sec = start_sec, end_sec = end_sec, length_bars = length_bars },
@@ -1094,7 +1099,8 @@ local function start_compose_plan()
     false,
     ensemble_info,
     true,
-    nil
+    nil,
+    compose_state.length_bars
   )
 
   utils.log(string.format("Compose: using plan model '%s'", request.model.model_name))
@@ -1247,7 +1253,8 @@ function start_next_compose_generation()
     compose_state.allow_tempo_changes or false,
     ensemble_info,
     false,
-    compose_state.original_bpm
+    compose_state.original_bpm,
+    compose_state.length_bars
   )
   
   local handle, err = http.begin_request(const.DEFAULT_BRIDGE_URL, request)
@@ -1711,7 +1718,8 @@ function start_next_arrange_generation()
     arrange_state.allow_tempo_changes or false,
     ensemble_info,
     false,
-    arrange_state.original_bpm
+    arrange_state.original_bpm,
+    arrange_state.length_bars
   )
   
   local handle, err = http.begin_request(const.DEFAULT_BRIDGE_URL, request)
@@ -1850,7 +1858,7 @@ local function start_arrange_plan()
   end
 
   local request = {
-    time = { start_sec = arrange_state.start_sec, end_sec = arrange_state.end_sec },
+    time = { start_sec = arrange_state.start_sec, end_sec = arrange_state.end_sec, length_bars = arrange_state.length_bars },
     music = { bpm = arrange_state.bpm, time_sig = string.format("%d/%d", arrange_state.num, arrange_state.denom), key = arrange_state.key },
     source_sketch = {
       track_name = arrange_state.source_sketch.track_name,
@@ -1937,6 +1945,7 @@ local function run_arrange(state, profile_list, profiles_by_id)
   end
 
   local bpm, num, denom = get_bpm_and_timesig(start_sec)
+  local length_bars = calculate_length_bars(start_sec, end_sec, num, denom)
   
   local key = state.key or const.DEFAULT_KEY
   if state.key_mode == "Auto" then
@@ -1973,6 +1982,7 @@ local function run_arrange(state, profile_list, profiles_by_id)
     },
     start_sec = start_sec,
     end_sec = end_sec,
+    length_bars = length_bars,
     bpm = bpm,
     original_bpm = bpm,
     num = num,
@@ -2048,6 +2058,7 @@ local function run_compose(state, profile_list, profiles_by_id)
   end
 
   local bpm, num, denom = get_bpm_and_timesig(start_sec)
+  local length_bars = calculate_length_bars(start_sec, end_sec, num, denom)
   
   local key = state.key or const.DEFAULT_KEY
   if state.key_mode == "Auto" then
@@ -2079,6 +2090,7 @@ local function run_compose(state, profile_list, profiles_by_id)
     plan = nil,
     start_sec = start_sec,
     end_sec = end_sec,
+    length_bars = length_bars,
     bpm = bpm,
     original_bpm = bpm,
     num = num,

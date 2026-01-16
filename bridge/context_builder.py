@@ -18,6 +18,7 @@ try:
         build_rhythmic_context_prompt,
         extract_motif_from_notes,
     )
+    from music_notation import time_q_to_bar_beat
     from music_theory import (
         analyze_chord,
         detect_key_from_chords,
@@ -43,6 +44,7 @@ except ImportError:
         build_rhythmic_context_prompt,
         extract_motif_from_notes,
     )
+    from .music_notation import time_q_to_bar_beat
     from .music_theory import (
         analyze_chord,
         detect_key_from_chords,
@@ -386,6 +388,133 @@ def safe_float(value: Any) -> Optional[float]:
         return None
 
 
+def normalize_track_name(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def get_profile_keyswitch_pitches(profile: Optional[Dict[str, Any]]) -> set[int]:
+    if not profile or not isinstance(profile, dict):
+        return set()
+    pitches: set[int] = set()
+    art_cfg = profile.get("articulations", {})
+    if isinstance(art_cfg, dict):
+        octave_offset = safe_int(art_cfg.get("octave_offset")) or 0
+        mode = str(art_cfg.get("mode", "none")).lower()
+        if mode == "keyswitch":
+            pitches.update(build_keyswitch_map(art_cfg).keys())
+        art_map = art_cfg.get("map", {})
+        if isinstance(art_map, dict):
+            for data in art_map.values():
+                if not isinstance(data, dict):
+                    continue
+                pitch = data.get("pitch") or data.get("keyswitch")
+                if pitch is None:
+                    continue
+                try:
+                    midi_pitch = note_to_midi(pitch) + (octave_offset * 12)
+                except ValueError:
+                    continue
+                pitches.add(midi_pitch)
+    legato_cfg = profile.get("legato", {})
+    if isinstance(legato_cfg, dict) and str(legato_cfg.get("mode", "")).lower() == "keyswitch":
+        ks = legato_cfg.get("keyswitch")
+        if ks:
+            try:
+                pitches.add(note_to_midi(ks))
+            except ValueError:
+                pass
+    return pitches
+
+
+def build_context_track_keyswitch_map(context_tracks: Optional[List[Dict[str, Any]]]) -> Dict[str, set[int]]:
+    mapping: Dict[str, set[int]] = {}
+    if not context_tracks:
+        return mapping
+    for track in context_tracks:
+        if not isinstance(track, dict):
+            continue
+        name = normalize_track_name(track.get("name") or track.get("track") or track.get("track_name"))
+        profile_id = str(track.get("profile_id") or "").strip()
+        if not name or not profile_id:
+            continue
+        try:
+            profile = load_profile(profile_id)
+        except Exception:
+            continue
+        pitches = get_profile_keyswitch_pitches(profile)
+        if pitches:
+            mapping[name] = pitches
+    return mapping
+
+
+def filter_keyswitch_notes(notes: Optional[List[Dict[str, Any]]], keyswitch_pitches: set[int]) -> List[Dict[str, Any]]:
+    if not notes:
+        return []
+    if not keyswitch_pitches:
+        return list(notes)
+    result: List[Dict[str, Any]] = []
+    for note in notes:
+        pitch = safe_int(note.get("pitch")) if isinstance(note, dict) else None
+        if pitch is not None and pitch in keyswitch_pitches:
+            continue
+        result.append(note)
+    return result
+
+
+def filter_keyswitch_notes_by_track(
+    notes: Optional[List[Dict[str, Any]]],
+    track_keyswitch_map: Dict[str, set[int]],
+) -> List[Dict[str, Any]]:
+    if not notes:
+        return []
+    if not track_keyswitch_map:
+        return list(notes)
+    result: List[Dict[str, Any]] = []
+    for note in notes:
+        if not isinstance(note, dict):
+            continue
+        pitch = safe_int(note.get("pitch"))
+        if pitch is None:
+            result.append(note)
+            continue
+        track_name = normalize_track_name(note.get("track"))
+        keyswitches = track_keyswitch_map.get(track_name)
+        if keyswitches and pitch in keyswitches:
+            continue
+        result.append(note)
+    return result
+
+
+def filter_horizontal_context(
+    horizontal: Optional[HorizontalContext],
+    keyswitch_pitches: set[int],
+) -> Optional[HorizontalContext]:
+    if not horizontal:
+        return None
+    if isinstance(horizontal, dict):
+        before = filter_keyswitch_notes(horizontal.get("before", []), keyswitch_pitches)
+        after = filter_keyswitch_notes(horizontal.get("after", []), keyswitch_pitches)
+        position = str(horizontal.get("position") or "isolated")
+        return HorizontalContext(before=before, after=after, position=position)
+    before = filter_keyswitch_notes(horizontal.before, keyswitch_pitches)
+    after = filter_keyswitch_notes(horizontal.after, keyswitch_pitches)
+    position = horizontal.position or "isolated"
+    return HorizontalContext(before=before, after=after, position=position)
+
+
+def compute_pitch_range(notes: List[Dict[str, Any]]) -> Optional[Tuple[int, int]]:
+    pitches: List[int] = []
+    for note in notes:
+        if not isinstance(note, dict):
+            continue
+        pitch = safe_int(note.get("pitch"))
+        if pitch is not None:
+            pitches.append(pitch)
+    if not pitches:
+        return None
+    return min(pitches), max(pitches)
+
+
 def average(values: List[int]) -> float:
     return sum(values) / len(values)
 
@@ -604,6 +733,19 @@ def compress_changes(changes: List[Tuple[float, str]]) -> List[str]:
         if not seq or seq[-1] != name:
             seq.append(name)
     return seq
+
+
+def compress_changes_with_time(changes: List[Tuple[float, str]]) -> List[Tuple[float, str]]:
+    seq: List[Tuple[float, str]] = []
+    for time_q, name in changes:
+        if not seq or seq[-1][1] != name:
+            seq.append((time_q, name))
+    return seq
+
+
+def format_articulation_change(time_q: float, name: str, time_sig: str) -> str:
+    bar, beat = time_q_to_bar_beat(time_q, time_sig)
+    return f"{bar}.{beat}@{time_q:.3f}:{name}"
 
 
 def build_simplified_midi_map(
@@ -831,7 +973,10 @@ def format_handoff_for_prompt(handoff: Dict[str, Any], instrument_name: str) -> 
     return "\n".join(lines)
 
 
-def summarize_articulation_context(context_tracks: Optional[List[Dict[str, Any]]]) -> List[str]:
+def summarize_articulation_context(
+    context_tracks: Optional[List[Dict[str, Any]]],
+    time_sig: str = "4/4",
+) -> List[str]:
     if not context_tracks:
         return []
 
@@ -858,9 +1003,13 @@ def summarize_articulation_context(context_tracks: Optional[List[Dict[str, Any]]
         elif mode == "cc":
             changes = collect_cc_articulation_changes(cc_events, art_cfg)
 
-        seq = compress_changes(changes)
+        seq = compress_changes_with_time(changes)
         if seq:
-            preview = " -> ".join(seq[:ARTICULATION_CHANGE_PREVIEW_LIMIT])
+            preview_parts = [
+                format_articulation_change(time_q, name, time_sig)
+                for time_q, name in seq[:ARTICULATION_CHANGE_PREVIEW_LIMIT]
+            ]
+            preview = " -> ".join(preview_parts)
             if len(seq) > ARTICULATION_CHANGE_PREVIEW_LIMIT:
                 preview = f"{preview} -> ..."
             name_prefix = f"{track_name}: " if track_name else ""
@@ -1025,15 +1174,18 @@ def build_ensemble_context(
     return "\n".join(parts)
 
 
-def collect_context_notes_for_velocity(context: ContextInfo) -> List[Dict[str, Any]]:
+def collect_context_notes_for_velocity(
+    existing_notes: Optional[List[Dict[str, Any]]],
+    horizontal: Optional[HorizontalContext],
+) -> List[Dict[str, Any]]:
     notes: List[Dict[str, Any]] = []
-    if context.existing_notes:
-        notes.extend(context.existing_notes)
-    if context.horizontal:
-        if context.horizontal.before:
-            notes.extend(context.horizontal.before)
-        if context.horizontal.after:
-            notes.extend(context.horizontal.after)
+    if existing_notes:
+        notes.extend(existing_notes)
+    if horizontal:
+        if horizontal.before:
+            notes.extend(horizontal.before)
+        if horizontal.after:
+            notes.extend(horizontal.after)
     return notes
 
 
@@ -1043,6 +1195,7 @@ def build_context_summary(
     length_q: float = 16.0,
     key_str: str = "unknown",
     skip_auto_harmony: bool = False,
+    target_profile: Optional[Dict[str, Any]] = None,
 ) -> Tuple[str, str, str]:
     if not context:
         return "", "unknown", "isolated"
@@ -1051,30 +1204,42 @@ def build_context_summary(
     detected_key = "unknown"
     position = "isolated"
 
-    notes_for_progression = context.extended_progression or context.existing_notes
+    track_keyswitch_map = build_context_track_keyswitch_map(context.context_tracks)
+    target_keyswitches = get_profile_keyswitch_pitches(target_profile) if target_profile else set()
+    existing_notes = filter_keyswitch_notes_by_track(context.existing_notes, track_keyswitch_map)
+    extended_progression = filter_keyswitch_notes_by_track(context.extended_progression, track_keyswitch_map)
+    horizontal = filter_horizontal_context(context.horizontal, target_keyswitches)
+
+    notes_for_progression = extended_progression or existing_notes
     if notes_for_progression and not skip_auto_harmony:
         progression, detected_key = analyze_harmony_progression(notes_for_progression, time_sig, length_q)
         if progression:
             parts.append(f"### HARMONY CONTEXT\nCHORD PROGRESSION: {progression}")
 
     effective_key = key_str if key_str != "unknown" else detected_key
-    horizontal_summary, position = build_horizontal_context_summary(context.horizontal, effective_key)
+    horizontal_summary, position = build_horizontal_context_summary(horizontal, effective_key)
     if horizontal_summary:
         parts.append(horizontal_summary)
 
-    if context.existing_notes:
-        if context.pitch_range:
+    if existing_notes:
+        range_tuple = compute_pitch_range(existing_notes)
+        if range_tuple:
+            min_p, max_p = range_tuple
+        elif context.pitch_range:
             min_p = context.pitch_range.get("min", 48)
             max_p = context.pitch_range.get("max", 72)
+        else:
+            min_p, max_p = 48, 72
+        if min_p is not None and max_p is not None:
             parts.append(f"Vertical context range: {pitch_to_note(min_p)} to {pitch_to_note(max_p)} (MIDI {min_p}-{max_p})")
             suggested_low = max_p
             suggested_high = min(max_p + 12, 96)
             parts.append(f"SUGGESTED MELODY RANGE: MIDI {suggested_low}-{suggested_high} (above existing parts)")
-        note_summary = format_notes_for_context(context.existing_notes, NOTE_CONTEXT_PREVIEW_LIMIT)
+        note_summary = format_notes_for_context(existing_notes, NOTE_CONTEXT_PREVIEW_LIMIT)
         if note_summary:
             parts.append(f"Context notes (start_q, pitch, dur_q, vel, chan): {note_summary}")
 
-    velocity_notes = collect_context_notes_for_velocity(context)
+    velocity_notes = collect_context_notes_for_velocity(existing_notes, horizontal)
     dynamics_lines = summarize_velocity_context(velocity_notes)
     if dynamics_lines:
         parts.append("### DYNAMICS CONTEXT\n" + "\n".join(dynamics_lines))
@@ -1083,7 +1248,7 @@ def build_context_summary(
     if cc_lines:
         parts.append("### CC CONTEXT\n" + "\n".join(cc_lines))
 
-    articulation_lines = summarize_articulation_context(context.context_tracks)
+    articulation_lines = summarize_articulation_context(context.context_tracks, time_sig)
     if articulation_lines:
         parts.append("### ARTICULATION CONTEXT\n" + "\n".join(articulation_lines))
 

@@ -346,7 +346,7 @@ def format_profile_for_prompt(profile: Dict[str, Any]) -> str:
     
     if mode == "cc" and art_map:
         cc_num = art.get("cc_number")
-        lines.append(f"ARTICULATIONS (CC{cc_num}):")
+        lines.append(f"ARTICULATIONS (CC{cc_num}, use articulation_changes list):")
         for art_name, data in art_map.items():
             if not isinstance(data, dict):
                 continue
@@ -361,16 +361,14 @@ def format_profile_for_prompt(profile: Dict[str, Any]) -> str:
                 lines.append(f"  {art_name}: keyswitch {ks} (vel_on={data['velocity_on']}, vel_off={data.get('velocity_off', 1)})")
     
     elif mode == "keyswitch" and art_map:
-        lines.append("ARTICULATIONS (keyswitch):")
+        lines.append("ARTICULATIONS (use articulation_changes list, keyswitches added automatically):")
         for art_name, data in art_map.items():
             if not isinstance(data, dict):
                 continue
-            ks = data.get("keyswitch") or data.get("pitch")
             desc = data.get("description", art_name)
-            if data.get("velocity_on"):
-                lines.append(f"  {art_name}: {ks} (vel_on={data['velocity_on']}, vel_off={data.get('velocity_off', 1)})")
-            else:
-                lines.append(f"  {art_name}: {ks} - {desc}")
+            dynamics = data.get("dynamics", "cc1")
+            dyn_str = " [velocity]" if dynamics == "velocity" else ""
+            lines.append(f"  {art_name}: {desc}{dyn_str}")
     
     elif midi.get("is_drum"):
         drum_map = midi.get("drum_map", {})
@@ -752,6 +750,7 @@ def build_prompt(
     context_summary, detected_key, _position = build_context_summary(
         request.context, request.music.time_sig, length_q, request.music.key,
         skip_auto_harmony=skip_auto_harmony,
+        target_profile=profile,
     )
 
     final_key = request.music.key

@@ -18,7 +18,7 @@
     "mode": "none",
     "default": "sustain",
     "map": {
-      "sustain": { "description": "Standard piano tone with full resonance", "dynamics": "velocity" }
+      "sustain": { "description": "standard piano tone with full resonance", "dynamics": "velocity" }
     }
   },
   "controllers": {

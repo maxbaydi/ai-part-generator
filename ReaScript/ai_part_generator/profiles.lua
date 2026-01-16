@@ -404,6 +404,42 @@ function M.get_articulation_changes(profile, response)
   local mode = tostring(art_config.mode or "none"):lower()
   local map = art_config.map or {}
 
+  local function resolve_name(name)
+    if not name or name == "" then
+      return nil
+    end
+    if map[name] then
+      return name
+    end
+    local lower = tostring(name):lower()
+    for key, _ in pairs(map) do
+      if tostring(key):lower() == lower then
+        return key
+      end
+    end
+    return nil
+  end
+
+  local raw_changes = response.articulation_changes
+  if type(raw_changes) == "table" and #raw_changes > 0 then
+    local changes = {}
+    for _, change in ipairs(raw_changes) do
+      if type(change) == "table" then
+        local art_name = resolve_name(change.articulation or change.art or change.name)
+        local t = tonumber(change.time_q) or tonumber(change.start_q) or 0
+        if art_name then
+          table.insert(changes, { time_q = t, articulation = art_name })
+        end
+      end
+    end
+
+    table.sort(changes, function(a, b)
+      return (a.time_q or 0) < (b.time_q or 0)
+    end)
+
+    return changes
+  end
+
   if mode == "cc" then
     local cc_num = tonumber(art_config.cc_number)
     if not cc_num then
@@ -426,7 +462,7 @@ function M.get_articulation_changes(profile, response)
         local cc = tonumber(evt.cc) or tonumber(evt.controller)
         if cc == cc_num then
           local val = tonumber(evt.value) or tonumber(evt.val)
-          local art_name = val and value_to_name[val] or nil
+          local art_name = val and resolve_name(value_to_name[val]) or nil
           if art_name then
             local t = tonumber(evt.time_q) or tonumber(evt.start_q) or 0
             table.insert(changes, { time_q = t, articulation = art_name })
@@ -457,7 +493,7 @@ function M.get_articulation_changes(profile, response)
     for _, ks in ipairs(response.keyswitches or {}) do
       if type(ks) == "table" then
         local pitch = tonumber(ks.pitch)
-        local art_name = pitch and pitch_to_name[pitch] or nil
+        local art_name = pitch and resolve_name(pitch_to_name[pitch]) or nil
         if art_name then
           local t = tonumber(ks.time_q) or tonumber(ks.start_q) or 0
           table.insert(changes, { time_q = t, articulation = art_name })

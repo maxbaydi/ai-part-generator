@@ -20,18 +20,18 @@
     "default": "sustain",
     "short_articulations": ["staccatissimo", "staccato", "sforzando", "marcato"],
     "map": {
-      "sustain": { "cc_value": 0, "description": "Sustain (Low Latency Legato)", "dynamics": "cc1" },
-      "sustain_expressive": { "cc_value": 6, "description": "Sustain (Expressive Legato)", "dynamics": "cc1" },
-      "repetitions": { "cc_value": 11, "description": "Repetitions", "dynamics": "velocity" },
-      "staccatissimo": { "cc_value": 16, "description": "Staccatissimo", "dynamics": "velocity" },
-      "staccato": { "cc_value": 21, "description": "Staccato", "dynamics": "velocity" },
-      "sforzando": { "cc_value": 26, "description": "Sforzando", "dynamics": "velocity" },
-      "trills": { "cc_value": 46, "description": "Trills", "dynamics": "cc1" },
-      "flutter": { "cc_value": 51, "description": "Flutter Tongue", "dynamics": "cc1" },
-      "measured_reps": { "cc_value": 61, "description": "Measured Repetitions", "dynamics": "velocity" },
-      "marcato": { "cc_value": 66, "description": "Marcato", "dynamics": "velocity" },
-      "legato": { "cc_value": 76, "description": "Legato On", "dynamics": "cc1" },
-      "legato_off": { "cc_value": 81, "description": "Legato Off", "dynamics": "cc1" }
+      "sustain": { "cc_value": 0, "description": "sustain low latency legato", "dynamics": "cc1" },
+      "sustain_expressive": { "cc_value": 6, "description": "sustain expressive legato", "dynamics": "cc1" },
+      "repetitions": { "cc_value": 11, "description": "repetitions", "dynamics": "velocity" },
+      "staccatissimo": { "cc_value": 16, "description": "staccatissimo", "dynamics": "velocity" },
+      "staccato": { "cc_value": 21, "description": "staccato", "dynamics": "velocity" },
+      "sforzando": { "cc_value": 26, "description": "sforzando", "dynamics": "velocity" },
+      "trills": { "cc_value": 46, "description": "trills", "dynamics": "cc1" },
+      "flutter": { "cc_value": 51, "description": "flutter tongue", "dynamics": "cc1" },
+      "measured_reps": { "cc_value": 61, "description": "measured repetitions", "dynamics": "velocity" },
+      "marcato": { "cc_value": 66, "description": "marcato", "dynamics": "velocity" },
+      "legato": { "cc_value": 76, "description": "legato on", "dynamics": "cc1" },
+      "legato_off": { "cc_value": 81, "description": "legato off", "dynamics": "cc1" }
     }
   },
   "controllers": {

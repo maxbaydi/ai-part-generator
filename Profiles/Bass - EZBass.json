@@ -20,16 +20,16 @@
     "default": "sustain",
     "short_articulations": ["staccato", "ghost_note", "loud_mute", "slap"],
     "map": {
-      "sustain": { "pitch": "A-1", "description": "Normal fingered notes with polyphony enabled (hold)", "dynamics": "velocity", "hold": true },
-      "harmonic": { "pitch": "A#-1", "description": "Natural harmonics", "dynamics": "velocity", "hold": true },
-      "slap": { "pitch": "B-1", "description": "Slap/Pop technique", "dynamics": "velocity", "hold": true },
-      "finger_down": { "pitch": "C#0", "description": "Middle finger / Down stroke articulation", "dynamics": "velocity" },
-      "loud_mute": { "pitch": "D#0", "description": "Percussive muted note (press to trigger)", "dynamics": "velocity" },
-      "ghost_note": { "pitch": "E0", "description": "Ghost note - soft percussive note", "dynamics": "velocity" },
-      "slide_down": { "pitch": "F0", "description": "Slide current note down (press)", "dynamics": "velocity" },
-      "slide": { "pitch": "G0", "description": "Slide to next note (hold during transition)", "dynamics": "velocity", "hold": true },
-      "slide_up": { "pitch": "G#0", "description": "Slide current note up (press)", "dynamics": "velocity" },
-      "staccato": { "pitch": "A-1", "description": "Short notes using polyphony mode", "dynamics": "velocity" }
+      "sustain": { "pitch": "A-1", "description": "normal fingered notes with polyphony enabled", "dynamics": "velocity", "hold": true },
+      "harmonic": { "pitch": "A#-1", "description": "natural harmonics", "dynamics": "velocity", "hold": true },
+      "slap": { "pitch": "B-1", "description": "slap pop technique", "dynamics": "velocity", "hold": true },
+      "finger_down": { "pitch": "C#0", "description": "middle finger down stroke articulation", "dynamics": "velocity" },
+      "loud_mute": { "pitch": "D#0", "description": "percussive muted note", "dynamics": "velocity" },
+      "ghost_note": { "pitch": "E0", "description": "ghost note soft percussive note", "dynamics": "velocity" },
+      "slide_down": { "pitch": "F0", "description": "slide current note down", "dynamics": "velocity" },
+      "slide": { "pitch": "G0", "description": "slide to next note", "dynamics": "velocity", "hold": true },
+      "slide_up": { "pitch": "G#0", "description": "slide current note up", "dynamics": "velocity" },
+      "staccato": { "pitch": "A-1", "description": "short notes using polyphony mode", "dynamics": "velocity" }
     }
   },
   "controllers": {

@@ -1,0 +1,39 @@
+{
+  "id": "16_violins_nucleus",
+  "name": "16 Violins - Nucleus",
+  "family": "strings",
+  "vendor": "Audio Imperia",
+  "description": "Audio Imperia Nucleus 16 Violins ensemble. Lush, cinematic string section with progressive vibrato legato (NV-V). Rich, full sound perfect for emotional themes and epic orchestrations.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "poly",
+    "is_drum": false
+  },
+  "range": {
+    "absolute": ["G3", "A6"],
+    "preferred": ["G3", "E6"]
+  },
+  "fix_policy": "octave_shift_to_fit",
+  "articulations": {
+    "mode": "keyswitch",
+    "default": "legato",
+    "short_articulations": ["spiccato", "pizzicato"],
+    "send_keyswitch_on_every_change": true,
+    "map": {
+      "legato": { "pitch": 12, "description": "legato nv-v", "dynamics": "cc1" },
+      "sustained": { "pitch": 13, "description": "sustained nv-v", "dynamics": "cc1" },
+      "spiccato": { "pitch": 14, "description": "spiccato", "dynamics": "velocity" },
+      "pizzicato": { "pitch": 15, "description": "pizzicato", "dynamics": "velocity" },
+      "tremolo": { "pitch": 16, "description": "tremolo", "dynamics": "cc1" }
+    }
+  },
+  "controllers": {
+    "dynamics": 1,
+    "expression": 11
+  },
+  "ai": {
+    "system_prompt_template": "IMPORTANT: Always list articulation_changes BEFORE every articulation change (with exact time). Always specify current articulation explicitly. If starting with legato - add an articulation change entry, switching to spiccato - add an articulation change entry, if long notes appear within short notes section - switch to sustained/legato, then back to short articulation. Never assume previous articulation persists - always add an articulation change entry when articulation type changes. Ensemble violins (16 players). CC1 controls dynamics for long articulations. Progressive vibrato on legato. Use velocity for short articulations (spiccato, pizzicato).",
+    "user_prompt_template": ""
+  }
+}
+

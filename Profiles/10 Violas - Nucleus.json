@@ -1,0 +1,38 @@
+{
+  "id": "10_violas_nucleus",
+  "name": "10 Violas - Nucleus",
+  "family": "strings",
+  "vendor": "Audio Imperia",
+  "description": "Audio Imperia Nucleus 10 Violas ensemble. Warm, rich midrange tone. Essential for inner harmonies and lush orchestral textures.",
+  "midi": {
+    "channel": 1,
+    "polyphony": "poly",
+    "is_drum": false
+  },
+  "range": {
+    "absolute": ["C3", "E6"],
+    "preferred": ["C3", "A5"]
+  },
+  "fix_policy": "octave_shift_to_fit",
+  "articulations": {
+    "mode": "keyswitch",
+    "default": "sustained",
+    "short_articulations": ["spiccato", "pizzicato"],
+    "send_keyswitch_on_every_change": true,
+    "map": {
+      "sustained": { "pitch": 0, "description": "sustained", "dynamics": "cc1" },
+      "spiccato": { "pitch": 1, "description": "spiccato", "dynamics": "velocity" },
+      "pizzicato": { "pitch": 2, "description": "pizzicato", "dynamics": "velocity" },
+      "tremolo": { "pitch": 3, "description": "tremolo", "dynamics": "cc1" }
+    }
+  },
+  "controllers": {
+    "dynamics": 1,
+    "expression": 11
+  },
+  "ai": {
+    "system_prompt_template": "IMPORTANT: Always list articulation_changes BEFORE every articulation change (with exact time). Always specify current articulation explicitly. If starting with sustained - add an articulation change entry, switching to spiccato - add an articulation change entry, if long notes appear within short notes section - switch to sustained, then back to short articulation. Never assume previous articulation persists - always add an articulation change entry when articulation type changes. Ensemble violas (10 players). CC1 controls dynamics for long articulations. No legato available. Use velocity for short articulations.",
+    "user_prompt_template": ""
+  }
+}
+

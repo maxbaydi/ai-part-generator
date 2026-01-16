@@ -38,13 +38,18 @@ Output valid JSON with notes in MUSICAL NOTATION:
     ]},
     "dynamics": {"interp": "cubic", "breakpoints": [...]}
   },
-  "articulation": "legato"
+  "articulation_changes": [
+    {"time_q": 0, "articulation": "legato"}
+  ]
 }
 
 ALTERNATIVE FORMAT (also accepted):
 {
   "notes": [
     {"start_q": 0, "dur_q": 1, "pitch": 72, "vel": 80, "chan": 1}
+  ],
+  "articulation_changes": [
+    {"time_q": 0, "articulation": "legato"}
   ]
 }
 
@@ -53,7 +58,10 @@ ALTERNATIVE FORMAT (also accepted):
 Use articulations from INSTRUMENT PROFILE where musically appropriate:
 - SHORT articulations (spiccato, staccato, pizzicato): dur 8th-16th
 - LONG articulations (sustain, legato, tremolo): dur quarter+
-- Add "art" field per note: {"note": "C5", "dur": "quarter", "art": "legato"}
+- ALWAYS output "articulation_changes" with exact timing (time_q preferred, bar/beat also OK)
+- Include a change at time_q 0 even if there is only ONE articulation for the whole part
+- Do NOT output keyswitch notes or articulation CCs; those are added automatically
+- Use ONLY articulation names from the instrument profile
 
 === DYNAMICS SYSTEM ===
 
@@ -175,11 +183,17 @@ POSITION: Bar.Beat (e.g., 1.1, 3.2.5)
     "intensity_curve": "building",
     "gaps_for_others": "left low register open, rests on beats 2-3",
     "suggestion_for_next": "Add harmonic support in low-mid range"
-  }
+  },
+  "articulation_changes": [
+    {"time_q": 0, "articulation": "legato"}
+  ]
 }
 
 ALTERNATIVE FORMAT (also accepted):
-{"notes": [{"start_q": 0, "dur_q": 1, "pitch": 72, "vel": 80, "chan": 1}]}
+{
+  "notes": [{"start_q": 0, "dur_q": 1, "pitch": 72, "vel": 80, "chan": 1}],
+  "articulation_changes": [{"time_q": 0, "articulation": "legato"}]
+}
 
 === DYNAMICS SYSTEM ===
 
@@ -202,7 +216,10 @@ DYNAMICS CURVE EXAMPLE:
 Use from instrument profile:
 - SHORT (spiccato, staccato, pizzicato): dur 8th-16th
 - LONG (sustain, legato, tremolo): dur quarter+
-- Add "art" field: {"note": "C5", "dur": "half", "art": "legato"}
+- ALWAYS output "articulation_changes" with exact timing (time_q preferred, bar/beat also OK)
+- Include a change at time_q 0 even if there is only ONE articulation for the whole part
+- Do NOT output keyswitch notes or articulation CCs; those are added automatically
+- Use ONLY articulation names from the instrument profile
 
 === PATTERNS ===
 
