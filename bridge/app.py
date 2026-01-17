@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 
 from fastapi import FastAPI, HTTPException
@@ -13,8 +14,22 @@ try:
     from prompt_builder import build_arrange_plan_prompt, build_chat_messages, build_plan_prompt, build_prompt
     from llm_client import call_llm, parse_llm_json, resolve_model
     from prompt_enhancer import ENHANCER_SYSTEM_PROMPT, build_enhancer_prompt, extract_enhanced_prompt
-    from promts import REPAIR_SYSTEM_PROMPT
-    from response_builder import build_response
+    from promts import (
+        OUTPUT_SCHEMA_CURVE_KEYS,
+        OUTPUT_SCHEMA_KEYS,
+        OUTPUT_SCHEMA_LIST_KEYS,
+        OUTPUT_SCHEMA_STRING_KEYS,
+        OUTPUT_SCHEMA_TEMPLATE,
+        REPAIR_SYSTEM_PROMPT,
+        SCHEMA_KEY_ARTICULATION,
+        SCHEMA_KEY_ARTICULATION_CHANGES,
+        SCHEMA_KEY_CURVES,
+        SCHEMA_KEY_GENERATION_STYLE,
+        SCHEMA_KEY_GENERATION_TYPE,
+        SCHEMA_KEY_HANDOFF,
+        SCHEMA_REPAIR_SYSTEM_PROMPT,
+    )
+    from response_builder import build_response, normalize_articulation_changes
     from utils import summarize_text
 except ImportError:
     from .constants import APP_NAME, BRIDGE_HOST, BRIDGE_PORT, MAX_REPAIR_ATTEMPTS, SECONDS_PER_MINUTE
@@ -24,8 +39,22 @@ except ImportError:
     from .prompt_builder import build_arrange_plan_prompt, build_chat_messages, build_plan_prompt, build_prompt
     from .llm_client import call_llm, parse_llm_json, resolve_model
     from .prompt_enhancer import ENHANCER_SYSTEM_PROMPT, build_enhancer_prompt, extract_enhanced_prompt
-    from .promts import REPAIR_SYSTEM_PROMPT
-    from .response_builder import build_response
+    from .promts import (
+        OUTPUT_SCHEMA_CURVE_KEYS,
+        OUTPUT_SCHEMA_KEYS,
+        OUTPUT_SCHEMA_LIST_KEYS,
+        OUTPUT_SCHEMA_STRING_KEYS,
+        OUTPUT_SCHEMA_TEMPLATE,
+        REPAIR_SYSTEM_PROMPT,
+        SCHEMA_KEY_ARTICULATION,
+        SCHEMA_KEY_ARTICULATION_CHANGES,
+        SCHEMA_KEY_CURVES,
+        SCHEMA_KEY_GENERATION_STYLE,
+        SCHEMA_KEY_GENERATION_TYPE,
+        SCHEMA_KEY_HANDOFF,
+        SCHEMA_REPAIR_SYSTEM_PROMPT,
+    )
+    from .response_builder import build_response, normalize_articulation_changes
     from .utils import summarize_text
 
 app = FastAPI(title=APP_NAME)
@@ -47,6 +76,283 @@ def calculate_length_q(time_window, music_info) -> float:
     
     bpm_for_calc = music_info.original_bpm or music_info.bpm
     return max(0.0, length_sec * float(bpm_for_calc) / SECONDS_PER_MINUTE)
+
+
+PROFILE_KEY_ARTICULATIONS = "articulations"
+PROFILE_KEY_MAP = "map"
+PROFILE_KEY_MIDI = "midi"
+PROFILE_KEY_MODE = "mode"
+PROFILE_KEY_IS_DRUM = "is_drum"
+PROFILE_KEY_DEFAULT = "default"
+ARTICULATION_MODE_NONE = "none"
+CURVE_KEY_BREAKPOINTS = "breakpoints"
+CURVE_KEY_INTERP = "interp"
+ARTICULATION_TIME_KEY = "time_q"
+ARTICULATION_NAME_KEY = "articulation"
+
+
+def get_profile_articulation_names(profile: dict) -> list[str]:
+    art_cfg = profile.get(PROFILE_KEY_ARTICULATIONS, {})
+    art_map = art_cfg.get(PROFILE_KEY_MAP, {})
+    if not isinstance(art_map, dict):
+        return []
+    names = [str(name).strip() for name in art_map.keys() if str(name).strip()]
+    return sorted(set(names))
+
+
+def profile_has_articulations(profile: dict) -> bool:
+    art_cfg = profile.get(PROFILE_KEY_ARTICULATIONS, {})
+    mode = str(art_cfg.get(PROFILE_KEY_MODE, "")).lower()
+    art_map = art_cfg.get(PROFILE_KEY_MAP, {})
+    return mode != ARTICULATION_MODE_NONE and isinstance(art_map, dict) and len(art_map) > 0
+
+
+def build_allowed_articulation_map(names: list[str]) -> dict[str, str]:
+    return {name.lower(): name for name in names}
+
+
+def resolve_articulation_name(value: str, allowed_map: dict[str, str]) -> str:
+    name = str(value or "").strip()
+    if not name:
+        return ""
+    if not allowed_map:
+        return name
+    return allowed_map.get(name.lower(), "")
+
+
+def resolve_default_articulation(profile: dict, allowed_map: dict[str, str], allowed_names: list[str]) -> str:
+    art_cfg = profile.get(PROFILE_KEY_ARTICULATIONS, {})
+    default_name = str(art_cfg.get(PROFILE_KEY_DEFAULT, "")).strip()
+    resolved = resolve_articulation_name(default_name, allowed_map)
+    if resolved:
+        return resolved
+    return allowed_names[0] if allowed_names else ""
+
+
+def normalize_articulation_changes_list(
+    raw_changes: list[dict],
+    allowed_map: dict[str, str],
+    time_sig: str,
+) -> list[dict]:
+    normalized = normalize_articulation_changes(raw_changes, time_sig)
+    cleaned: list[dict] = []
+    for change in normalized:
+        art_name = resolve_articulation_name(change.get(ARTICULATION_NAME_KEY, ""), allowed_map)
+        if not art_name:
+            continue
+        cleaned.append({
+            ARTICULATION_TIME_KEY: float(change.get(ARTICULATION_TIME_KEY, 0.0)),
+            ARTICULATION_NAME_KEY: art_name,
+        })
+    return cleaned
+
+
+def normalize_llm_output_schema(
+    parsed: dict,
+    profile: dict,
+    time_sig: str,
+    generation_type: str | None,
+    generation_style: str | None,
+) -> dict:
+    normalized = dict(parsed) if isinstance(parsed, dict) else {}
+    raw_changes_source = normalized.get(SCHEMA_KEY_ARTICULATION_CHANGES)
+    defaults = copy.deepcopy(OUTPUT_SCHEMA_TEMPLATE)
+    for key, value in defaults.items():
+        if key not in normalized or normalized[key] is None:
+            normalized[key] = value
+
+    for key in OUTPUT_SCHEMA_LIST_KEYS:
+        if not isinstance(normalized.get(key), list):
+            normalized[key] = []
+
+    for key in OUTPUT_SCHEMA_STRING_KEYS:
+        if not isinstance(normalized.get(key), str):
+            normalized[key] = ""
+
+    curves = normalized.get(SCHEMA_KEY_CURVES)
+    if not isinstance(curves, dict):
+        curves = copy.deepcopy(defaults[SCHEMA_KEY_CURVES])
+    for curve_key in OUTPUT_SCHEMA_CURVE_KEYS:
+        curve_default = defaults[SCHEMA_KEY_CURVES].get(curve_key, {CURVE_KEY_INTERP: "cubic", CURVE_KEY_BREAKPOINTS: []})
+        curve_val = curves.get(curve_key)
+        if not isinstance(curve_val, dict):
+            curves[curve_key] = copy.deepcopy(curve_default)
+        else:
+            if not isinstance(curve_val.get(CURVE_KEY_BREAKPOINTS), list):
+                curve_val[CURVE_KEY_BREAKPOINTS] = []
+            if not isinstance(curve_val.get(CURVE_KEY_INTERP), str):
+                curve_val[CURVE_KEY_INTERP] = curve_default.get(CURVE_KEY_INTERP, "cubic")
+    normalized[SCHEMA_KEY_CURVES] = curves
+
+    handoff = normalized.get(SCHEMA_KEY_HANDOFF)
+    if handoff is not None and not isinstance(handoff, dict):
+        normalized[SCHEMA_KEY_HANDOFF] = None
+
+    if not normalized[SCHEMA_KEY_GENERATION_TYPE].strip() and generation_type:
+        normalized[SCHEMA_KEY_GENERATION_TYPE] = generation_type
+    if not normalized[SCHEMA_KEY_GENERATION_STYLE].strip() and generation_style:
+        normalized[SCHEMA_KEY_GENERATION_STYLE] = generation_style
+
+    allowed_names = get_profile_articulation_names(profile)
+    allowed_map = build_allowed_articulation_map(allowed_names)
+    default_articulation = resolve_default_articulation(profile, allowed_map, allowed_names)
+
+    is_drum = bool(profile.get(PROFILE_KEY_MIDI, {}).get(PROFILE_KEY_IS_DRUM, False))
+    has_articulations = profile_has_articulations(profile)
+
+    articulation_value = normalized.get(SCHEMA_KEY_ARTICULATION, "")
+    articulation_value = resolve_articulation_name(articulation_value, allowed_map)
+
+    raw_changes = raw_changes_source
+    if isinstance(raw_changes, dict):
+        raw_changes = [raw_changes]
+    elif not isinstance(raw_changes, list):
+        raw_changes = []
+    changes = normalize_articulation_changes_list(raw_changes, allowed_map, time_sig)
+
+    if is_drum:
+        changes = []
+        articulation_value = ""
+    elif has_articulations:
+        if changes:
+            first_time = float(changes[0].get(ARTICULATION_TIME_KEY, 0.0))
+            if first_time > 0:
+                changes.insert(0, {
+                    ARTICULATION_TIME_KEY: 0.0,
+                    ARTICULATION_NAME_KEY: changes[0][ARTICULATION_NAME_KEY],
+                })
+        else:
+            chosen = articulation_value or default_articulation
+            if chosen:
+                changes = [{ARTICULATION_TIME_KEY: 0.0, ARTICULATION_NAME_KEY: chosen}]
+                articulation_value = chosen
+    else:
+        changes = []
+
+    normalized[SCHEMA_KEY_ARTICULATION] = articulation_value
+    normalized[SCHEMA_KEY_ARTICULATION_CHANGES] = changes
+
+    return normalized
+
+
+def validate_llm_output_schema(parsed: dict, profile: dict, time_sig: str) -> list[str]:
+    if not isinstance(parsed, dict):
+        return ["root_not_object"]
+
+    errors: list[str] = []
+
+    for key in OUTPUT_SCHEMA_KEYS:
+        if key not in parsed:
+            errors.append(f"missing:{key}")
+
+    for key in OUTPUT_SCHEMA_LIST_KEYS:
+        if key in parsed and not isinstance(parsed.get(key), list):
+            errors.append(f"type:{key}:list")
+
+    for key in OUTPUT_SCHEMA_STRING_KEYS:
+        if key in parsed and not isinstance(parsed.get(key), str):
+            errors.append(f"type:{key}:string")
+
+    curves = parsed.get(SCHEMA_KEY_CURVES)
+    if isinstance(curves, dict):
+        for key in OUTPUT_SCHEMA_CURVE_KEYS:
+            curve = curves.get(key)
+            if not isinstance(curve, dict):
+                errors.append(f"type:curves.{key}")
+                continue
+            breakpoints = curve.get(CURVE_KEY_BREAKPOINTS)
+            if not isinstance(breakpoints, list):
+                errors.append(f"type:curves.{key}.breakpoints")
+    elif SCHEMA_KEY_CURVES in parsed:
+        errors.append("type:curves:dict")
+
+    handoff = parsed.get(SCHEMA_KEY_HANDOFF)
+    if handoff is not None and not isinstance(handoff, dict):
+        errors.append("type:handoff:dict_or_null")
+
+    is_drum = bool(profile.get(PROFILE_KEY_MIDI, {}).get(PROFILE_KEY_IS_DRUM, False))
+    raw_changes = parsed.get(SCHEMA_KEY_ARTICULATION_CHANGES)
+    normalized_changes = (
+        normalize_articulation_changes(raw_changes, time_sig)
+        if isinstance(raw_changes, list)
+        else []
+    )
+    allowed_names = get_profile_articulation_names(profile)
+    allowed_set = {name.lower() for name in allowed_names}
+
+    if is_drum:
+        if normalized_changes:
+            errors.append("drum_articulation_changes")
+    else:
+        has_articulations = profile_has_articulations(profile)
+        if has_articulations and not normalized_changes:
+            errors.append("missing_articulation_changes")
+        if normalized_changes:
+            first_time = float(normalized_changes[0].get(ARTICULATION_TIME_KEY, 0.0))
+            if first_time > 0:
+                errors.append("missing_time_zero_articulation")
+            if allowed_set:
+                for change in normalized_changes:
+                    art_name = str(change.get(ARTICULATION_NAME_KEY, "")).strip()
+                    if not art_name or art_name.lower() not in allowed_set:
+                        errors.append(f"invalid_articulation:{art_name or 'empty'}")
+                        break
+
+    articulation = parsed.get(SCHEMA_KEY_ARTICULATION)
+    if isinstance(articulation, str) and articulation.strip() and allowed_set:
+        if articulation.lower() not in allowed_set:
+            errors.append(f"invalid_articulation:{articulation}")
+    elif SCHEMA_KEY_ARTICULATION in parsed and articulation is not None and not isinstance(articulation, str):
+        errors.append("type:articulation:string")
+
+    return errors
+
+
+def build_schema_repair_prompt(parsed: dict, profile: dict, errors: list[str]) -> str:
+    allowed = get_profile_articulation_names(profile)
+    allowed_str = ", ".join(allowed) if allowed else "none"
+    return "\n".join([
+        "Fix the JSON to match the required schema. Keep musical content unchanged.",
+        f"Allowed articulations: {allowed_str}",
+        f"Schema errors: {', '.join(errors)}",
+        "JSON:",
+        json.dumps(parsed, ensure_ascii=False),
+    ])
+
+
+def attempt_schema_repair(
+    parsed: dict,
+    profile: dict,
+    time_sig: str,
+    generation_type: str | None,
+    generation_style: str | None,
+    provider: str,
+    model_name: str,
+    base_url: str,
+    temperature: float,
+    api_key: str | None,
+    max_attempts: int,
+) -> dict | None:
+    errors = validate_llm_output_schema(parsed, profile, time_sig)
+    if not errors:
+        return parsed
+    for attempt in range(max_attempts):
+        repair_messages = [
+            {"role": "system", "content": SCHEMA_REPAIR_SYSTEM_PROMPT},
+            {"role": "user", "content": build_schema_repair_prompt(parsed, profile, errors)},
+        ]
+        content = call_llm(provider, model_name, base_url, temperature, repair_messages, api_key)
+        try:
+            candidate = parse_llm_json(content)
+        except ValueError:
+            errors = ["invalid_json_after_schema_repair"]
+            continue
+        candidate = normalize_llm_output_schema(candidate, profile, time_sig, generation_type, generation_style)
+        errors = validate_llm_output_schema(candidate, profile, time_sig)
+        if not errors:
+            return candidate
+        parsed = candidate
+    return None
 
 
 @app.get("/health")
@@ -116,6 +422,37 @@ def generate(request: GenerateRequest) -> JSONResponse:
         if parsed is None:
             logger.error("LLM JSON parse failed after repair attempts")
             raise HTTPException(status_code=502, detail="LLM JSON parse failed after repair attempts")
+
+    parsed = normalize_llm_output_schema(
+        parsed,
+        profile,
+        request.music.time_sig,
+        request.generation_type,
+        request.generation_style,
+    )
+    schema_errors = validate_llm_output_schema(parsed, profile, request.music.time_sig)
+    if schema_errors:
+        logger.warning("LLM output schema validation failed: %s", schema_errors)
+        repaired = attempt_schema_repair(
+            parsed,
+            profile,
+            request.music.time_sig,
+            request.generation_type,
+            request.generation_style,
+            provider,
+            model_name,
+            base_url,
+            temperature,
+            api_key,
+            MAX_REPAIR_ATTEMPTS,
+        )
+        if repaired is None:
+            logger.error("LLM output schema repair failed after attempts")
+            schema_errors = validate_llm_output_schema(parsed, profile, request.music.time_sig)
+            if schema_errors:
+                logger.warning("Proceeding with normalized output despite schema errors: %s", schema_errors)
+        else:
+            parsed = repaired
 
     should_extract_motif = False
     source_instrument = ""

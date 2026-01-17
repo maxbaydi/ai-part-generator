@@ -15,6 +15,7 @@ local compose_state = nil
 local enhance_state = nil
 local arrange_state = nil
 local arrange_source = nil
+local apply_deferred_tempo_markers_if_allowed = nil
 
 local ROLE_PRIORITY = {
   melody = 1,
@@ -935,26 +936,7 @@ local function apply_compose_result_and_continue()
   compose_state.current_index = compose_state.current_index + 1
   if compose_state.current_index > compose_state.total_tracks then
     utils.log("Compose: ALL COMPLETE!")
-    
-    if compose_state.deferred_tempo_markers and #compose_state.deferred_tempo_markers > 0 then
-      utils.log(string.format("Compose: applying %d deferred tempo markers...", #compose_state.deferred_tempo_markers))
-      local markers_to_apply = {}
-      local quarters_per_bar = compose_state.num * (4.0 / compose_state.denom)
-      for _, tm in ipairs(compose_state.deferred_tempo_markers) do
-        if tm.bar and tm.bar > 1 and tm.bpm then
-          local time_q = (tm.bar - 1) * quarters_per_bar
-          table.insert(markers_to_apply, {
-            time_q = time_q,
-            bpm = tm.bpm,
-            linear = tm.linear or false,
-          })
-        end
-      end
-      if #markers_to_apply > 0 then
-        apply_tempo_markers(markers_to_apply, compose_state.start_sec, compose_state.end_sec)
-        utils.log("Compose: deferred tempo markers applied successfully")
-      end
-    end
+    apply_deferred_tempo_markers_if_allowed(compose_state, "Compose")
     
     compose_state = nil
     return
@@ -974,6 +956,69 @@ local function apply_initial_bpm(bpm, start_sec, num, denom)
   reaper.UpdateArrange()
   utils.log(string.format("apply_initial_bpm: set initial tempo to %.1f BPM at %.2f sec", bpm, start_sec))
   return true
+end
+
+local function build_tempo_markers_from_map(tempo_map, num, denom)
+  local markers = {}
+  if type(tempo_map) ~= "table" or #tempo_map == 0 then
+    return markers
+  end
+  local quarters_per_bar = num * (4.0 / denom)
+  for _, tm in ipairs(tempo_map) do
+    if tm.bar and tm.bar > 1 and tm.bpm then
+      local time_q = (tm.bar - 1) * quarters_per_bar
+      table.insert(markers, {
+        time_q = time_q,
+        bpm = tm.bpm,
+        linear = tm.linear or false,
+      })
+    end
+  end
+  return markers
+end
+
+local function apply_plan_tempo_if_allowed(state, label)
+  if not state or not state.plan then
+    return
+  end
+  if not state.allow_tempo_changes then
+    local tempo_map = state.plan.tempo_map
+    if state.plan.initial_bpm or (type(tempo_map) == "table" and #tempo_map > 0) then
+      utils.log(string.format("%s: tempo changes disabled, plan tempo ignored", label))
+    end
+    return
+  end
+
+  local initial_bpm = state.plan.initial_bpm
+  if initial_bpm and initial_bpm > 0 then
+    apply_initial_bpm(initial_bpm, state.start_sec, state.num, state.denom)
+    state.bpm = initial_bpm
+    state.original_bpm = initial_bpm
+    utils.log(string.format("%s: initial_bpm from plan = %.1f", label, initial_bpm))
+  end
+
+  local tempo_map = state.plan.tempo_map
+  if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
+    state.deferred_tempo_markers = tempo_map
+    utils.log(string.format("%s: saved %d deferred tempo markers for later", label, #tempo_map))
+  end
+end
+
+apply_deferred_tempo_markers_if_allowed = function(state, label)
+  if not state or not state.allow_tempo_changes then
+    return false
+  end
+  if not state.deferred_tempo_markers or #state.deferred_tempo_markers == 0 then
+    return false
+  end
+  utils.log(string.format("%s: applying %d deferred tempo markers...", label, #state.deferred_tempo_markers))
+  local markers_to_apply = build_tempo_markers_from_map(state.deferred_tempo_markers, state.num, state.denom)
+  if #markers_to_apply > 0 then
+    apply_tempo_markers(markers_to_apply, state.start_sec, state.end_sec)
+    utils.log(string.format("%s: deferred tempo markers applied successfully", label))
+    return true
+  end
+  return false
 end
 
 local function poll_compose_plan()
@@ -1004,21 +1049,7 @@ local function poll_compose_plan()
       utils.log("Compose plan summary: " .. compose_state.plan_summary)
     end
     
-    if compose_state.plan then
-      local initial_bpm = compose_state.plan.initial_bpm
-      if initial_bpm and initial_bpm > 0 then
-        apply_initial_bpm(initial_bpm, compose_state.start_sec, compose_state.num, compose_state.denom)
-        compose_state.bpm = initial_bpm
-        compose_state.original_bpm = initial_bpm
-        utils.log(string.format("Compose: initial_bpm from plan = %.1f", initial_bpm))
-      end
-      
-      local tempo_map = compose_state.plan.tempo_map
-      if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
-        compose_state.deferred_tempo_markers = tempo_map
-        utils.log(string.format("Compose: saved %d deferred tempo markers for later", #tempo_map))
-      end
-    end
+    apply_plan_tempo_if_allowed(compose_state, "Compose")
     
     local ordered, applied = apply_plan_order(compose_state.plan, compose_state.tracks)
     if applied then
@@ -1517,26 +1548,7 @@ local function apply_arrange_result_and_continue()
   arrange_state.current_index = arrange_state.current_index + 1
   if arrange_state.current_index > arrange_state.total_tracks then
     utils.log("Arrange: ALL COMPLETE!")
-    
-    if arrange_state.deferred_tempo_markers and #arrange_state.deferred_tempo_markers > 0 then
-      utils.log(string.format("Arrange: applying %d deferred tempo markers...", #arrange_state.deferred_tempo_markers))
-      local markers_to_apply = {}
-      local quarters_per_bar = arrange_state.num * (4.0 / arrange_state.denom)
-      for _, tm in ipairs(arrange_state.deferred_tempo_markers) do
-        if tm.bar and tm.bar > 1 and tm.bpm then
-          local time_q = (tm.bar - 1) * quarters_per_bar
-          table.insert(markers_to_apply, {
-            time_q = time_q,
-            bpm = tm.bpm,
-            linear = tm.linear or false,
-          })
-        end
-      end
-      if #markers_to_apply > 0 then
-        apply_tempo_markers(markers_to_apply, arrange_state.start_sec, arrange_state.end_sec)
-        utils.log("Arrange: deferred tempo markers applied successfully")
-      end
-    end
+    apply_deferred_tempo_markers_if_allowed(arrange_state, "Arrange")
     
     arrange_state = nil
     return
@@ -1766,21 +1778,7 @@ local function poll_arrange_plan()
         i, a.instrument or "?", a.role or "?", a.verbatim_level or "?"))
     end
     
-    if arrange_state.plan then
-      local initial_bpm = arrange_state.plan.initial_bpm
-      if initial_bpm and initial_bpm > 0 then
-        apply_initial_bpm(initial_bpm, arrange_state.start_sec, arrange_state.num, arrange_state.denom)
-        arrange_state.bpm = initial_bpm
-        arrange_state.original_bpm = initial_bpm
-        utils.log(string.format("Arrange: initial_bpm from plan = %.1f", initial_bpm))
-      end
-      
-      local tempo_map = arrange_state.plan.tempo_map
-      if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
-        arrange_state.deferred_tempo_markers = tempo_map
-        utils.log(string.format("Arrange: saved %d deferred tempo markers for later", #tempo_map))
-      end
-    end
+    apply_plan_tempo_if_allowed(arrange_state, "Arrange")
     
     if arrange_state.plan_summary ~= "" then
       utils.log("Arrange plan summary: " .. arrange_state.plan_summary)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from typing import Any, Dict, List, Optional, Tuple
 
 from bisect import bisect_right
@@ -93,14 +95,15 @@ MIN_NOTE_DUR_FOR_DYNAMICS = 1.0
 SWELL_PEAK_RATIO = 0.35
 DYNAMICS_BASE_VALUE = 64
 DYNAMICS_SWELL_AMOUNT = 12
-MIN_BREAKPOINTS_TO_TRUST_COMPLETELY = 20
+MIN_BREAKPOINTS_TO_TRUST_COMPLETELY = 2
+BARS_PER_BREAKPOINT_TARGET = 2.0
 FALLBACK_COVERAGE_THRESHOLD = 0.5
 
 EXPRESSION_DEFAULT_MIN = 70
 EXPRESSION_DEFAULT_MAX = 100
 EXPRESSION_FALLBACK_POINTS = 5
 
-MAX_DYNAMICS_JUMP = 25
+MAX_DYNAMICS_JUMP = 20
 SMOOTH_TRANSITION_STEP = 0.25
 
 HARMONY_VALIDATION_TOLERANCE_Q = 0.125
@@ -297,7 +300,13 @@ def ensure_per_note_dynamics(
         else:
             existing_breakpoints.append(bp)
 
-    if len(existing_breakpoints) >= MIN_BREAKPOINTS_TO_TRUST_COMPLETELY:
+    bars = length_q / quarters_per_bar if quarters_per_bar > 0 else 0.0
+    min_breakpoints_to_trust = max(
+        MIN_BREAKPOINTS_TO_TRUST_COMPLETELY,
+        int(math.ceil(bars / BARS_PER_BREAKPOINT_TARGET)) if bars > 0 else MIN_BREAKPOINTS_TO_TRUST_COMPLETELY,
+    )
+
+    if len(existing_breakpoints) >= min_breakpoints_to_trust:
         if length_q > 0:
             bp_times = [float(bp.get("time_q", 0)) for bp in existing_breakpoints]
             coverage = (max(bp_times) - min(bp_times)) / length_q if bp_times else 0
@@ -318,27 +327,6 @@ def ensure_per_note_dynamics(
             if start <= t <= end:
                 count += 1
         return count
-
-    def get_value_at_time(t: float) -> float:
-        if not existing_breakpoints:
-            return DYNAMICS_BASE_VALUE
-        sorted_bps = sorted(existing_breakpoints, key=lambda x: float(x.get("time_q", 0)))
-        for i, bp in enumerate(sorted_bps):
-            bp_time = float(bp.get("time_q", 0))
-            if bp_time >= t:
-                if i == 0:
-                    return float(bp.get("value", DYNAMICS_BASE_VALUE))
-                prev_bp = sorted_bps[i - 1]
-                prev_t = float(prev_bp.get("time_q", 0))
-                prev_v = float(prev_bp.get("value", DYNAMICS_BASE_VALUE))
-                curr_v = float(bp.get("value", DYNAMICS_BASE_VALUE))
-                if bp_time == prev_t:
-                    return curr_v
-                ratio = (t - prev_t) / (bp_time - prev_t)
-                return prev_v + (curr_v - prev_v) * ratio
-        if sorted_bps:
-            return float(sorted_bps[-1].get("value", DYNAMICS_BASE_VALUE))
-        return DYNAMICS_BASE_VALUE
 
     new_breakpoints = list(existing_breakpoints)
     
@@ -521,9 +509,18 @@ def parse_bar_beat_string(value: Any) -> Optional[Tuple[int, float]]:
 
 
 def parse_articulation_change_time(change: Dict[str, Any], time_sig: str) -> Optional[float]:
-    time_q = safe_float(change.get("time_q") or change.get("start_q") or change.get("time"))
-    if time_q is not None:
-        return time_q
+    if "time_q" in change:
+        time_q = safe_float(change.get("time_q"))
+        if time_q is not None:
+            return time_q
+    if "start_q" in change:
+        time_q = safe_float(change.get("start_q"))
+        if time_q is not None:
+            return time_q
+    if "time" in change:
+        time_q = safe_float(change.get("time"))
+        if time_q is not None:
+            return time_q
 
     bar = safe_int(change.get("bar"))
     beat = safe_float(change.get("beat"))

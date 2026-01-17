@@ -1,3 +1,64 @@
+import json
+
+SCHEMA_KEY_NOTES = "notes"
+SCHEMA_KEY_DRUMS = "drums"
+SCHEMA_KEY_PATTERNS = "patterns"
+SCHEMA_KEY_REPEATS = "repeats"
+SCHEMA_KEY_CURVES = "curves"
+SCHEMA_KEY_ARTICULATION = "articulation"
+SCHEMA_KEY_ARTICULATION_CHANGES = "articulation_changes"
+SCHEMA_KEY_GENERATION_TYPE = "generation_type"
+SCHEMA_KEY_GENERATION_STYLE = "generation_style"
+SCHEMA_KEY_TEMPO_MARKERS = "tempo_markers"
+SCHEMA_KEY_HANDOFF = "handoff"
+
+OUTPUT_SCHEMA_TEMPLATE = {
+    SCHEMA_KEY_NOTES: [],
+    SCHEMA_KEY_DRUMS: [],
+    SCHEMA_KEY_PATTERNS: [],
+    SCHEMA_KEY_REPEATS: [],
+    SCHEMA_KEY_CURVES: {
+        "expression": {"interp": "cubic", "breakpoints": []},
+        "dynamics": {"interp": "cubic", "breakpoints": []},
+    },
+    SCHEMA_KEY_ARTICULATION: "",
+    SCHEMA_KEY_ARTICULATION_CHANGES: [],
+    SCHEMA_KEY_GENERATION_TYPE: "",
+    SCHEMA_KEY_GENERATION_STYLE: "",
+    SCHEMA_KEY_TEMPO_MARKERS: [],
+    SCHEMA_KEY_HANDOFF: None,
+}
+
+OUTPUT_SCHEMA_KEYS = tuple(OUTPUT_SCHEMA_TEMPLATE.keys())
+OUTPUT_SCHEMA_LIST_KEYS = tuple(k for k, v in OUTPUT_SCHEMA_TEMPLATE.items() if isinstance(v, list))
+OUTPUT_SCHEMA_STRING_KEYS = tuple(k for k, v in OUTPUT_SCHEMA_TEMPLATE.items() if isinstance(v, str))
+OUTPUT_SCHEMA_CURVE_KEYS = tuple(OUTPUT_SCHEMA_TEMPLATE[SCHEMA_KEY_CURVES].keys())
+OUTPUT_SCHEMA_NULLABLE_KEYS = tuple(k for k, v in OUTPUT_SCHEMA_TEMPLATE.items() if v is None)
+
+OUTPUT_SCHEMA_PROMPT = "\n".join([
+    "=== REQUIRED OUTPUT SCHEMA (MANDATORY) ===",
+    "Return a JSON object with ALL keys exactly as shown.",
+    "Do NOT omit keys. If unused, keep empty arrays/objects or null.",
+    "",
+    json.dumps(OUTPUT_SCHEMA_TEMPLATE, ensure_ascii=False, indent=2),
+    "",
+    "Rules:",
+    "- Use time_q for articulation_changes and tempo_markers.",
+    "- If articulations are available, include articulation_changes with time_q 0.",
+    "- If no articulations are available, set articulation to \"\" and articulation_changes to [].",
+    "- generation_type and generation_style must be set (copy from prompt or choose in free mode).",
+    "- Use only articulation names from the instrument profile.",
+    "- Do not output keyswitch notes or articulation CCs.",
+])
+
+SCHEMA_REPAIR_SYSTEM_PROMPT = "\n".join([
+    "Return valid JSON only.",
+    "Fix the user's JSON to match the required schema exactly.",
+    "Do NOT change musical content unless needed to fix invalid types.",
+    "Add missing keys with empty arrays/objects or null as specified.",
+    OUTPUT_SCHEMA_PROMPT,
+])
+
 BASE_SYSTEM_PROMPT = """You are an expert composer. Create realistic, humanized musical parts using STANDARD MUSICAL NOTATION.
 
 === MUSICAL NOTATION (USE THIS FORMAT) ===
@@ -149,6 +210,7 @@ RULES:
 4. Wind instruments MUST breathe (max 4 beat note)
 5. HUMANIZE velocities - no robotic identical values
 6. Output valid JSON only"""
+BASE_SYSTEM_PROMPT = BASE_SYSTEM_PROMPT + "\n\n" + OUTPUT_SCHEMA_PROMPT
 
 REPAIR_SYSTEM_PROMPT = (
     "Return valid JSON only. Do not include any extra text or markdown."
@@ -261,6 +323,7 @@ NEVER use identical velocities! Real musicians ALWAYS vary dynamics.
 4. Wind instruments MUST breathe (max 4 beat note)
 5. HUMANIZE velocities - no robotic identical values
 6. Valid JSON with generation_type, generation_style"""
+FREE_MODE_SYSTEM_PROMPT = FREE_MODE_SYSTEM_PROMPT + "\n\n" + OUTPUT_SCHEMA_PROMPT
 
 COMPOSITION_PLAN_SYSTEM_PROMPT = """You are a composition planner. Create a coordination blueprint using MUSICAL NOTATION.
 

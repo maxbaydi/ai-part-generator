@@ -29,7 +29,7 @@ try:
         FREE_MODE_SYSTEM_PROMPT,
     )
     from style import DYNAMICS_HINTS, MOOD_HINTS
-    from type import ARTICULATION_HINTS, TYPE_HINTS
+    from type import TYPE_HINTS
     from utils import safe_format
 except ImportError:
     from .constants import (
@@ -57,7 +57,7 @@ except ImportError:
         FREE_MODE_SYSTEM_PROMPT,
     )
     from .style import DYNAMICS_HINTS, MOOD_HINTS
-    from .type import ARTICULATION_HINTS, TYPE_HINTS
+    from .type import TYPE_HINTS
     from .utils import safe_format
 
 def build_generation_progress(ensemble: Any, current_profile_name: str) -> str:
@@ -407,6 +407,40 @@ def resolve_prompt_pitch_range(pref_range: Any) -> Tuple[int, int]:
     return pitch_low, pitch_high
 
 
+def get_profile_articulation_names(profile: Dict[str, Any]) -> List[str]:
+    art_cfg = profile.get("articulations", {})
+    art_map = art_cfg.get("map", {})
+    if not isinstance(art_map, dict):
+        return []
+    names = [str(name).strip() for name in art_map.keys() if str(name).strip()]
+    return sorted(set(names))
+
+
+def resolve_profile_default_articulation(
+    profile: Dict[str, Any],
+    allowed_map: Dict[str, str],
+    allowed_names: List[str],
+) -> str:
+    art_cfg = profile.get("articulations", {})
+    default_name = str(art_cfg.get("default", "")).strip()
+    if default_name:
+        resolved = allowed_map.get(default_name.lower(), "")
+        if resolved:
+            return resolved
+    return allowed_names[0] if allowed_names else ""
+
+
+def resolve_prompt_articulation(profile: Dict[str, Any], preset_settings: Dict[str, Any]) -> str:
+    allowed_names = get_profile_articulation_names(profile)
+    allowed_map = {name.lower(): name for name in allowed_names}
+    preset_value = preset_settings.get("articulation") if isinstance(preset_settings, dict) else None
+    if preset_value:
+        resolved = allowed_map.get(str(preset_value).strip().lower(), "")
+        if resolved:
+            return resolved
+    return resolve_profile_default_articulation(profile, allowed_map, allowed_names)
+
+
 ARTICULATION_DURATION_HINTS = {
     "spiccato": "dur_q: 0.25-0.5, bouncy detached",
     "staccatissimo": "dur_q: 0.125-0.25, very short crisp",
@@ -713,8 +747,7 @@ def build_prompt(
     midi_channel = profile.get("midi", {}).get("channel", 1)
     pitch_low, pitch_high = resolve_prompt_pitch_range(pref_range)
 
-    articulation = preset_settings.get("articulation", "legato")
-    articulation_hint = ARTICULATION_HINTS.get(articulation.lower(), "") if articulation else ""
+    articulation = resolve_prompt_articulation(profile, preset_settings)
 
     if request.free_mode:
         generation_style = ""
@@ -1382,7 +1415,7 @@ def build_prompt(
         ])
     else:
         short_articulations = profile.get("articulations", {}).get("short_articulations", [])
-        is_short_art = articulation.lower() in [a.lower() for a in short_articulations]
+        is_short_art = bool(articulation) and articulation.lower() in [a.lower() for a in short_articulations]
         velocity_hint = "Use dyn for note-to-note dynamics (accents: f-fff, normal: mf-f, soft: p-mp)" if is_short_art else "Vary dynamics for phrase shaping (peaks: f-ff, between: mf)"
 
         composition_rules = [
@@ -1391,8 +1424,9 @@ def build_prompt(
             f"- ALLOWED RANGE: {pitch_low_note} to {pitch_high_note}",
             f"- Suggested note count: {min_notes}-{max_notes} (adapt based on musical needs)",
             f"- Channel: {midi_channel}",
-            f"- Articulation: {articulation}",
         ]
+        if articulation:
+            composition_rules.append(f"- Articulation: {articulation}")
         if max_dur_hint:
             composition_rules.append(max_dur_hint)
         user_prompt_parts.extend(composition_rules)

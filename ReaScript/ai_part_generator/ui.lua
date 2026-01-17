@@ -321,7 +321,7 @@ local function draw_tab_settings(ctx, state)
   comp.header(ctx, "⚙️ API Configuration")
   
   local providers = {
-    { display = "Local (LM Studio)", value = const.API_PROVIDER_LOCAL },
+    { display = "LM Studio (Local)", value = const.API_PROVIDER_LOCAL },
     { display = "OpenRouter (Cloud)", value = const.API_PROVIDER_OPENROUTER },
   }
   
@@ -398,7 +398,9 @@ function M.run_imgui(state, profile_list, profiles_by_id, callbacks)
     if open then
       reaper.defer(loop)
     else
-      reaper.ImGui_DestroyContext(ctx)
+      if reaper.ImGui_DestroyContext then
+        reaper.ImGui_DestroyContext(ctx)
+      end
     end
   end
 
