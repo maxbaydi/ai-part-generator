@@ -95,8 +95,10 @@ MIN_NOTE_DUR_FOR_DYNAMICS = 1.0
 SWELL_PEAK_RATIO = 0.35
 DYNAMICS_BASE_VALUE = 64
 DYNAMICS_SWELL_AMOUNT = 12
-MIN_BREAKPOINTS_TO_TRUST_COMPLETELY = 2
+MIN_BREAKPOINTS_TO_TRUST_COMPLETELY = 4
 BARS_PER_BREAKPOINT_TARGET = 2.0
+NOTES_PER_BREAKPOINT_TARGET = 8
+NOTE_START_BREAKPOINT_WINDOW_Q = 0.1
 FALLBACK_COVERAGE_THRESHOLD = 0.5
 
 EXPRESSION_DEFAULT_MIN = 70
@@ -306,27 +308,20 @@ def ensure_per_note_dynamics(
         int(math.ceil(bars / BARS_PER_BREAKPOINT_TARGET)) if bars > 0 else MIN_BREAKPOINTS_TO_TRUST_COMPLETELY,
     )
 
+    trust_model = False
     if len(existing_breakpoints) >= min_breakpoints_to_trust:
         if length_q > 0:
             bp_times = [float(bp.get("time_q", 0)) for bp in existing_breakpoints]
             coverage = (max(bp_times) - min(bp_times)) / length_q if bp_times else 0
             if coverage >= FALLBACK_COVERAGE_THRESHOLD:
+                trust_model = True
                 logger.info("Dynamics: trusting model (%d breakpoints, %.0f%% coverage)", 
                            len(existing_breakpoints), coverage * 100)
-                return curves
 
     sustained_notes = [
         n for n in notes
         if isinstance(n, dict) and float(n.get("dur_q", 0)) >= MIN_NOTE_DUR_FOR_DYNAMICS
     ]
-
-    def count_breakpoints_in_range(start: float, end: float) -> int:
-        count = 0
-        for bp in existing_breakpoints:
-            t = float(bp.get("time_q", 0))
-            if start <= t <= end:
-                count += 1
-        return count
 
     new_breakpoints = list(existing_breakpoints)
     
@@ -334,17 +329,35 @@ def ensure_per_note_dynamics(
         [n for n in notes if isinstance(n, dict)],
         key=lambda x: float(x.get("start_q", 0))
     )
+
+    breakpoint_count = max(1, len(existing_breakpoints))
+    notes_per_breakpoint = len(all_notes_sorted) / breakpoint_count if all_notes_sorted else 0
+    should_add_note_start = (not trust_model) or (notes_per_breakpoint > NOTES_PER_BREAKPOINT_TARGET)
+
+    def count_breakpoints_in_range(start: float, end: float) -> int:
+        count = 0
+        for bp in new_breakpoints:
+            t = float(bp.get("time_q", 0))
+            if start <= t <= end:
+                count += 1
+        return count
     
-    for note in all_notes_sorted:
-        start_q = float(note.get("start_q", 0))
-        vel = int(note.get("vel", 80))
-        note_dynamics = int(clamp(vel * 1.0, 40, 127))
-        
-        bp_count = count_breakpoints_in_range(start_q, start_q + 0.1)
-        if bp_count == 0:
-            new_breakpoints.append({"time_q": round(start_q, 4), "value": note_dynamics})
+    if should_add_note_start:
+        for note in all_notes_sorted:
+            start_q = float(note.get("start_q", 0))
+            dur_q = safe_float(note.get("dur_q")) or 0.0
+            if dur_q >= MIN_NOTE_DUR_FOR_DYNAMICS:
+                continue
+            vel = int(note.get("vel", 80))
+            note_dynamics = int(clamp(vel * 1.0, 40, 127))
+            
+            bp_count = count_breakpoints_in_range(start_q, start_q + NOTE_START_BREAKPOINT_WINDOW_Q)
+            if bp_count == 0:
+                new_breakpoints.append({"time_q": round(start_q, 4), "value": note_dynamics})
 
     if not sustained_notes:
+        if not should_add_note_start:
+            return curves
         new_breakpoints.sort(key=lambda x: float(x.get("time_q", 0)))
         added_count = len(new_breakpoints) - len(existing_breakpoints)
         if added_count > 0:
