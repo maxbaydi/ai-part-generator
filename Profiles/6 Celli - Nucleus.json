@@ -20,11 +20,11 @@
     "short_articulations": ["spiccato", "pizzicato"],
     "send_keyswitch_on_every_change": true,
     "map": {
-      "legato": { "pitch": 6, "description": "legato nv-v", "dynamics": "cc1" },
-      "sustained": { "pitch": 7, "description": "sustained nv-v", "dynamics": "cc1" },
-      "spiccato": { "pitch": 8, "description": "spiccato", "dynamics": "velocity" },
-      "pizzicato": { "pitch": 9, "description": "pizzicato", "dynamics": "velocity" },
-      "tremolo": { "pitch": 10, "description": "tremolo", "dynamics": "cc1" }
+      "legato": { "pitch": 18, "description": "legato nv-v", "dynamics": "cc1" },
+      "sustained": { "pitch": 19, "description": "sustained nv-v", "dynamics": "cc1" },
+      "spiccato": { "pitch": 20, "description": "spiccato", "dynamics": "velocity" },
+      "pizzicato": { "pitch": 21, "description": "pizzicato", "dynamics": "velocity" },
+      "tremolo": { "pitch": 22, "description": "tremolo", "dynamics": "cc1" }
     }
   },
   "controllers": {
