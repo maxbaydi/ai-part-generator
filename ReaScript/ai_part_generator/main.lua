@@ -205,6 +205,13 @@ local function get_enriched_style_prompt(musical_style, generation_mood, use_sty
   return ""
 end
 
+local function build_continuation_payload(state)
+  return {
+    mode = state.continuation_mode or const.DEFAULT_CONTINUATION_MODE,
+    section_position = state.section_position or const.DEFAULT_SECTION_POSITION
+  }
+end
+
 local function get_bpm_and_timesig(time_sec)
   local bpm = reaper.Master_GetTempo()
   local num = 4
@@ -410,7 +417,7 @@ local function calculate_length_bars(start_sec, end_sec, num, denom)
   return math.floor(length_q / quarters_per_bar + 0.5)
 end
 
-local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan, original_bpm, length_bars_override)
+local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan, original_bpm, length_bars_override, continuation)
   local provider = const.DEFAULT_MODEL_PROVIDER
   local model_name = const.DEFAULT_MODEL_NAME
   local base_url = const.DEFAULT_MODEL_BASE_URL
@@ -473,6 +480,9 @@ local function build_request(start_sec, end_sec, bpm, num, denom, key, profile_i
   end
   if ensemble_info then
     request.ensemble = ensemble_info
+  end
+  if continuation then
+    request.continuation = continuation
   end
   return request
 end
@@ -798,7 +808,11 @@ local function run_generation_after_bridge(state, profiles_by_id, start_sec, end
     return
   end
 
-  local ctx = context.build_context(state.use_selected_tracks, target_track, start_sec, end_sec)
+  local use_selected_context = state.context_use_selected_tracks
+  if use_selected_context == nil then
+    use_selected_context = state.use_selected_tracks
+  end
+  local ctx = context.build_context(use_selected_context, target_track, start_sec, end_sec)
   local key = state.key or const.DEFAULT_KEY
   if state.key_mode == "Auto" then
     local tracks = get_key_tracks()
@@ -838,7 +852,8 @@ local function run_generation_after_bridge(state, profiles_by_id, start_sec, end
     state.allow_tempo_changes or false,
     nil,
     false,
-    nil
+    nil,
+    state.continuation
   )
 
   utils.log("AI Part Generator: sending request to bridge.")
@@ -861,7 +876,7 @@ local function run_generation_after_bridge(state, profiles_by_id, start_sec, end
   reaper.defer(poll_generation)
 end
 
-local function run_generation(state, profiles_by_id)
+local function run_generation(state, profiles_by_id, opts)
   local start_sec, end_sec = utils.get_time_selection()
   if start_sec == end_sec then
     utils.show_error("No time selection set.")
@@ -872,6 +887,22 @@ local function run_generation(state, profiles_by_id)
     return
   end
 
+  if opts and opts.require_selected_items then
+    local selected_count = reaper.CountSelectedMediaItems(0)
+    if selected_count < const.MIN_SELECTED_ITEMS_FOR_CONTINUATION then
+      utils.show_error(const.ERROR_CONTINUATION_NO_SELECTION)
+      return
+    end
+  end
+
+  local base_use_selected_tracks = state.use_selected_tracks
+  local use_selected_tracks = base_use_selected_tracks
+  if opts and opts.force_use_selected then
+    use_selected_tracks = true
+  end
+
+  local continuation = opts and opts.continuation
+
   local state_snapshot = {
     profile_id = state.profile_id,
     articulation_name = state.articulation_name,
@@ -881,7 +912,8 @@ local function run_generation(state, profiles_by_id)
     generation_mood = state.generation_mood,
     free_mode = state.free_mode,
     prompt = state.prompt,
-    use_selected_tracks = state.use_selected_tracks,
+    use_selected_tracks = base_use_selected_tracks,
+    context_use_selected_tracks = use_selected_tracks,
     insert_target = state.insert_target,
     key_mode = state.key_mode,
     key = state.key,
@@ -890,6 +922,9 @@ local function run_generation(state, profiles_by_id)
     api_key = state.api_key,
     api_base_url = state.api_base_url,
     model_name = state.model_name,
+    continuation_mode = state.continuation_mode,
+    section_position = state.section_position,
+    continuation = continuation,
   }
 
   run_generation_after_bridge(state_snapshot, profiles_by_id, start_sec, end_sec)
@@ -2171,6 +2206,8 @@ function M.main()
     prompt = track_settings.prompt or "",
     use_selected_tracks = track_settings.use_selected_tracks ~= nil and track_settings.use_selected_tracks or true,
     insert_target = track_settings.insert_target or const.INSERT_TARGET_ACTIVE,
+    continuation_mode = track_settings.continuation_mode or const.DEFAULT_CONTINUATION_MODE,
+    section_position = track_settings.section_position or const.DEFAULT_SECTION_POSITION,
     key_mode = key_mode,
     key = key,
     api_provider = api_provider,
@@ -2183,6 +2220,14 @@ function M.main()
 
   local on_generate = function(current_state)
     run_generation(current_state, profiles_by_id)
+  end
+
+  local on_continue = function(current_state)
+    run_generation(current_state, profiles_by_id, {
+      continuation = build_continuation_payload(current_state),
+      force_use_selected = true,
+      require_selected_items = true,
+    })
   end
 
   local on_compose = function(current_state)
@@ -2211,6 +2256,7 @@ function M.main()
 
   local callbacks = {
     on_generate = on_generate,
+    on_continue = on_continue,
     on_compose = on_compose,
     on_enhance = on_enhance,
     on_arrange = on_arrange,

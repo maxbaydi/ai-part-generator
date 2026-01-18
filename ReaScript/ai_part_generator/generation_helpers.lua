@@ -447,7 +447,7 @@ function M.calculate_length_bars(start_sec, end_sec, num, denom)
   return math.floor(length_q / quarters_per_bar + ROUND_HALF)
 end
 
-function M.build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan, original_bpm, length_bars_override)
+function M.build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, articulation_name, generation_type, generation_style, prompt, ctx, api_settings, free_mode, allow_tempo_changes, ensemble_info, is_plan, original_bpm, length_bars_override, continuation)
   local provider, model_name, base_url, api_key = resolve_model_config(api_settings, {
     use_plan_model = is_plan == true,
   })
@@ -493,6 +493,9 @@ function M.build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, a
   end
   if ensemble_info then
     request.ensemble = ensemble_info
+  end
+  if continuation then
+    request.continuation = continuation
   end
   return request
 end

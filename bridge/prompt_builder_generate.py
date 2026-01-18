@@ -19,7 +19,8 @@ try:
     )
     from models import GenerateRequest
     from music_theory import get_scale_note_names
-    from promts import BASE_SYSTEM_PROMPT, FREE_MODE_SYSTEM_PROMPT
+    from promts import BASE_SYSTEM_PROMPT, CONTINUATION_SYSTEM_PROMPT_TEMPLATE, FREE_MODE_SYSTEM_PROMPT
+    from prompt_builder_continuation import build_continuation_prompt, build_full_selection_context
     from prompt_builder_plan_sections import append_generated_motif_section, append_plan_sections
     from prompt_builder_sketch import build_arrangement_context
     from prompt_builder_utils import (
@@ -60,7 +61,8 @@ except ImportError:
     )
     from .models import GenerateRequest
     from .music_theory import get_scale_note_names
-    from .promts import BASE_SYSTEM_PROMPT, FREE_MODE_SYSTEM_PROMPT
+    from .promts import BASE_SYSTEM_PROMPT, CONTINUATION_SYSTEM_PROMPT_TEMPLATE, FREE_MODE_SYSTEM_PROMPT
+    from .prompt_builder_continuation import build_continuation_prompt, build_full_selection_context
     from .prompt_builder_plan_sections import append_generated_motif_section, append_plan_sections
     from .prompt_builder_sketch import build_arrangement_context
     from .prompt_builder_utils import (
@@ -237,12 +239,12 @@ def build_musical_context_lines(
     selection_info: List[str],
     include_scale_notes: bool,
 ) -> List[str]:
-    lines = [
-        "### MUSICAL CONTEXT",
-        f"- Key: {final_key}",
-    ]
-    if include_scale_notes:
-        lines.append(f"- Scale notes: {scale_notes}")
+    lines = ["### MUSICAL CONTEXT"]
+    key_is_known = final_key and final_key.lower() not in (UNKNOWN_VALUE, "")
+    if key_is_known:
+        lines.append(f"- Key: {final_key}")
+        if include_scale_notes and scale_notes:
+            lines.append(f"- Scale notes: {scale_notes}")
     lines.extend([
         f"- Tempo: {bpm} BPM, Time: {time_sig}",
         f"- Length: {bars} bars ({round(length_q, MUSICAL_LENGTH_PRECISION)} quarter notes)",
@@ -471,7 +473,17 @@ def build_prompt(
     articulation = resolve_prompt_articulation(profile, preset_settings)
 
     system_base = FREE_MODE_SYSTEM_PROMPT if request.free_mode else BASE_SYSTEM_PROMPT
-    system_prompt = "\n\n".join([p for p in (system_base, safe_format(profile_system, values)) if p])
+    continuation_mode = request.continuation.mode if request.continuation else ""
+    continuation_section_position = request.continuation.section_position if request.continuation else ""
+    continuation_system_prompt = ""
+    if request.continuation:
+        continuation_values = dict(values)
+        continuation_values["continuation_mode"] = continuation_mode
+        continuation_values["section_position"] = continuation_section_position
+        continuation_system_prompt = safe_format(CONTINUATION_SYSTEM_PROMPT_TEMPLATE, continuation_values)
+    system_prompt = "\n\n".join([
+        p for p in (system_base, continuation_system_prompt, safe_format(profile_system, values)) if p
+    ])
 
     skip_auto_harmony = is_arrangement_mode or has_plan_chord_map
 
@@ -482,11 +494,11 @@ def build_prompt(
         request.music.key,
         skip_auto_harmony=skip_auto_harmony,
         target_profile=profile,
+        forced_position=continuation_section_position,
+        continuation_mode=continuation_mode,
     )
 
     final_key = request.music.key
-    if final_key == UNKNOWN_VALUE and detected_key != UNKNOWN_VALUE:
-        final_key = detected_key
     if final_key == UNKNOWN_VALUE and has_plan_chord_map:
         inferred_key = extract_key_from_chord_map(plan_chord_map)
         if inferred_key == UNKNOWN_VALUE:
@@ -601,6 +613,21 @@ def build_prompt(
     if context_summary:
         user_prompt_parts.append("")
         user_prompt_parts.append(context_summary)
+
+    continuation_prompt_lines = build_continuation_prompt(request.continuation, request.context, profile)
+    if continuation_prompt_lines:
+        user_prompt_parts.append("")
+        user_prompt_parts.extend(continuation_prompt_lines)
+
+    full_selection_context = build_full_selection_context(
+        request.context,
+        request.music.time_sig,
+        length_q,
+        profile,
+    )
+    if full_selection_context:
+        user_prompt_parts.append("")
+        user_prompt_parts.extend(full_selection_context)
 
     ensemble_context = build_ensemble_context(
         request.ensemble,

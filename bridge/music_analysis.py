@@ -649,7 +649,7 @@ def analyze_horizontal_continuity(
     return result
 
 
-def build_horizontal_continuity_prompt(analysis: Dict[str, Any]) -> str:
+def build_horizontal_continuity_prompt(analysis: Dict[str, Any], force_continuation: bool = False) -> str:
     if not analysis:
         return ""
 
@@ -680,7 +680,9 @@ def build_horizontal_continuity_prompt(analysis: Dict[str, Any]) -> str:
                 from .music_theory import pitch_to_note
             lines.append(f"- RESOLUTION NEEDED: Consider starting with {pitch_to_note(resolution)} (MIDI {resolution})")
 
-    if analysis.get("phrase_incomplete"):
+    if force_continuation:
+        lines.append("- Continue developing the existing idea; do NOT start a new theme")
+    elif analysis.get("phrase_incomplete"):
         lines.append("- Previous phrase feels INCOMPLETE - consider continuing or resolving it")
     else:
         lines.append("- Previous phrase ended naturally - OK to start fresh")

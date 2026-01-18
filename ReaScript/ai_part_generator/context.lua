@@ -6,6 +6,9 @@ local M = {}
 
 local cached_profiles = nil
 local cached_profiles_by_id = nil
+local get_track_name_for_item
+local collect_cc_from_item
+local ZERO_TIME_Q = 0
 
 local function get_profiles_cache()
   if cached_profiles ~= nil then
@@ -144,7 +147,119 @@ local function collect_notes_with_abs_position(item, start_sec, end_sec)
   return notes
 end
 
-local function collect_cc_from_item(item, start_sec, end_sec, selection_start_qn, track_name, max_events)
+local function collect_selected_continuation_notes(selected_items, target_track, selection_start_qn)
+  local notes = {}
+  if not selected_items or #selected_items == 0 or not target_track then
+    return notes
+  end
+
+  for _, item in ipairs(selected_items) do
+    if reaper.GetMediaItem_Track(item) == target_track then
+      local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+      local item_len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+      local item_end = item_start + item_len
+      local item_notes = collect_notes_with_abs_position(item, item_start, item_end)
+      for _, note in ipairs(item_notes) do
+        table.insert(notes, {
+          start_q = note.start_qn - selection_start_qn,
+          dur_q = note.dur_q,
+          pitch = note.pitch,
+          vel = note.vel,
+          chan = note.chan,
+        })
+      end
+    end
+  end
+
+  return notes
+end
+
+local function collect_selected_continuation_cc_events(selected_items, target_track, start_sec, end_sec, selection_start_qn)
+  local events = {}
+  if not selected_items or #selected_items == 0 or not target_track then
+    return events
+  end
+
+  local track_name = utils.get_track_name(target_track)
+  for _, item in ipairs(selected_items) do
+    if reaper.GetMediaItem_Track(item) == target_track then
+      local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+      local item_len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+      local item_end = item_start + item_len
+      local range_start = item_start
+      local range_end = item_end
+      if range_end > start_sec and range_start < end_sec then
+        local cc_events = collect_cc_from_item(item, range_start, range_end, selection_start_qn, track_name, nil, false)
+        append_items(events, cc_events)
+      end
+    end
+  end
+
+  return events
+end
+
+local function collect_full_selected_tracks_context(selected_items, target_track, selection_start_qn)
+  local tracks_map = {}
+  if not selected_items or #selected_items == 0 then
+    return {}
+  end
+
+  for _, item in ipairs(selected_items) do
+    local item_track = reaper.GetMediaItem_Track(item)
+    if item_track and item_track ~= target_track then
+      local track_name = get_track_name_for_item(item)
+      local track_key = tostring(item_track)
+      local track_data = tracks_map[track_key]
+      if not track_data then
+        local profile_id, profile = resolve_track_profile(item_track)
+        track_data = {
+          name = track_name,
+          profile_id = profile_id,
+          profile_name = profile and profile.name or nil,
+          notes = {},
+          cc_events = {},
+        }
+        tracks_map[track_key] = track_data
+      end
+
+      local item_start = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+      local item_len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+      local item_end = item_start + item_len
+      local notes = collect_notes_with_abs_position(item, item_start, item_end)
+      for _, note in ipairs(notes) do
+        table.insert(track_data.notes, {
+          start_q = note.start_qn - selection_start_qn,
+          dur_q = note.dur_q,
+          pitch = note.pitch,
+          vel = note.vel,
+          chan = note.chan,
+        })
+      end
+
+      local cc_events = collect_cc_from_item(item, item_start, item_end, selection_start_qn, track_name, nil, false)
+      append_items(track_data.cc_events, cc_events)
+    end
+  end
+
+  local result = {}
+  for _, data in pairs(tracks_map) do
+    if #data.notes > 1 then
+      table.sort(data.notes, function(a, b)
+        return (a.start_q or 0) < (b.start_q or 0)
+      end)
+    end
+    if #data.cc_events > 1 then
+      table.sort(data.cc_events, function(a, b)
+        return (a.time_q or 0) < (b.time_q or 0)
+      end)
+    end
+    table.insert(result, data)
+  end
+
+  return result
+end
+
+collect_cc_from_item = function(item, start_sec, end_sec, selection_start_qn, track_name, max_events, clamp_to_zero)
   local events = {}
   if max_events ~= nil and max_events <= 0 then
     return events
@@ -163,8 +278,12 @@ local function collect_cc_from_item(item, start_sec, end_sec, selection_start_qn
     if ok and chanmsg == const.MIDI_CC_STATUS and ppqpos >= start_ppq and ppqpos <= end_ppq then
       local time_sec = reaper.MIDI_GetProjTimeFromPPQPos(take, ppqpos)
       local time_qn = reaper.TimeMap2_timeToQN(0, time_sec)
+      local time_q = time_qn - selection_start_qn
+      if clamp_to_zero ~= false then
+        time_q = math.max(ZERO_TIME_Q, time_q)
+      end
       local event = {
-        time_q = math.max(0, time_qn - selection_start_qn),
+        time_q = time_q,
         cc = msg2,
         value = msg3,
         chan = chan + 1,
@@ -183,7 +302,7 @@ local function collect_cc_from_item(item, start_sec, end_sec, selection_start_qn
   return events
 end
 
-local function get_track_name_for_item(item)
+get_track_name_for_item = function(item)
   local track = reaper.GetMediaItem_Track(item)
   if track then
     return utils.get_track_name(track)
@@ -447,6 +566,7 @@ end
 function M.build_context(use_selected, target_track, start_sec, end_sec)
   local selected_items = use_selected and get_selected_items() or nil
   local require_selected = use_selected and selected_items and #selected_items > 0
+  local selection_start_qn = reaper.TimeMap2_timeToQN(0, start_sec)
   local horizontal = collect_horizontal_context(target_track, start_sec, end_sec, selected_items, require_selected)
   
   if not use_selected then
@@ -495,6 +615,20 @@ function M.build_context(use_selected, target_track, start_sec, end_sec)
   end
 
   local notes_for_bridge = format_notes_for_bridge(all_notes, 200)
+  local continuation_notes = collect_selected_continuation_notes(selected_items, target_track, selection_start_qn)
+  if #continuation_notes > 1 then
+    table.sort(continuation_notes, function(a, b)
+      return (a.start_q or 0) < (b.start_q or 0)
+    end)
+  end
+  local continuation_cc_events = collect_selected_continuation_cc_events(
+    selected_items,
+    target_track,
+    start_sec,
+    end_sec,
+    selection_start_qn
+  )
+  local full_selected_tracks = collect_full_selected_tracks_context(selected_items, target_track, selection_start_qn)
 
   local context_result = {
     selected_tracks_midi = track_list,
@@ -503,6 +637,16 @@ function M.build_context(use_selected, target_track, start_sec, end_sec)
     existing_notes = notes_for_bridge,
     pitch_range = min_pitch and { min = min_pitch, max = max_pitch } or nil,
   }
+
+  if #continuation_notes > 0 then
+    context_result.continuation_source = format_notes_for_bridge(continuation_notes, #continuation_notes)
+  end
+  if #continuation_cc_events > 0 then
+    context_result.continuation_cc_events = format_cc_events_for_bridge(continuation_cc_events, #continuation_cc_events)
+  end
+  if #full_selected_tracks > 0 then
+    context_result.selected_tracks_full = full_selected_tracks
+  end
 
   if horizontal and (#horizontal.before > 0 or #horizontal.after > 0) then
     context_result.horizontal = {

@@ -109,21 +109,19 @@ local function draw_prompt_area(ctx, state, callbacks, tracks_info)
   end
 end
 
---------------------------------------------------------------------------------
--- Tab: Single Generator
---------------------------------------------------------------------------------
-
-local function draw_tab_generator(ctx, state, profile_list, profiles_by_id, callbacks)
-  reaper.ImGui_BeginChild(ctx, "gen_scroll", 0, -40) -- Leave space for footer
-  
-  -- 1. Instrument
-  comp.header(ctx, "🎻 Instrument")
-  
+local function build_profile_items(profile_list)
   local profile_items = {}
   for _, p in ipairs(profile_list) do
     table.insert(profile_items, { display = p.name, value = p.id })
   end
-  
+  return profile_items
+end
+
+local function draw_instrument_section(ctx, state, profile_list, profiles_by_id)
+  comp.header(ctx, "🎻 Instrument")
+
+  local profile_items = build_profile_items(profile_list)
+
   comp.label(ctx, "Profile")
   comp.combo(ctx, "##profile", state.profile_id, profile_items, function(val)
     state.profile_id = val
@@ -148,16 +146,17 @@ local function draw_tab_generator(ctx, state, profile_list, profiles_by_id, call
       state.articulation_name = val
     end)
   end
+end
 
-  -- 2. Generation Settings
+local function draw_generation_settings(ctx, state)
   comp.header(ctx, "⚡ Generation Settings")
-  
+
   comp.checkbox(ctx, "Free Mode (AI chooses details)", state.free_mode, function(v) state.free_mode = v end)
-  
+
   if not state.free_mode then
     comp.label(ctx, "Type")
     comp.combo(ctx, "##type", state.generation_type, const.GENERATION_TYPES, function(v) state.generation_type = v end)
-    
+
     comp.label(ctx, "Musical Style")
     comp.combo(ctx, "##mus_style", state.musical_style, const.MUSICAL_STYLES, function(v) state.musical_style = v end)
 
@@ -169,17 +168,11 @@ local function draw_tab_generator(ctx, state, profile_list, profiles_by_id, call
 
   reaper.ImGui_Spacing(ctx)
   comp.checkbox(ctx, "Allow Tempo Changes", state.allow_tempo_changes, function(v) state.allow_tempo_changes = v end)
-  
-  draw_key_selector(ctx, state)
 
-  -- 3. Context & Target
-  comp.header(ctx, "🎯 Context")
-  comp.checkbox(ctx, "Use Selected Items as Context", state.use_selected_tracks, function(v) state.use_selected_tracks = v end)
-  
-  reaper.ImGui_SameLine(ctx)
-  reaper.ImGui_Spacing(ctx)
-  reaper.ImGui_SameLine(ctx)
-  
+  draw_key_selector(ctx, state)
+end
+
+local function draw_insert_target_selector(ctx, state)
   comp.label(ctx, "Insert To: ")
   reaper.ImGui_SameLine(ctx)
   local targets = {
@@ -187,6 +180,55 @@ local function draw_tab_generator(ctx, state, profile_list, profiles_by_id, call
     { display = "New Track", value = const.INSERT_TARGET_NEW }
   }
   comp.combo(ctx, "##target", state.insert_target, targets, function(v) state.insert_target = v end, 150)
+end
+
+local function draw_context_section(ctx, state, opts)
+  comp.header(ctx, "🎯 Context")
+  local force_selected = opts and opts.force_selected
+  if force_selected then
+    reaper.ImGui_BeginDisabled(ctx)
+    comp.checkbox(ctx, "Use Selected Items as Context", true, nil)
+    reaper.ImGui_EndDisabled(ctx)
+  else
+    comp.checkbox(ctx, "Use Selected Items as Context", state.use_selected_tracks, function(v) state.use_selected_tracks = v end)
+  end
+
+  reaper.ImGui_SameLine(ctx)
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_SameLine(ctx)
+
+  draw_insert_target_selector(ctx, state)
+end
+
+local function draw_continuation_settings(ctx, state)
+  comp.header(ctx, "🔁 Continuation")
+
+  comp.label(ctx, "Mode")
+  comp.combo(ctx, "##cont_mode", state.continuation_mode, const.CONTINUATION_MODES, function(v)
+    state.continuation_mode = v
+  end, 150)
+
+  comp.label(ctx, "Section Position")
+  comp.combo(ctx, "##section_pos", state.section_position, const.SECTION_POSITION_OPTIONS, function(v)
+    state.section_position = v
+  end, 150)
+end
+
+--------------------------------------------------------------------------------
+-- Tab: Single Generator
+--------------------------------------------------------------------------------
+
+local function draw_tab_generator(ctx, state, profile_list, profiles_by_id, callbacks)
+  reaper.ImGui_BeginChild(ctx, "gen_scroll", 0, -40) -- Leave space for footer
+  
+  -- 1. Instrument
+  draw_instrument_section(ctx, state, profile_list, profiles_by_id)
+
+  -- 2. Generation Settings
+  draw_generation_settings(ctx, state)
+
+  -- 3. Context & Target
+  draw_context_section(ctx, state, { force_selected = false })
 
   -- 4. Prompt
   draw_prompt_area(ctx, state, callbacks, nil)
@@ -196,6 +238,30 @@ local function draw_tab_generator(ctx, state, profile_list, profiles_by_id, call
   reaper.ImGui_Spacing(ctx)
   comp.primary_button(ctx, "GENERATE PART", function()
     callbacks.on_generate(state)
+  end)
+
+  reaper.ImGui_EndChild(ctx)
+end
+
+--------------------------------------------------------------------------------
+-- Tab: Continue / Finish
+--------------------------------------------------------------------------------
+
+local function draw_tab_continue(ctx, state, profile_list, profiles_by_id, callbacks)
+  reaper.ImGui_BeginChild(ctx, "cont_scroll", 0, -40)
+
+  draw_instrument_section(ctx, state, profile_list, profiles_by_id)
+  draw_continuation_settings(ctx, state)
+  draw_generation_settings(ctx, state)
+  draw_context_section(ctx, state, { force_selected = true })
+
+  draw_prompt_area(ctx, state, callbacks, nil)
+
+  reaper.ImGui_Spacing(ctx)
+  reaper.ImGui_Separator(ctx)
+  reaper.ImGui_Spacing(ctx)
+  comp.primary_button(ctx, "CONTINUE / FINISH", function()
+    callbacks.on_continue(state)
   end)
 
   reaper.ImGui_EndChild(ctx)
@@ -374,6 +440,11 @@ function M.run_imgui(state, profile_list, profiles_by_id, callbacks)
       if reaper.ImGui_BeginTabBar(ctx, "MainTabs") then
         if reaper.ImGui_BeginTabItem(ctx, "Generate") then
           draw_tab_generator(ctx, state, profile_list, profiles_by_id, callbacks)
+          reaper.ImGui_EndTabItem(ctx)
+        end
+
+        if reaper.ImGui_BeginTabItem(ctx, "Continue / Finish") then
+          draw_tab_continue(ctx, state, profile_list, profiles_by_id, callbacks)
           reaper.ImGui_EndTabItem(ctx)
         end
         

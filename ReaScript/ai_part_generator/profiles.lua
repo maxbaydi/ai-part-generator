@@ -89,6 +89,8 @@ function M.get_track_settings(track)
   local _, key_mode = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_KEY_MODE, "", false)
   local _, key = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_KEY, "", false)
   local _, allow_tempo = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_ALLOW_TEMPO_CHANGES, "", false)
+  local _, continuation_mode = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_CONTINUATION_MODE, "", false)
+  local _, section_position = reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_SECTION_POSITION, "", false)
 
   if articulation_name ~= "" then settings.articulation_name = articulation_name end
   if generation_type ~= "" then settings.generation_type = generation_type end
@@ -108,6 +110,8 @@ function M.get_track_settings(track)
   if key_mode ~= "" then settings.key_mode = key_mode end
   if key ~= "" then settings.key = key end
   if allow_tempo ~= "" then settings.allow_tempo_changes = allow_tempo == "1" end
+  if continuation_mode ~= "" then settings.continuation_mode = continuation_mode end
+  if section_position ~= "" then settings.section_position = section_position end
 
   return settings
 end
@@ -129,6 +133,8 @@ function M.save_track_settings(track, state)
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_KEY_MODE, state.key_mode or "", true)
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_KEY, state.key or "", true)
   reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_ALLOW_TEMPO_CHANGES, state.allow_tempo_changes and "1" or "0", true)
+  reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_CONTINUATION_MODE, state.continuation_mode or "", true)
+  reaper.GetSetMediaTrackInfo_String(track, "P_EXT:" .. const.EXTSTATE_SECTION_POSITION, state.section_position or "", true)
 end
 
 local function normalize_name(s)

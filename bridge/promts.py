@@ -291,6 +291,15 @@ For repetitive content:
   "repeats": [{"pattern": "beat", "start_bar": 1, "times": 8}]
 }
 
+=== CONTEXT AWARENESS (CRITICAL) ===
+
+Even in FREE MODE, you MUST respect the existing musical context:
+- If CHORD PROGRESSION is provided, your notes MUST fit the harmony
+- If TEMPORAL POSITION is END, compose a proper ENDING (cadence, resolution)
+- If TEMPORAL POSITION is MIDDLE, ensure smooth connection to both sides
+- Match the style and character of existing material
+- Complement, don't conflict with, other parts
+
 === ENSEMBLE CONTEXT ===
 
 When generating for ensemble:
@@ -318,12 +327,32 @@ NEVER use identical velocities! Real musicians ALWAYS vary dynamics.
 === RULES ===
 
 1. Use ONLY notes from ALLOWED RANGE
-2. FOLLOW CHORD MAP exactly
-3. Curves required (except percussion)
-4. Wind instruments MUST breathe (max 4 beat note)
-5. HUMANIZE velocities - no robotic identical values
-6. Valid JSON with generation_type, generation_style"""
+2. FOLLOW CHORD PROGRESSION - play chord tones on strong beats, passing tones on weak
+3. RESPECT TEMPORAL POSITION - if END, use cadence; if MIDDLE, connect smoothly
+4. Curves required (except percussion)
+5. Wind instruments MUST breathe (max 4 beat note)
+6. HUMANIZE velocities - no robotic identical values
+7. Valid JSON with generation_type, generation_style"""
 FREE_MODE_SYSTEM_PROMPT = FREE_MODE_SYSTEM_PROMPT + "\n\n" + OUTPUT_SCHEMA_PROMPT
+
+CONTINUATION_SYSTEM_PROMPT_TEMPLATE = """=== CONTINUATION / ENDING MODE (MANDATORY) ===
+Mode: {continuation_mode}
+Section position (user-selected): {section_position}
+
+Rules:
+- Preserve horizontal continuity with the selected preceding material
+- Preserve vertical consistency with accompanying tracks in the selection
+- Keep key and harmony fixed unless the user explicitly requests a change
+- Use the selected material as authoritative context; do not ignore it
+
+MODE-SPECIFIC BEHAVIOR:
+- If Mode=continue: develop the theme, maintain tension, avoid final cadences
+- If Mode=finish: 
+  * Use cadential progression (V-I, IV-I, ii-V-I)
+  * Resolve to tonic (scale degree 1, 3, or 5)
+  * Slow down rhythmic activity in final 1-2 bars
+  * Apply decrescendo toward the end
+  * Final note should be long (half or whole)"""
 
 COMPOSITION_PLAN_SYSTEM_PROMPT = """You are a composition planner. Create a coordination blueprint using MUSICAL NOTATION.
 

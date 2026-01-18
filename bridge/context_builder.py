@@ -3,7 +3,15 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
-    from constants import MIDI_MAX, MIDI_MIN
+    from constants import (
+        CONTINUATION_MODES,
+        MIDI_MAX,
+        MIDI_MIN,
+        SECTION_POSITION_END,
+        SECTION_POSITION_ISOLATED,
+        SECTION_POSITION_MIDDLE,
+        SECTION_POSITION_START,
+    )
     from midi_utils import note_to_midi
     from models import ContextInfo, EnsembleInfo, HorizontalContext
     from music_analysis import (
@@ -16,7 +24,6 @@ try:
         build_horizontal_continuity_prompt,
         build_melodic_context_prompt,
         build_rhythmic_context_prompt,
-        extract_motif_from_notes,
     )
     from music_notation import time_q_to_bar_beat
     from music_theory import (
@@ -29,7 +36,15 @@ try:
     )
     from profile_utils import load_profile
 except ImportError:
-    from .constants import MIDI_MAX, MIDI_MIN
+    from .constants import (
+        CONTINUATION_MODES,
+        MIDI_MAX,
+        MIDI_MIN,
+        SECTION_POSITION_END,
+        SECTION_POSITION_ISOLATED,
+        SECTION_POSITION_MIDDLE,
+        SECTION_POSITION_START,
+    )
     from .midi_utils import note_to_midi
     from .models import ContextInfo, EnsembleInfo, HorizontalContext
     from .music_analysis import (
@@ -42,7 +57,6 @@ except ImportError:
         build_horizontal_continuity_prompt,
         build_melodic_context_prompt,
         build_rhythmic_context_prompt,
-        extract_motif_from_notes,
     )
     from .music_notation import time_q_to_bar_beat
     from .music_theory import (
@@ -56,10 +70,26 @@ except ImportError:
     from .profile_utils import load_profile
 
 POSITION_DESCRIPTIONS = {
-    "start": "This is the BEGINNING of a musical section. There is existing material AFTER the generation area.",
-    "middle": "This is the MIDDLE of a musical section. There is existing material BEFORE and AFTER the generation area.",
-    "end": "This is the END of a musical section. There is existing material BEFORE the generation area.",
-    "isolated": "This is an isolated section with no surrounding context on this track.",
+    SECTION_POSITION_START: (
+        "This is the BEGINNING of a musical section. There is existing material AFTER.\n"
+        "GUIDANCE: Establish the theme/motif. Build momentum toward the existing material. "
+        "Ensure smooth connection to what follows."
+    ),
+    SECTION_POSITION_MIDDLE: (
+        "This is the MIDDLE of a musical section. There is material BEFORE and AFTER.\n"
+        "GUIDANCE: Continue the established theme. Maintain momentum and coherence. "
+        "Connect smoothly to both preceding and following material."
+    ),
+    SECTION_POSITION_END: (
+        "This is the END of a musical section. There is existing material BEFORE.\n"
+        "GUIDANCE: Conclude the musical idea. Use cadential patterns (V-I, IV-I, ii-V-I). "
+        "Resolve melodic tension. Slow rhythmic activity toward the final note. "
+        "End on a stable scale degree (1, 3, or 5 of the key). Decrescendo in final bars."
+    ),
+    SECTION_POSITION_ISOLATED: (
+        "This is an isolated section with no surrounding context on this track.\n"
+        "GUIDANCE: Create a complete musical statement. Include introduction, development, and conclusion."
+    ),
 }
 
 ROLE_HINTS = {
@@ -308,17 +338,33 @@ def analyze_horizontal_notes(notes: List[Dict[str, Any]], label: str) -> str:
     return " ".join(parts)
 
 
+def resolve_section_position_value(forced_position: Optional[str], fallback_position: str) -> str:
+    if forced_position in POSITION_DESCRIPTIONS:
+        return forced_position
+    if fallback_position in POSITION_DESCRIPTIONS:
+        return fallback_position
+    return SECTION_POSITION_ISOLATED
+
+
 def build_horizontal_context_summary(
     horizontal: Optional[HorizontalContext],
     key_str: str = "C major",
+    forced_position: Optional[str] = None,
+    force_continuation: bool = False,
 ) -> Tuple[str, str]:
     if not horizontal:
-        return "", "isolated"
+        position = resolve_section_position_value(forced_position, SECTION_POSITION_ISOLATED)
+        if forced_position in POSITION_DESCRIPTIONS:
+            return (
+                f"### TEMPORAL POSITION\n{POSITION_DESCRIPTIONS.get(position, POSITION_DESCRIPTIONS[SECTION_POSITION_ISOLATED])}",
+                position,
+            )
+        return "", position
 
     parts: List[str] = []
 
-    position = horizontal.position or "isolated"
-    parts.append(f"### TEMPORAL POSITION\n{POSITION_DESCRIPTIONS.get(position, POSITION_DESCRIPTIONS['isolated'])}")
+    position = resolve_section_position_value(forced_position, horizontal.position or SECTION_POSITION_ISOLATED)
+    parts.append(f"### TEMPORAL POSITION\n{POSITION_DESCRIPTIONS.get(position, POSITION_DESCRIPTIONS[SECTION_POSITION_ISOLATED])}")
 
     if horizontal.before:
         before_summary = analyze_horizontal_notes(horizontal.before, "BEFORE (preceding notes)")
@@ -335,7 +381,7 @@ def build_horizontal_context_summary(
             horizontal.after if horizontal.after else [],
             key_str,
         )
-        continuity_prompt = build_horizontal_continuity_prompt(continuity_analysis)
+        continuity_prompt = build_horizontal_continuity_prompt(continuity_analysis, force_continuation=force_continuation)
         if continuity_prompt:
             parts.append("")
             parts.append(continuity_prompt)
@@ -390,6 +436,40 @@ def safe_float(value: Any) -> Optional[float]:
 
 def normalize_track_name(value: Any) -> str:
     return str(value or "").strip().lower()
+
+
+def get_instrument_pitch_range(profile: Optional[Dict[str, Any]]) -> Optional[Tuple[int, int]]:
+    if not profile or not isinstance(profile, dict):
+        return None
+    range_cfg = profile.get("range", {})
+    if not isinstance(range_cfg, dict):
+        return None
+    preferred = range_cfg.get("preferred")
+    absolute = range_cfg.get("absolute")
+    target_range = preferred if preferred else absolute
+    if not target_range or not isinstance(target_range, (list, tuple)) or len(target_range) < 2:
+        return None
+    low_val = target_range[0]
+    high_val = target_range[1]
+    low_pitch: Optional[int] = None
+    high_pitch: Optional[int] = None
+    if isinstance(low_val, int):
+        low_pitch = low_val
+    elif isinstance(low_val, str):
+        try:
+            low_pitch = note_to_midi(low_val)
+        except ValueError:
+            pass
+    if isinstance(high_val, int):
+        high_pitch = high_val
+    elif isinstance(high_val, str):
+        try:
+            high_pitch = note_to_midi(high_val)
+        except ValueError:
+            pass
+    if low_pitch is not None and high_pitch is not None:
+        return (low_pitch, high_pitch)
+    return None
 
 
 def get_profile_keyswitch_pitches(profile: Optional[Dict[str, Any]]) -> set[int]:
@@ -461,14 +541,52 @@ def filter_keyswitch_notes(notes: Optional[List[Dict[str, Any]]], keyswitch_pitc
     return result
 
 
+KEYSWITCH_PITCH_THRESHOLD = 21
+
+
+def is_likely_keyswitch(pitch: int, dur_q: float) -> bool:
+    if pitch < KEYSWITCH_PITCH_THRESHOLD:
+        return True
+    if pitch < 36 and dur_q > 16.0:
+        return True
+    return False
+
+
 def filter_keyswitch_notes_by_track(
     notes: Optional[List[Dict[str, Any]]],
     track_keyswitch_map: Dict[str, set[int]],
+    global_keyswitches: Optional[set[int]] = None,
 ) -> List[Dict[str, Any]]:
     if not notes:
         return []
-    if not track_keyswitch_map:
-        return list(notes)
+    result: List[Dict[str, Any]] = []
+    global_ks = global_keyswitches or set()
+    for note in notes:
+        if not isinstance(note, dict):
+            continue
+        pitch = safe_int(note.get("pitch"))
+        if pitch is None:
+            result.append(note)
+            continue
+        dur_q = safe_float(note.get("dur_q")) or 1.0
+        if is_likely_keyswitch(pitch, dur_q):
+            continue
+        if pitch in global_ks:
+            continue
+        track_name = normalize_track_name(note.get("track"))
+        keyswitches = track_keyswitch_map.get(track_name)
+        if keyswitches and pitch in keyswitches:
+            continue
+        result.append(note)
+    return result
+
+
+def filter_keyswitch_notes_enhanced(
+    notes: Optional[List[Dict[str, Any]]],
+    keyswitch_pitches: set[int],
+) -> List[Dict[str, Any]]:
+    if not notes:
+        return []
     result: List[Dict[str, Any]] = []
     for note in notes:
         if not isinstance(note, dict):
@@ -477,9 +595,10 @@ def filter_keyswitch_notes_by_track(
         if pitch is None:
             result.append(note)
             continue
-        track_name = normalize_track_name(note.get("track"))
-        keyswitches = track_keyswitch_map.get(track_name)
-        if keyswitches and pitch in keyswitches:
+        dur_q = safe_float(note.get("dur_q")) or 1.0
+        if is_likely_keyswitch(pitch, dur_q):
+            continue
+        if keyswitch_pitches and pitch in keyswitch_pitches:
             continue
         result.append(note)
     return result
@@ -492,13 +611,13 @@ def filter_horizontal_context(
     if not horizontal:
         return None
     if isinstance(horizontal, dict):
-        before = filter_keyswitch_notes(horizontal.get("before", []), keyswitch_pitches)
-        after = filter_keyswitch_notes(horizontal.get("after", []), keyswitch_pitches)
-        position = str(horizontal.get("position") or "isolated")
+        before = filter_keyswitch_notes_enhanced(horizontal.get("before", []), keyswitch_pitches)
+        after = filter_keyswitch_notes_enhanced(horizontal.get("after", []), keyswitch_pitches)
+        position = str(horizontal.get("position") or SECTION_POSITION_ISOLATED)
         return HorizontalContext(before=before, after=after, position=position)
-    before = filter_keyswitch_notes(horizontal.before, keyswitch_pitches)
-    after = filter_keyswitch_notes(horizontal.after, keyswitch_pitches)
-    position = horizontal.position or "isolated"
+    before = filter_keyswitch_notes_enhanced(horizontal.before, keyswitch_pitches)
+    after = filter_keyswitch_notes_enhanced(horizontal.after, keyswitch_pitches)
+    position = horizontal.position or SECTION_POSITION_ISOLATED
     return HorizontalContext(before=before, after=after, position=position)
 
 
@@ -1196,18 +1315,24 @@ def build_context_summary(
     key_str: str = "unknown",
     skip_auto_harmony: bool = False,
     target_profile: Optional[Dict[str, Any]] = None,
+    forced_position: Optional[str] = None,
+    continuation_mode: Optional[str] = None,
 ) -> Tuple[str, str, str]:
     if not context:
-        return "", "unknown", "isolated"
+        return "", "unknown", SECTION_POSITION_ISOLATED
 
     parts: List[str] = []
     detected_key = "unknown"
-    position = "isolated"
+    position = SECTION_POSITION_ISOLATED
 
     track_keyswitch_map = build_context_track_keyswitch_map(context.context_tracks)
     target_keyswitches = get_profile_keyswitch_pitches(target_profile) if target_profile else set()
-    existing_notes = filter_keyswitch_notes_by_track(context.existing_notes, track_keyswitch_map)
-    extended_progression = filter_keyswitch_notes_by_track(context.extended_progression, track_keyswitch_map)
+    existing_notes = filter_keyswitch_notes_by_track(
+        context.existing_notes, track_keyswitch_map, target_keyswitches
+    )
+    extended_progression = filter_keyswitch_notes_by_track(
+        context.extended_progression, track_keyswitch_map, target_keyswitches
+    )
     horizontal = filter_horizontal_context(context.horizontal, target_keyswitches)
 
     notes_for_progression = extended_progression or existing_notes
@@ -1217,7 +1342,14 @@ def build_context_summary(
             parts.append(f"### HARMONY CONTEXT\nCHORD PROGRESSION: {progression}")
 
     effective_key = key_str if key_str != "unknown" else detected_key
-    horizontal_summary, position = build_horizontal_context_summary(horizontal, effective_key)
+    continuation_mode_value = str(continuation_mode or "").lower()
+    force_continuation = continuation_mode_value in CONTINUATION_MODES
+    horizontal_summary, position = build_horizontal_context_summary(
+        horizontal,
+        effective_key,
+        forced_position=forced_position,
+        force_continuation=force_continuation,
+    )
     if horizontal_summary:
         parts.append(horizontal_summary)
 
@@ -1232,9 +1364,17 @@ def build_context_summary(
             min_p, max_p = 48, 72
         if min_p is not None and max_p is not None:
             parts.append(f"Vertical context range: {pitch_to_note(min_p)} to {pitch_to_note(max_p)} (MIDI {min_p}-{max_p})")
-            suggested_low = max_p
-            suggested_high = min(max_p + 12, 96)
-            parts.append(f"SUGGESTED MELODY RANGE: MIDI {suggested_low}-{suggested_high} (above existing parts)")
+            instrument_range = get_instrument_pitch_range(target_profile)
+            if instrument_range:
+                inst_low, inst_high = instrument_range
+                suggested_low = max(max_p, inst_low)
+                suggested_high = min(max_p + 12, inst_high)
+                if suggested_low < suggested_high:
+                    parts.append(f"SUGGESTED MELODY RANGE: MIDI {suggested_low}-{suggested_high} (above existing parts, within instrument range)")
+            else:
+                suggested_low = max_p
+                suggested_high = min(max_p + 12, 96)
+                parts.append(f"SUGGESTED MELODY RANGE: MIDI {suggested_low}-{suggested_high} (above existing parts)")
         note_summary = format_notes_for_context(existing_notes, NOTE_CONTEXT_PREVIEW_LIMIT)
         if note_summary:
             parts.append(f"Context notes (start_q, pitch, dur_q, vel, chan): {note_summary}")

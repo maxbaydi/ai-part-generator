@@ -5,9 +5,17 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 try:
-    from constants import DEFAULT_PROVIDER
+    from constants import (
+        DEFAULT_PROVIDER,
+        DEFAULT_CONTINUATION_MODE,
+        DEFAULT_SECTION_POSITION,
+    )
 except ImportError:
-    from .constants import DEFAULT_PROVIDER
+    from .constants import (
+        DEFAULT_PROVIDER,
+        DEFAULT_CONTINUATION_MODE,
+        DEFAULT_SECTION_POSITION,
+    )
 
 
 class TimeWindow(BaseModel):
@@ -49,6 +57,9 @@ class ContextInfo(BaseModel):
     extended_progression: Optional[List[Dict[str, Any]]] = None
     context_tracks: Optional[List[Dict[str, Any]]] = None
     cc_events: Optional[List[Dict[str, Any]]] = None
+    continuation_source: Optional[List[Dict[str, Any]]] = None
+    continuation_cc_events: Optional[List[Dict[str, Any]]] = None
+    selected_tracks_full: Optional[List[Dict[str, Any]]] = None
 
 
 class ModelInfo(BaseModel):
@@ -130,6 +141,11 @@ class EnsembleInfo(BaseModel):
     arrangement_assignment: Optional[Dict[str, Any]] = None
 
 
+class ContinuationInfo(BaseModel):
+    mode: str = DEFAULT_CONTINUATION_MODE
+    section_position: str = DEFAULT_SECTION_POSITION
+
+
 class GenerateRequest(BaseModel):
     time: TimeWindow
     music: MusicInfo
@@ -142,6 +158,7 @@ class GenerateRequest(BaseModel):
     allow_tempo_changes: bool = False
     user_prompt: str = ""
     model: Optional[ModelInfo] = None
+    continuation: Optional[ContinuationInfo] = None
 
 
 class ArrangeRequest(BaseModel):
