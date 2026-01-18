@@ -68,10 +68,21 @@ NOTES: Use standard note names with octave (C4 = middle C)
 - Octaves: C4 = MIDI 60, C5 = MIDI 72, etc.
 - Examples: C4, F#5, Bb3, G6
 
-DURATIONS: Use musical terms or abbreviations
-- whole (w) = 4 beats | dotted-half (dh) = 3 beats | half (h) = 2 beats
-- dotted-quarter (dq) = 1.5 beats | quarter (q) = 1 beat | dotted-8th (d8) = 0.75 beats
-- 8th = 0.5 beats | 16th = 0.25 beats | 32nd = 0.125 beats
+DURATIONS: Use musical terms or abbreviations (values are in QUARTER NOTES)
+- whole (w) = 4q | dotted-half (dh) = 3q | half (h) = 2q
+- dotted-quarter (dq) = 1.5q | quarter (q) = 1q | dotted-8th (d8) = 0.75q
+- 8th = 0.5q | 16th = 0.25q | 32nd = 0.125q
+
+TIME SIGNATURE AWARENESS (CRITICAL):
+- In 4/4: 1 bar = 4 quarters, so "dh" (3q) fits within one bar
+- In 6/8: 1 bar = 3 quarters (6 eighths), so "dh" (3q) = ENTIRE BAR
+- In 3/4: 1 bar = 3 quarters, so "dh" (3q) = ENTIRE BAR
+- NEVER place two notes with "dh" duration in the same bar of 6/8 or 3/4!
+
+MELODIC LINE RULE (NO OVERLAPS):
+- In a single melodic line, notes must NOT overlap
+- If note A starts at beat 1 with duration 3q, next note can only start at beat 4 or later
+- Overlapping notes are only valid for CHORDS (notes starting at the SAME time)
 
 DYNAMICS: Use standard markings
 - ppp (very very soft) ~16 | pp (very soft) ~33 | p (soft) ~49
@@ -678,6 +689,13 @@ Register adjustment: {register_adjustment}
 - WIND/BRASS: Must breathe! Max single note = 4 beats
 - Break long notes: 3 beats + gap + 3 beats + gap + 2 beats
 - STRINGS: Can sustain longer, but MUST have dynamics curve
+
+=== DURATION vs TIME SIGNATURE (CRITICAL) ===
+- All durations are in QUARTER NOTES (q)
+- In 6/8: 1 bar = 3q, so "dh" (3q) fills the ENTIRE bar
+- In 3/4: 1 bar = 3q, so "dh" (3q) fills the ENTIRE bar  
+- In 4/4: 1 bar = 4q
+- NEVER overlap notes in a melodic line! If note starts at beat 1 with "dh" (3q), next note must start at beat 4+
 
 === DYNAMICS ===
 - DYNAMICS curve (CC1) = section dynamics envelope (values 40-127)

@@ -937,6 +937,68 @@ def resolve_same_pitch_overlaps(notes: List[Dict[str, Any]]) -> None:
             n.pop("_end_q", None)
 
 
+CHORD_TIME_THRESHOLD_Q = 0.05
+
+
+def resolve_melodic_overlaps(notes: List[Dict[str, Any]]) -> None:
+    if not notes:
+        return
+    
+    grouped: Dict[int, List[Dict[str, Any]]] = {}
+    for n in notes:
+        if not isinstance(n, dict):
+            continue
+        try:
+            chan = int(n.get("chan", 1))
+            start_q = float(n.get("start_q", 0.0))
+            dur_q = float(n.get("dur_q", MIN_NOTE_DUR_Q))
+        except (TypeError, ValueError):
+            continue
+        if dur_q <= 0:
+            continue
+        n["_start_q"] = start_q
+        n["_end_q"] = start_q + dur_q
+        grouped.setdefault(chan, []).append(n)
+    
+    for channel_notes in grouped.values():
+        channel_notes.sort(key=lambda x: (float(x.get("_start_q", 0.0)), float(x.get("pitch", 60))))
+        
+        events: List[Tuple[float, List[Dict[str, Any]]]] = []
+        current_time: Optional[float] = None
+        current_group: List[Dict[str, Any]] = []
+        
+        for note in channel_notes:
+            note_start = float(note.get("_start_q", 0.0))
+            if current_time is None or abs(note_start - current_time) > CHORD_TIME_THRESHOLD_Q:
+                if current_group:
+                    events.append((current_time, current_group))
+                current_time = note_start
+                current_group = [note]
+            else:
+                current_group.append(note)
+        
+        if current_group and current_time is not None:
+            events.append((current_time, current_group))
+        
+        for i in range(len(events) - 1):
+            curr_time, curr_notes = events[i]
+            next_time, _ = events[i + 1]
+            max_end = next_time - MIN_NOTE_GAP_Q
+            
+            for note in curr_notes:
+                note_end = float(note.get("_end_q", 0.0))
+                if note_end > max_end:
+                    new_dur = max_end - curr_time
+                    if new_dur < MIN_NOTE_DUR_Q:
+                        new_dur = MIN_NOTE_DUR_Q
+                    note["dur_q"] = new_dur
+    
+    for n in notes:
+        if isinstance(n, dict):
+            n.pop("_start_q", None)
+            n.pop("_end_q", None)
+
+
 def rearticulate_long_notes(
     notes: List[Dict[str, Any]],
     time_sig: str,
@@ -1561,9 +1623,13 @@ def build_response(
         if harmony_corrections > 0:
             logger.info("build_response: harmony validation corrected %d notes", harmony_corrections)
     
-    if arrangement_mode:
+    if not is_drum:
         logger.info("build_response: resolve_same_pitch_overlaps")
         resolve_same_pitch_overlaps(notes)
+        logger.info("build_response: resolve_melodic_overlaps")
+        resolve_melodic_overlaps(notes)
+    
+    if arrangement_mode:
         logger.info("build_response: rearticulate_long_notes")
         notes = rearticulate_long_notes(notes, time_sig, profile, length_q)
         logger.info("build_response: rearticulated to %d notes", len(notes))
