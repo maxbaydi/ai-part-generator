@@ -44,6 +44,7 @@ try:
     )
     from style import DYNAMICS_HINTS, MOOD_HINTS
     from type import TYPE_HINTS
+    from text_utils import fix_mojibake
     from utils import safe_format
 except ImportError:
     from .constants import (
@@ -86,6 +87,7 @@ except ImportError:
     )
     from .style import DYNAMICS_HINTS, MOOD_HINTS
     from .type import TYPE_HINTS
+    from .text_utils import fix_mojibake
     from .utils import safe_format
 
 
@@ -173,21 +175,13 @@ def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> Li
         return []
 
     if request.ensemble and request.ensemble.is_sequential:
-        plan = request.ensemble.plan or {}
-        initial_bpm = plan.get("initial_bpm")
-
-        if initial_bpm:
-            return [
-                "### TEMPO/TIME SIGNATURE",
-                f"Tempo is set by the composition plan: {initial_bpm} BPM",
-                "DO NOT output tempo_markers - tempo changes are controlled by the plan.",
-            ]
-
+        total_instruments = int(request.ensemble.total_instruments or 0)
         generation_order = int(request.ensemble.generation_order or GENERATION_ORDER_DEFAULT)
-        if generation_order > GENERATION_ORDER_FIRST:
+        if total_instruments > 0 and generation_order < total_instruments:
             return [
                 "### TEMPO/TIME SIGNATURE CHANGES",
-                "Tempo and time signature changes are already defined by an earlier part.",
+                "Tempo/time signature will be applied AFTER all parts are generated.",
+                "Output tempo_markers ONLY in the FINAL part or a dedicated tempo request.",
                 "DO NOT output tempo_markers for this response.",
             ]
 
@@ -200,6 +194,7 @@ def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> Li
         "",
         "YOU MAY CHANGE the initial tempo if it doesn't fit the style/mood you're creating.",
         "The project tempo is just a starting point - override it if musically appropriate.",
+        "Tempo/time signature changes will be applied AFTER all parts are generated.",
         "",
         "YOUR OPTIONS:",
         "- OVERRIDE initial tempo (time_q: 0) - set what fits the mood/genre",
@@ -225,7 +220,7 @@ def build_tempo_change_guidance(request: GenerateRequest, length_q: float) -> Li
     ]
     if request.ensemble and request.ensemble.is_sequential:
         lines.append("")
-        lines.append("IMPORTANT: Only output tempo_markers for the FIRST instrument in sequential generation.")
+        lines.append("IMPORTANT: Only output tempo_markers for the FINAL instrument in sequential generation.")
     return lines
 
 
@@ -316,7 +311,7 @@ def build_free_mode_prompt_parts(
 
     user_prompt_parts.extend([
         "",
-        "Note: Use Expression curve for overall section dynamics, Dynamics curve for note-level shaping. For SHORT articulations, velocity is primary.",
+        "Note: Use Expression curve (CC11) for overall dynamics, Dynamics curve (CC1) for per-note shaping. For SHORT articulations, velocity is primary.",
     ])
 
     orchestration_hints_prompt = build_orchestration_hints_prompt(profile, is_ensemble)
@@ -534,9 +529,21 @@ def build_prompt(
             current_track = normalize_text(ensemble.current_instrument.get("track_name"))
             current_profile_name_str = normalize_text(ensemble.current_instrument.get("profile_name"))
 
-            current_role = normalize_text(ensemble.current_instrument.get("role"))
+            current_inst = ensemble.current_instrument
+            current_role = normalize_text(current_inst.get("role")) if current_inst else ""
+            current_inst_index = None
+            if current_inst:
+                current_inst_index = current_inst.get("index")
+            if current_inst_index is None and request.ensemble:
+                current_inst_index = request.ensemble.current_instrument_index
             if not current_role or normalize_lower(current_role) == UNKNOWN_VALUE:
-                current_role = extract_role_from_plan(plan_data, current_profile_name_str, current_track)
+                current_role = extract_role_from_plan(
+                    plan_data,
+                    current_profile_name_str,
+                    current_track,
+                    current_inst_index,
+                    profile.get("family", ""),
+                )
 
             current_role_upper = (
                 current_role.upper() if current_role and normalize_lower(current_role) != UNKNOWN_VALUE else UNKNOWN_ROLE_LABEL
@@ -551,22 +558,37 @@ def build_prompt(
                 for entry in role_guidance_list:
                     if not isinstance(entry, dict):
                         continue
-                    inst_name = normalize_lower(entry.get("instrument"))
-                    if not inst_name:
+                    entry_index = entry.get("instrument_index")
+                    if entry_index is not None and current_inst_index is not None:
+                        try:
+                            if int(entry_index) == int(current_inst_index):
+                                matched = True
+                            else:
+                                matched = False
+                        except (TypeError, ValueError):
+                            matched = False
+                    else:
+                        matched = False
+                    if not matched:
+                        inst_name = normalize_lower(entry.get("instrument"))
+                        if not inst_name:
+                            continue
+                        matched = inst_name in (current_track_lower, current_profile_name_lower) or inst_name == profile_name_lower
+                    if not matched:
                         continue
-                    if inst_name in (current_track_lower, current_profile_name_lower) or inst_name == profile_name_lower:
-                        guidance = normalize_text(entry.get("guidance"))
-                        relationship = normalize_text(entry.get("relationship"))
-                        register = normalize_text(entry.get("register"))
-                        details = []
-                        if register:
-                            details.append(f"Register: {register}")
-                        if guidance:
-                            details.append(guidance)
-                        if relationship:
-                            details.append(f"Relationship: {relationship}")
-                        role_detail = "\n".join(details).strip()
-                        break
+
+                    guidance = normalize_text(entry.get("guidance") or entry.get("musical_intent"))
+                    relationship = normalize_text(entry.get("relationship"))
+                    register = normalize_text(entry.get("register"))
+                    details = []
+                    if register:
+                        details.append(f"Register: {register}")
+                    if guidance:
+                        details.append(guidance)
+                    if relationship:
+                        details.append(f"Relationship: {relationship}")
+                    role_detail = "\n".join(details).strip()
+                    break
 
             user_prompt_parts = build_compose_role_prompt_parts(
                 profile,
@@ -721,14 +743,15 @@ def build_prompt(
             "",
             "### THREE-LAYER DYNAMICS",
             "1. DYNAMICS (dyn): Note attack intensity - p, mp, mf, f, ff",
-            "2. EXPRESSION CURVE: GLOBAL section envelope (CC11)",
-            "3. DYNAMICS CURVE: Section dynamics shape (CC1)",
+            "2. EXPRESSION CURVE (CC11): GLOBAL phrase arc across the part",
+            "3. DYNAMICS CURVE (CC1): PER-NOTE swells for sustained notes",
             "",
             "DYNAMICS CURVE (CC1) - CRITICAL:",
             "- Values: 40-127 (40=pp, 64=mp, 80=mf, 100=f, 120=ff)",
-            "- SMOOTH transitions - max jump 20 between points",
-            "- 4-8 breakpoints covering the full piece length",
-            "- Follow DYNAMIC ARC from composition plan",
+            "- Use 2-3 points per sustained note (start/peak/release)",
+            "- Smooth motion within each note (avoid jumps >20 within a note)",
+            "- Short notes can omit CC1; use velocity/dyn instead",
+            "- Follow DYNAMIC ARC with CC11 (global), not CC1",
         ])
     else:
         short_articulations = profile.get("articulations", {}).get("short_articulations", [])
@@ -756,10 +779,10 @@ def build_prompt(
             "",
             "### THREE-LAYER DYNAMICS",
             f"1. DYNAMICS: {velocity_hint}",
-            "2. EXPRESSION CURVE: GLOBAL section envelope",
-            "3. DYNAMICS CURVE: PER-NOTE breathing (cresc/decresc/swell for each sustained note)",
+            "2. EXPRESSION CURVE (CC11): GLOBAL phrase arc across the part",
+            "3. DYNAMICS CURVE (CC1): PER-NOTE swells for sustained notes",
             "",
-            "DYNAMICS CURVE (CC1): Provide 4-8 breakpoints with SMOOTH transitions (max jump 20)",
+            "DYNAMICS CURVE (CC1): Use 2-3 points per sustained note, smooth within each note",
         ])
 
     tempo_guidance = build_tempo_change_guidance(request, length_q)
@@ -772,7 +795,7 @@ def build_prompt(
         user_prompt_parts.append("")
         user_prompt_parts.extend(pattern_guidance)
 
-    user_prompt_text = normalize_text(request.user_prompt)
+    user_prompt_text = normalize_text(fix_mojibake(request.user_prompt))
     if user_prompt_text:
         user_prompt_parts.append("")
         user_prompt_parts.append("### USER REQUEST (PRIORITY - follow these instructions, they override defaults):")
@@ -780,7 +803,7 @@ def build_prompt(
         user_prompt_parts.append("")
         user_prompt_parts.append("INTERPRET USER REQUEST:")
         user_prompt_parts.append("- If user asks for 'simple', 'basic', 'straightforward' → create simple, clean output")
-        user_prompt_parts.append("- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve for overall, Dynamics curve for detail")
+        user_prompt_parts.append("- If user mentions dynamics (crescendo, forte, soft, etc.) → apply to Expression curve (CC11) for overall, Dynamics curve (CC1) for per-note detail")
         user_prompt_parts.append("- If user forbids spikes or caps max dynamics (e.g. 'cap at f, no ff') → enforce strictly in velocity/CC (no sfz, no sudden accents, no abrupt jumps)")
         user_prompt_parts.append("- If user mentions a composer style (Zimmer, Williams, etc.) → match their typical approach")
         user_prompt_parts.append("- If user asks for chords/pads → use sustained notes, minimal articulation changes")

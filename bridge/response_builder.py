@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import math
+import re
 
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -49,6 +49,7 @@ try:
         parse_range,
     )
     from music_analysis import extract_motif_from_notes
+    from music_theory import NOTE_TO_PC, get_chord_tones
     from utils import clamp
 except ImportError:
     from .constants import (
@@ -88,27 +89,30 @@ except ImportError:
         parse_range,
     )
     from .music_analysis import extract_motif_from_notes
+    from .music_theory import NOTE_TO_PC, get_chord_tones
     from .utils import clamp
 
 
 MIN_NOTE_DUR_FOR_DYNAMICS = 1.0
+LONG_NOTE_DUR_FOR_DYNAMICS = 2.0
 SWELL_PEAK_RATIO = 0.35
+DYNAMICS_DECAY_RATIO = 0.75
+DYNAMICS_RELEASE_RATIO = 0.9
 DYNAMICS_BASE_VALUE = 64
 DYNAMICS_SWELL_AMOUNT = 12
-MIN_BREAKPOINTS_TO_TRUST_COMPLETELY = 4
-BARS_PER_BREAKPOINT_TARGET = 2.0
-NOTES_PER_BREAKPOINT_TARGET = 8
-NOTE_START_BREAKPOINT_WINDOW_Q = 0.1
-FALLBACK_COVERAGE_THRESHOLD = 0.5
 
 EXPRESSION_DEFAULT_MIN = 70
 EXPRESSION_DEFAULT_MAX = 100
-EXPRESSION_FALLBACK_POINTS = 5
 
 MAX_DYNAMICS_JUMP = 20
 SMOOTH_TRANSITION_STEP = 0.25
 
 HARMONY_VALIDATION_TOLERANCE_Q = 0.125
+
+NOTE_NAME_RE = re.compile(r"\b([A-Ga-g])([#b]?)\b")
+MIN_PER_NOTE_DYNAMICS_POINTS = 3
+LONG_NOTE_DYNAMICS_POINTS = 4
+BREAKPOINT_NEAR_WINDOW_Q = 0.02
 
 
 def smooth_breakpoint_transitions(breakpoints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -141,6 +145,81 @@ def smooth_breakpoint_transitions(breakpoints: List[Dict[str, Any]]) -> List[Dic
         result.append({"time_q": time_q, "value": int(value)})
     
     return result
+
+
+def normalize_chord_tones(raw_tones: Any) -> List[int]:
+    if not raw_tones:
+        return []
+
+    if isinstance(raw_tones, str):
+        tokens = NOTE_NAME_RE.findall(raw_tones)
+        raw_tones = ["".join(token) for token in tokens]
+
+    tones: List[int] = []
+    for tone in raw_tones if isinstance(raw_tones, list) else []:
+        if isinstance(tone, str):
+            name = tone.strip()
+            if not name:
+                continue
+            pc = NOTE_TO_PC.get(name, NOTE_TO_PC.get(name.capitalize()))
+            if pc is None:
+                continue
+            tones.append(int(pc) % 12)
+        else:
+            try:
+                tones.append(int(tone) % 12)
+            except (TypeError, ValueError):
+                continue
+
+    return sorted(set(tones))
+
+
+def extract_chord_tones_from_notes_available(notes_available: Any) -> List[int]:
+    if not notes_available:
+        return []
+    if not isinstance(notes_available, str):
+        notes_available = str(notes_available)
+    tokens = NOTE_NAME_RE.findall(notes_available)
+    if not tokens:
+        return []
+    names = ["".join(token) for token in tokens]
+    return normalize_chord_tones(names)
+
+
+def normalize_chord_map_for_validation(
+    chord_map: Optional[List[Dict[str, Any]]],
+    time_sig: str,
+) -> List[Dict[str, Any]]:
+    if not chord_map:
+        return []
+
+    normalized: List[Dict[str, Any]] = []
+    for entry in chord_map:
+        if not isinstance(entry, dict):
+            continue
+        time_q = safe_float(entry.get("time_q"))
+        if time_q is None:
+            bar = entry.get("bar")
+            beat = entry.get("beat")
+            if bar is not None and beat is not None:
+                time_q = bar_beat_to_start_q(bar, beat, time_sig)
+            else:
+                time_q = 0.0
+
+        chord_tones = normalize_chord_tones(entry.get("chord_tones"))
+        if not chord_tones:
+            chord_tones = extract_chord_tones_from_notes_available(entry.get("notes_available"))
+        if not chord_tones:
+            chord_name = entry.get("chord") or entry.get("chord_name") or ""
+            chord_tones = normalize_chord_tones(get_chord_tones(str(chord_name)))
+
+        normalized.append({
+            **entry,
+            "time_q": float(time_q),
+            "chord_tones": chord_tones,
+        })
+
+    return normalized
 
 
 def get_active_chord_at_time(
@@ -302,129 +381,72 @@ def ensure_per_note_dynamics(
         else:
             existing_breakpoints.append(bp)
 
-    bars = length_q / quarters_per_bar if quarters_per_bar > 0 else 0.0
-    min_breakpoints_to_trust = max(
-        MIN_BREAKPOINTS_TO_TRUST_COMPLETELY,
-        int(math.ceil(bars / BARS_PER_BREAKPOINT_TARGET)) if bars > 0 else MIN_BREAKPOINTS_TO_TRUST_COMPLETELY,
-    )
-
-    trust_model = False
-    if len(existing_breakpoints) >= min_breakpoints_to_trust:
-        if length_q > 0:
-            bp_times = [float(bp.get("time_q", 0)) for bp in existing_breakpoints]
-            coverage = (max(bp_times) - min(bp_times)) / length_q if bp_times else 0
-            if coverage >= FALLBACK_COVERAGE_THRESHOLD:
-                trust_model = True
-                logger.info("Dynamics: trusting model (%d breakpoints, %.0f%% coverage)", 
-                           len(existing_breakpoints), coverage * 100)
-
     sustained_notes = [
         n for n in notes
         if isinstance(n, dict) and float(n.get("dur_q", 0)) >= MIN_NOTE_DUR_FOR_DYNAMICS
     ]
 
-    new_breakpoints = list(existing_breakpoints)
-    
-    all_notes_sorted = sorted(
-        [n for n in notes if isinstance(n, dict)],
-        key=lambda x: float(x.get("start_q", 0))
-    )
+    if not sustained_notes:
+        return curves
 
-    breakpoint_count = max(1, len(existing_breakpoints))
-    notes_per_breakpoint = len(all_notes_sorted) / breakpoint_count if all_notes_sorted else 0
-    should_add_note_start = (not trust_model) or (notes_per_breakpoint > NOTES_PER_BREAKPOINT_TARGET)
+    new_breakpoints = list(existing_breakpoints)
 
     def count_breakpoints_in_range(start: float, end: float) -> int:
-        count = 0
-        for bp in new_breakpoints:
-            t = float(bp.get("time_q", 0))
-            if start <= t <= end:
-                count += 1
-        return count
-    
-    if should_add_note_start:
-        for note in all_notes_sorted:
-            start_q = float(note.get("start_q", 0))
-            dur_q = safe_float(note.get("dur_q")) or 0.0
-            if dur_q >= MIN_NOTE_DUR_FOR_DYNAMICS:
-                continue
-            vel = int(note.get("vel", 80))
-            note_dynamics = int(clamp(vel * 1.0, 40, 127))
-            
-            bp_count = count_breakpoints_in_range(start_q, start_q + NOTE_START_BREAKPOINT_WINDOW_Q)
-            if bp_count == 0:
-                new_breakpoints.append({"time_q": round(start_q, 4), "value": note_dynamics})
+        return sum(
+            1 for bp in new_breakpoints
+            if start <= float(bp.get("time_q", 0)) <= end
+        )
 
-    if not sustained_notes:
-        if not should_add_note_start:
-            return curves
-        new_breakpoints.sort(key=lambda x: float(x.get("time_q", 0)))
-        added_count = len(new_breakpoints) - len(existing_breakpoints)
-        if added_count > 0:
-            logger.info("Dynamics: added %d note-start breakpoints", added_count)
-        curves["dynamics"] = {
-            "breakpoints": new_breakpoints,
-            "interpolation": dynamics_curve.get("interpolation", "linear"),
-        }
-        return curves
-    
+    def has_breakpoint_near(time_q: float) -> bool:
+        return any(
+            abs(float(bp.get("time_q", 0)) - time_q) <= BREAKPOINT_NEAR_WINDOW_Q
+            for bp in new_breakpoints
+        )
+
     for note in sustained_notes:
         start_q = float(note.get("start_q", 0))
         dur_q = float(note.get("dur_q", 1))
         end_q = min(start_q + dur_q, length_q)
         vel = int(note.get("vel", 80))
-        
-        bp_count = count_breakpoints_in_range(start_q, end_q)
-        min_required = 1 if dur_q < 2.0 else 2
-        
-        if bp_count >= min_required:
+
+        min_required = LONG_NOTE_DYNAMICS_POINTS if dur_q >= LONG_NOTE_DUR_FOR_DYNAMICS else MIN_PER_NOTE_DYNAMICS_POINTS
+        if count_breakpoints_in_range(start_q, end_q) >= min_required:
             continue
-        
+
         note_dynamics = int(clamp(vel * 1.0, 40, 127))
         swell_amount = int(DYNAMICS_SWELL_AMOUNT * clamp(vel / 80.0, 0.7, 1.3))
-        
+
         peak_time = start_q + dur_q * SWELL_PEAK_RATIO
-        decay_time = start_q + dur_q * 0.75
-        
+        decay_time = start_q + dur_q * DYNAMICS_DECAY_RATIO
+        release_time = start_q + dur_q * DYNAMICS_RELEASE_RATIO
+
         start_value = int(clamp(note_dynamics - swell_amount * 0.2, 40, 127))
         peak_value = int(clamp(note_dynamics + swell_amount * 0.5, 40, 127))
         decay_value = int(clamp(note_dynamics - swell_amount * 0.4, 40, 127))
-        
-        new_breakpoints.append({"time_q": round(start_q, 4), "value": start_value})
-        new_breakpoints.append({"time_q": round(peak_time, 4), "value": peak_value})
-        
-        if dur_q >= 2.0:
+        release_value = int(clamp(note_dynamics - swell_amount * 0.3, 40, 127))
+
+        if not has_breakpoint_near(start_q):
+            new_breakpoints.append({"time_q": round(start_q, 4), "value": start_value})
+        if not has_breakpoint_near(peak_time):
+            new_breakpoints.append({"time_q": round(peak_time, 4), "value": peak_value})
+        if dur_q >= LONG_NOTE_DUR_FOR_DYNAMICS and not has_breakpoint_near(decay_time):
             new_breakpoints.append({"time_q": round(decay_time, 4), "value": decay_value})
+        if not has_breakpoint_near(release_time):
+            new_breakpoints.append({"time_q": round(release_time, 4), "value": release_value})
 
     new_breakpoints.sort(key=lambda x: float(x.get("time_q", 0)))
-    
     new_breakpoints = smooth_breakpoint_transitions(new_breakpoints)
-    
-    if new_breakpoints and length_q > 0:
-        last_bp = new_breakpoints[-1]
-        last_time = float(last_bp.get("time_q", 0))
-        last_value = float(last_bp.get("value", DYNAMICS_BASE_VALUE))
-        
-        if last_time < length_q - 1.0 and last_value > DYNAMICS_BASE_VALUE:
-            fade_start = max(last_time + 0.5, length_q - 2.0)
-            fade_end = length_q - 0.25
-            fade_value = int(clamp(last_value * 0.6, 40, DYNAMICS_BASE_VALUE))
-            
-            if fade_start > last_time:
-                new_breakpoints.append({"time_q": round(fade_start, 4), "value": int(last_value * 0.8)})
-            new_breakpoints.append({"time_q": round(fade_end, 4), "value": fade_value})
-            new_breakpoints.sort(key=lambda x: float(x.get("time_q", 0)))
-    
+
     added_count = len(new_breakpoints) - len(existing_breakpoints)
     if added_count > 0:
-        logger.info("Dynamics fallback: added %d breakpoints for %d sustained notes (model had %d)", 
+        logger.info("Dynamics per-note: added %d breakpoints for %d sustained notes (model had %d)",
                    added_count, len(sustained_notes), len(existing_breakpoints))
-    
+
     curves["dynamics"] = {
         "interp": dynamics_curve.get("interp", "cubic"),
         "breakpoints": new_breakpoints,
     }
-    
+
     return curves
 
 
@@ -436,27 +458,18 @@ def ensure_expression_baseline(
     expression_curve = curves.get("expression", {})
     existing_breakpoints = expression_curve.get("breakpoints", [])
     
-    if len(existing_breakpoints) >= 2:
+    if existing_breakpoints:
         return curves
     
     if length_q <= 0:
         return curves
-    
-    step = length_q / (EXPRESSION_FALLBACK_POINTS - 1)
-    breakpoints = []
-    mid = EXPRESSION_FALLBACK_POINTS // 2
-    
-    for i in range(EXPRESSION_FALLBACK_POINTS):
-        t = i * step
-        if i < mid:
-            ratio = i / mid
-            value = EXPRESSION_DEFAULT_MIN + (EXPRESSION_DEFAULT_MAX - EXPRESSION_DEFAULT_MIN) * ratio
-        elif i == mid:
-            value = EXPRESSION_DEFAULT_MAX
-        else:
-            ratio = (i - mid) / (EXPRESSION_FALLBACK_POINTS - 1 - mid)
-            value = EXPRESSION_DEFAULT_MAX - (EXPRESSION_DEFAULT_MAX - EXPRESSION_DEFAULT_MIN) * ratio * 0.8
-        breakpoints.append({"time_q": round(t, 4), "value": int(value)})
+
+    mid_time = length_q * 0.5
+    breakpoints = [
+        {"time_q": 0.0, "value": int(EXPRESSION_DEFAULT_MIN)},
+        {"time_q": round(mid_time, 4), "value": int(EXPRESSION_DEFAULT_MAX)},
+        {"time_q": round(length_q, 4), "value": int(EXPRESSION_DEFAULT_MIN)},
+    ]
     
     curves["expression"] = {
         "interp": "cubic",
@@ -1618,8 +1631,9 @@ def build_response(
     
     notes = clamp_wind_brass_durations(notes, profile)
     
-    if chord_map and not is_drum:
-        notes, harmony_corrections = validate_notes_against_harmony(notes, chord_map, abs_range)
+    normalized_chord_map = normalize_chord_map_for_validation(chord_map, time_sig)
+    if normalized_chord_map and not is_drum:
+        notes, harmony_corrections = validate_notes_against_harmony(notes, normalized_chord_map, abs_range)
         if harmony_corrections > 0:
             logger.info("build_response: harmony validation corrected %d notes", harmony_corrections)
     
@@ -1693,7 +1707,7 @@ def build_response(
         if motif:
             response["extracted_motif"] = motif
 
-    if is_ensemble and free_mode:
+    if is_ensemble:
         handoff = extract_handoff(raw, notes, length_q, current_role)
         if handoff:
             response["handoff"] = handoff

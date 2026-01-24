@@ -10,6 +10,7 @@ try:
     from prompt_builder_sketch import format_sketch_cc_segments, format_sketch_notes
     from prompt_builder_utils import MIN_BARS_COUNT, UNKNOWN_VALUE, normalize_text
     from promts import ARRANGEMENT_PLAN_SYSTEM_PROMPT, COMPOSITION_PLAN_SYSTEM_PROMPT
+    from text_utils import fix_mojibake
 except ImportError:
     from .constants import DEFAULT_PITCH
     from .context_builder import analyze_harmony_progression, build_context_summary, get_quarters_per_bar
@@ -18,6 +19,7 @@ except ImportError:
     from .prompt_builder_sketch import format_sketch_cc_segments, format_sketch_notes
     from .prompt_builder_utils import MIN_BARS_COUNT, UNKNOWN_VALUE, normalize_text
     from .promts import ARRANGEMENT_PLAN_SYSTEM_PROMPT, COMPOSITION_PLAN_SYSTEM_PROMPT
+    from .text_utils import fix_mojibake
 
 UNKNOWN_LABEL = "Unknown"
 DESCRIPTION_MAX_LEN = 100
@@ -81,12 +83,20 @@ def build_plan_prompt(request: GenerateRequest, length_q: float) -> Tuple[str, s
         user_prompt_parts.append("")
         user_prompt_parts.append("PLANNING TASKS:")
         user_prompt_parts.append("1. Assign ROLE to each instrument (melody/bass/harmony/rhythm/countermelody/pad)")
+        user_prompt_parts.append("   - Include instrument_index and instrument name in role_guidance")
+        user_prompt_parts.append("   - Provide register + guidance + relationship for each instrument")
         user_prompt_parts.append("2. Define REGISTER allocation to avoid clashes")
         user_prompt_parts.append("3. Plan HARMONIC framework (chord progression style)")
         user_prompt_parts.append("4. Describe MOTIF or musical idea to develop")
         user_prompt_parts.append("5. Order instruments by GENERATION PRIORITY (bass/rhythm first, melody second, etc.)")
 
-    user_prompt_text = normalize_text(request.user_prompt)
+        if request.allow_tempo_changes:
+            user_prompt_parts.append("")
+            user_prompt_parts.append("### TEMPO/TIME SIGNATURE CONTROL")
+            user_prompt_parts.append("You have FULL control over tempo and time signature if the user request implies it.")
+            user_prompt_parts.append("Set initial_bpm and time_sig accordingly. These will be applied after all parts.")
+
+    user_prompt_text = normalize_text(fix_mojibake(request.user_prompt))
     if user_prompt_text:
         user_prompt_parts.append("")
         user_prompt_parts.append("### USER REQUEST (this is the main creative direction)")

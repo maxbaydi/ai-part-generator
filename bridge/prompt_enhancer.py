@@ -4,8 +4,10 @@ from typing import Any, Dict, List, Optional
 
 try:
     from logger_config import logger
+    from text_utils import fix_mojibake
 except ImportError:
     from .logger_config import logger
+    from .text_utils import fix_mojibake
 
 
 ENHANCER_SYSTEM_PROMPT = """You are an expert music composition consultant. Transform brief user requests into HIGH-LEVEL creative direction for AI music generation.
@@ -207,6 +209,7 @@ def build_enhancer_prompt(
 ) -> str:
     sections = []
 
+    user_prompt = fix_mojibake(user_prompt)
     sections.append(f"USER REQUEST:\n{user_prompt}")
 
     inst_info = format_instrument_info(instruments)

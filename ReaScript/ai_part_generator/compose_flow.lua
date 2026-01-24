@@ -220,8 +220,9 @@ local function poll_compose_generation()
     local tempo_markers = nil
     if compose_state.allow_tempo_changes and not compose_state.tempo_applied then
       if type(data.tempo_markers) == "table" and #data.tempo_markers > 0 then
-        tempo_markers = data.tempo_markers
+        compose_state.deferred_tempo_markers = data.tempo_markers
         compose_state.tempo_applied = true
+        utils.log("Compose: received tempo markers (deferred until end)")
       end
     end
 
@@ -413,6 +414,7 @@ function M.run_compose(state, profile_list, profiles_by_id)
     use_selected_tracks = state.use_selected_tracks,
     allow_tempo_changes = state.allow_tempo_changes or false,
     tempo_applied = false,
+    deferred_tempo_markers = nil,
   }
 
   helpers.save_api_settings_extstate(state)

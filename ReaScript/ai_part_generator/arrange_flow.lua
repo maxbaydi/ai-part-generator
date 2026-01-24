@@ -110,8 +110,9 @@ local function apply_arrange_result_and_continue()
     local tempo_markers = nil
     if arrange_state.allow_tempo_changes and not arrange_state.tempo_applied then
       if type(current.response.tempo_markers) == "table" and #current.response.tempo_markers > 0 then
-        tempo_markers = current.response.tempo_markers
+        arrange_state.deferred_tempo_markers = current.response.tempo_markers
         arrange_state.tempo_applied = true
+        utils.log("Arrange: received tempo markers (deferred until end)")
       end
     end
 
@@ -357,6 +358,7 @@ local function poll_arrange_plan()
           end
         end
       end
+      arrange_state.ensemble_instruments = helpers.build_ensemble_instruments_from_tracks(arrange_state.tracks)
     end
   end
 
@@ -524,6 +526,7 @@ function M.run_arrange(state, profile_list, profiles_by_id)
     use_selected_tracks = state.use_selected_tracks,
     allow_tempo_changes = state.allow_tempo_changes or false,
     tempo_applied = false,
+    deferred_tempo_markers = nil,
   }
 
   helpers.save_api_settings_extstate(state)

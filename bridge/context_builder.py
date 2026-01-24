@@ -1219,27 +1219,25 @@ def build_ensemble_context(
             parts.append(full_analysis_prompt)
             parts.append("")
 
-        has_handoffs = any(prev_part.get("handoff") for prev_part in ensemble.previously_generated)
-        if has_handoffs:
-            parts.append("### MESSAGES FROM PREVIOUS MUSICIANS (HANDOFF)")
-            parts.append("These musicians have already played. Read their guidance carefully:")
+        parts.append("### MESSAGES FROM PREVIOUS MUSICIANS (HANDOFF)")
+        parts.append("These musicians have already played. Read their guidance carefully:")
+        parts.append("")
+        for prev_part in ensemble.previously_generated:
+            part_name = prev_part.get("profile_name", prev_part.get("track_name", "Unknown"))
+            prev_notes = prev_part.get("notes", [])
+            handoff = prev_part.get("handoff")
+            if handoff and isinstance(handoff, dict):
+                validated_handoff = validate_and_fix_handoff(handoff, prev_notes, length_q)
+            else:
+                part_role = str(prev_part.get("role") or "").strip()
+                validated_handoff = generate_synthetic_handoff(prev_notes, part_role, length_q)
+            parts.append(format_handoff_for_prompt(validated_handoff, part_name))
             parts.append("")
-            for prev_part in ensemble.previously_generated:
-                part_name = prev_part.get("profile_name", prev_part.get("track_name", "Unknown"))
-                prev_notes = prev_part.get("notes", [])
-                handoff = prev_part.get("handoff")
-                if handoff:
-                    validated_handoff = validate_and_fix_handoff(handoff, prev_notes, length_q)
-                else:
-                    part_role = str(prev_part.get("role") or "").strip()
-                    validated_handoff = generate_synthetic_handoff(prev_notes, part_role, length_q)
-                parts.append(format_handoff_for_prompt(validated_handoff, part_name))
-                parts.append("")
-            parts.append("HANDOFF PRIORITY:")
-            parts.append("- Consult the GLOBAL PLAN for overall direction")
-            parts.append("- Use HANDOFFS to understand what space is available")
-            parts.append("- If handoff conflicts with plan, FOLLOW THE PLAN")
-            parts.append("")
+        parts.append("HANDOFF PRIORITY:")
+        parts.append("- Consult the GLOBAL PLAN for overall direction")
+        parts.append("- Use HANDOFFS to understand what space is available")
+        parts.append("- If handoff conflicts with plan, FOLLOW THE PLAN")
+        parts.append("")
 
         parts.append("### PREVIOUSLY GENERATED PARTS (in musical notation)")
         parts.append("Format: Bar.Beat:Note(duration,dynamics)")

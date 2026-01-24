@@ -130,6 +130,15 @@ local function apply_plan_order(plan, tracks)
 
   for _, entry in ipairs(plan.role_guidance) do
     if type(entry) == "table" then
+      local entry_index = tonumber(entry.instrument_index)
+      if entry_index and tracks[entry_index] and not used[entry_index] then
+        local track_data = tracks[entry_index]
+        if entry.role and entry.role ~= "" then
+          track_data.role = entry.role
+        end
+        table.insert(ordered, track_data)
+        used[entry_index] = true
+      else
       local instrument_key = normalize_plan_name(entry.instrument)
       if instrument_key ~= "" then
         local best_idx = nil
@@ -161,6 +170,7 @@ local function apply_plan_order(plan, tracks)
           table.insert(ordered, track_data)
           used[best_idx] = true
         end
+      end
       end
     end
   end
@@ -272,6 +282,14 @@ local function validate_time_signature(num, denom)
     return nil, nil
   end
   return num_int, denom_int
+end
+
+local function parse_time_signature_string(value)
+  if not value then
+    return nil, nil
+  end
+  local num_str, denom_str = tostring(value):match("(%d+)%s*/%s*(%d+)")
+  return validate_time_signature(num_str, denom_str)
 end
 
 local function normalize_tempo_markers(markers, length_q)
@@ -980,19 +998,6 @@ local function apply_compose_result_and_continue()
   reaper.defer(start_next_compose_generation)
 end
 
-local function apply_initial_bpm(bpm, start_sec, num, denom)
-  if not bpm or bpm <= 0 then
-    return false
-  end
-  
-  local idx = find_tempo_marker_index(start_sec)
-  reaper.SetTempoTimeSigMarker(0, idx or -1, start_sec, -1, -1, bpm, num, denom, false)
-  reaper.UpdateTimeline()
-  reaper.UpdateArrange()
-  utils.log(string.format("apply_initial_bpm: set initial tempo to %.1f BPM at %.2f sec", bpm, start_sec))
-  return true
-end
-
 local function build_tempo_markers_from_map(tempo_map, num, denom)
   local markers = {}
   if type(tempo_map) ~= "table" or #tempo_map == 0 then
@@ -1000,15 +1005,52 @@ local function build_tempo_markers_from_map(tempo_map, num, denom)
   end
   local quarters_per_bar = num * (4.0 / denom)
   for _, tm in ipairs(tempo_map) do
-    if tm.bar and tm.bar > 1 and tm.bpm then
+    if tm.bar and tm.bar >= 1 and tm.bpm then
       local time_q = (tm.bar - 1) * quarters_per_bar
-      table.insert(markers, {
+      local marker = {
         time_q = time_q,
         bpm = tm.bpm,
         linear = tm.linear or false,
-      })
+      }
+      local num_raw = tm.num or tm.numerator or tm.time_sig_num
+      local denom_raw = tm.denom or tm.denominator or tm.time_sig_denom
+      local map_num, map_denom = validate_time_signature(num_raw, denom_raw)
+      if map_num and map_denom then
+        marker.num = map_num
+        marker.denom = map_denom
+      end
+      table.insert(markers, marker)
     end
   end
+  return markers
+end
+
+local function build_tempo_markers_from_plan(plan, num, denom)
+  local markers = {}
+  if type(plan) ~= "table" then
+    return markers
+  end
+
+  local initial_bpm = tonumber(plan.initial_bpm)
+  if initial_bpm and initial_bpm > 0 then
+    local entry = { time_q = 0, bpm = initial_bpm }
+    if num and denom then
+      entry.num = num
+      entry.denom = denom
+    end
+    table.insert(markers, entry)
+  elseif num and denom then
+    table.insert(markers, { time_q = 0, num = num, denom = denom })
+  end
+
+  local tempo_map = plan.tempo_map
+  if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
+    local map_markers = build_tempo_markers_from_map(tempo_map, num, denom)
+    for _, marker in ipairs(map_markers) do
+      table.insert(markers, marker)
+    end
+  end
+
   return markers
 end
 
@@ -1024,18 +1066,25 @@ local function apply_plan_tempo_if_allowed(state, label)
     return
   end
 
+  local plan_time_sig = state.plan.time_sig or state.plan.time_signature
+  local plan_num, plan_denom = parse_time_signature_string(plan_time_sig)
+  if plan_num and plan_denom then
+    state.num = plan_num
+    state.denom = plan_denom
+    utils.log(string.format("%s: time_sig from plan = %d/%d", label, plan_num, plan_denom))
+  end
+
   local initial_bpm = state.plan.initial_bpm
   if initial_bpm and initial_bpm > 0 then
-    apply_initial_bpm(initial_bpm, state.start_sec, state.num, state.denom)
     state.bpm = initial_bpm
     state.original_bpm = initial_bpm
     utils.log(string.format("%s: initial_bpm from plan = %.1f", label, initial_bpm))
   end
 
-  local tempo_map = state.plan.tempo_map
-  if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
-    state.deferred_tempo_markers = tempo_map
-    utils.log(string.format("%s: saved %d deferred tempo markers for later", label, #tempo_map))
+  local markers = build_tempo_markers_from_plan(state.plan, state.num, state.denom)
+  if #markers > 0 then
+    state.deferred_tempo_markers = markers
+    utils.log(string.format("%s: saved %d deferred tempo markers for later", label, #markers))
   end
 end
 
@@ -1047,8 +1096,14 @@ apply_deferred_tempo_markers_if_allowed = function(state, label)
     return false
   end
   utils.log(string.format("%s: applying %d deferred tempo markers...", label, #state.deferred_tempo_markers))
-  local markers_to_apply = build_tempo_markers_from_map(state.deferred_tempo_markers, state.num, state.denom)
-  if #markers_to_apply > 0 then
+  local markers_to_apply = nil
+  local first_marker = state.deferred_tempo_markers[1]
+  if first_marker and type(first_marker) == "table" and first_marker.time_q ~= nil then
+    markers_to_apply = state.deferred_tempo_markers
+  else
+    markers_to_apply = build_tempo_markers_from_map(state.deferred_tempo_markers, state.num, state.denom)
+  end
+  if markers_to_apply and #markers_to_apply > 0 then
     apply_tempo_markers(markers_to_apply, state.start_sec, state.end_sec)
     utils.log(string.format("%s: deferred tempo markers applied successfully", label))
     return true
@@ -1218,8 +1273,9 @@ local function poll_compose_generation()
     local tempo_markers = nil
     if compose_state.allow_tempo_changes and not compose_state.tempo_applied then
       if type(data.tempo_markers) == "table" and #data.tempo_markers > 0 then
-        tempo_markers = data.tempo_markers
+        compose_state.deferred_tempo_markers = data.tempo_markers
         compose_state.tempo_applied = true
+        utils.log("Compose: received tempo markers (deferred until end)")
       end
     end
 
@@ -1553,8 +1609,9 @@ local function apply_arrange_result_and_continue()
     local tempo_markers = nil
     if arrange_state.allow_tempo_changes and not arrange_state.tempo_applied then
       if type(current.response.tempo_markers) == "table" and #current.response.tempo_markers > 0 then
-        tempo_markers = current.response.tempo_markers
+        arrange_state.deferred_tempo_markers = current.response.tempo_markers
         arrange_state.tempo_applied = true
+        utils.log("Arrange: received tempo markers (deferred until end)")
       end
     end
 
@@ -1819,20 +1876,21 @@ local function poll_arrange_plan()
       utils.log("Arrange plan summary: " .. arrange_state.plan_summary)
     end
     
-    if arrange_state.arrangement_assignments and #arrange_state.arrangement_assignments > 0 then
-      for i, track_data in ipairs(arrange_state.tracks) do
-        for _, assignment in ipairs(arrange_state.arrangement_assignments) do
-          local inst_name = (assignment.instrument or ""):lower()
-          local track_name_lower = (track_data.name or ""):lower()
-          local profile_name_lower = (track_data.profile and track_data.profile.name or ""):lower()
-          if inst_name ~= "" and (track_name_lower:find(inst_name, 1, true) or profile_name_lower:find(inst_name, 1, true) or inst_name:find(track_name_lower, 1, true)) then
-            track_data.role = assignment.role or "unknown"
-            break
+      if arrange_state.arrangement_assignments and #arrange_state.arrangement_assignments > 0 then
+        for i, track_data in ipairs(arrange_state.tracks) do
+          for _, assignment in ipairs(arrange_state.arrangement_assignments) do
+            local inst_name = (assignment.instrument or ""):lower()
+            local track_name_lower = (track_data.name or ""):lower()
+            local profile_name_lower = (track_data.profile and track_data.profile.name or ""):lower()
+            if inst_name ~= "" and (track_name_lower:find(inst_name, 1, true) or profile_name_lower:find(inst_name, 1, true) or inst_name:find(track_name_lower, 1, true)) then
+              track_data.role = assignment.role or "unknown"
+              break
+            end
           end
         end
+        arrange_state.ensemble_instruments = build_ensemble_instruments_from_tracks(arrange_state.tracks)
       end
     end
-  end
 
   reaper.defer(start_next_arrange_generation)
 end
@@ -2029,9 +2087,10 @@ local function run_arrange(state, profile_list, profiles_by_id)
     use_style_mood = state.use_style_mood,
     free_mode = state.free_mode,
     use_selected_tracks = state.use_selected_tracks,
-    allow_tempo_changes = state.allow_tempo_changes or false,
-    tempo_applied = false,
-  }
+      allow_tempo_changes = state.allow_tempo_changes or false,
+      tempo_applied = false,
+      deferred_tempo_markers = nil,
+    }
 
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_PROVIDER, state.api_provider or const.API_PROVIDER_LOCAL, true)
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_KEY, state.api_key or "", true)
@@ -2131,15 +2190,16 @@ local function run_compose(state, profile_list, profiles_by_id)
     key = key,
     api_settings = api_settings,
     ensemble_instruments = ensemble_instruments,
-    prompt = state.prompt or "",
-    musical_style = state.musical_style,
-    generation_mood = state.generation_mood,
-    use_style_mood = state.use_style_mood,
-    free_mode = state.free_mode,
-    use_selected_tracks = state.use_selected_tracks,
-    allow_tempo_changes = state.allow_tempo_changes or false,
-    tempo_applied = false,
-  }
+      prompt = state.prompt or "",
+      musical_style = state.musical_style,
+      generation_mood = state.generation_mood,
+      use_style_mood = state.use_style_mood,
+      free_mode = state.free_mode,
+      use_selected_tracks = state.use_selected_tracks,
+      allow_tempo_changes = state.allow_tempo_changes or false,
+      tempo_applied = false,
+      deferred_tempo_markers = nil,
+    }
 
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_PROVIDER, state.api_provider or const.API_PROVIDER_LOCAL, true)
   reaper.SetExtState(const.SCRIPT_NAME, const.EXTSTATE_API_KEY, state.api_key or "", true)

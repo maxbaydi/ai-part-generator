@@ -378,12 +378,16 @@ def append_plan_sections(
             instrument = normalize_text(entry.get("instrument"))
             role = normalize_text(entry.get("role"))
             register = normalize_text(entry.get("register"))
-            guidance = normalize_text(entry.get("guidance"))
+            guidance = normalize_text(entry.get("guidance") or entry.get("musical_intent"))
             relationship = normalize_text(entry.get("relationship"))
+            instrument_index = entry.get("instrument_index")
 
-            if not instrument:
+            if not instrument and instrument_index is None:
                 continue
-            line = f"- **{instrument}**"
+            label = instrument if instrument else "Instrument"
+            if instrument_index is not None:
+                label = f"{instrument_index}. {label}"
+            line = f"- **{label}**"
             if role:
                 line += f" → {role.upper()}"
             if register:

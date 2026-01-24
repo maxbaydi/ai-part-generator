@@ -131,6 +131,9 @@ def analyze_rhythmic_pattern(notes: List[Dict[str, Any]], time_sig: str = "4/4")
         beat_unit = 4
 
     quarters_per_bar = beats_per_bar * (4.0 / beat_unit)
+    beat_q = 4.0 / beat_unit if beat_unit else 1.0
+    is_compound = beat_unit == 8 and beats_per_bar % 3 == 0
+    pulse_q = beat_q * 3 if is_compound else beat_q
 
     sorted_notes = sorted(notes, key=lambda n: n.get("start_q", 0))
     start_times = [n.get("start_q", 0) for n in sorted_notes]
@@ -140,7 +143,11 @@ def analyze_rhythmic_pattern(notes: List[Dict[str, Any]], time_sig: str = "4/4")
         beat_in_bar = round((t % quarters_per_bar) * 4) / 4
         beat_histogram[beat_in_bar] = beat_histogram.get(beat_in_bar, 0) + 1
 
-    strong_beats = [0, quarters_per_bar / 2] if quarters_per_bar >= 2 else [0]
+    strong_beats = [0.0]
+    if is_compound and beats_per_bar >= 6:
+        strong_beats.append(pulse_q)
+    elif not is_compound and beats_per_bar >= 4:
+        strong_beats.append(beat_q * 2)
     strong_beat_hits = sum(beat_histogram.get(b, 0) for b in strong_beats)
     total_hits = sum(beat_histogram.values())
 
@@ -157,7 +164,12 @@ def analyze_rhythmic_pattern(notes: List[Dict[str, Any]], time_sig: str = "4/4")
         groove_type = "balanced"
 
     sorted_beats = sorted(beat_histogram.items(), key=lambda x: x[1], reverse=True)
-    anchor_beats = [b for b, _ in sorted_beats[:4]]
+    observed_anchor_beats = [b for b, _ in sorted_beats[:4]]
+    anchor_beats = []
+    if quarters_per_bar > 0:
+        anchor_count = int(round(quarters_per_bar / pulse_q)) if pulse_q > 0 else 0
+        for i in range(max(1, anchor_count)):
+            anchor_beats.append(round(i * pulse_q, 3))
 
     durations = [n.get("dur_q", 1.0) for n in sorted_notes]
     duration_counts = Counter(round(d * 4) / 4 for d in durations)
@@ -194,6 +206,7 @@ def analyze_rhythmic_pattern(notes: List[Dict[str, Any]], time_sig: str = "4/4")
         "time_sig": time_sig,
         "groove_type": groove_type,
         "anchor_beats": anchor_beats,
+        "observed_anchor_beats": observed_anchor_beats,
         "common_durations": duration_names,
         "has_repeating_pattern": len(repeating_patterns) > 0,
         "strong_beat_ratio": round(strong_ratio, 2),
@@ -323,8 +336,13 @@ def build_rhythmic_context_prompt(analysis: Dict[str, Any]) -> str:
     anchor_beats = analysis.get("anchor_beats", [])
     if anchor_beats:
         beats_str = ", ".join(str(b) for b in anchor_beats[:4])
-        lines.append(f"- Anchor beats (strong pulse points): {beats_str}")
+        lines.append(f"- Pulse grid (from time signature): {beats_str}")
         lines.append("  ALIGN your accents to these beats for cohesion")
+
+    observed_beats = analysis.get("observed_anchor_beats", [])
+    if observed_beats:
+        obs_str = ", ".join(str(b) for b in observed_beats[:4])
+        lines.append(f"- Observed accents (from existing parts): {obs_str}")
 
     durations = analysis.get("common_durations", [])
     if durations:
@@ -413,17 +431,29 @@ def analyze_previously_generated(
     all_pitches = [n.get("pitch", 60) for n in all_notes]
     occupied_registers = []
     if all_pitches:
-        min_p, max_p = min(all_pitches), max(all_pitches)
-        if min_p < 48:
-            occupied_registers.append("bass")
-        if 48 <= min_p < 60 or 48 <= max_p < 60:
-            occupied_registers.append("low-mid")
-        if 60 <= min_p < 72 or 60 <= max_p < 72:
-            occupied_registers.append("mid")
-        if 72 <= min_p < 84 or 72 <= max_p < 84:
-            occupied_registers.append("high-mid")
-        if max_p >= 84:
-            occupied_registers.append("high")
+        register_hits = {
+            "bass": False,
+            "low-mid": False,
+            "mid": False,
+            "high-mid": False,
+            "high": False,
+        }
+        for pitch in all_pitches:
+            try:
+                pitch_val = int(pitch)
+            except (TypeError, ValueError):
+                continue
+            if pitch_val < 48:
+                register_hits["bass"] = True
+            elif pitch_val < 60:
+                register_hits["low-mid"] = True
+            elif pitch_val < 72:
+                register_hits["mid"] = True
+            elif pitch_val < 84:
+                register_hits["high-mid"] = True
+            else:
+                register_hits["high"] = True
+        occupied_registers = [name for name, hit in register_hits.items() if hit]
 
     available_registers = []
     if "high" not in occupied_registers:

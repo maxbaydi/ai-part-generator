@@ -142,32 +142,29 @@ THREE-LAYER DYNAMICS for realism:
 1. VELOCITY/DYNAMICS (dyn field): Note attack intensity
    - Accent notes: f-fff | Normal: mf-f | Soft passages: p-mp
 
-2. EXPRESSION CURVE: Global phrase shape
+2. EXPRESSION CURVE (CC11): Global phrase shape
    - Controls overall volume envelope over bars/phrases
    - Rises toward climax, falls toward resolution
+   - Smooth, continuous arc across the whole part
 
-3. DYNAMICS CURVE: Global dynamics envelope (CC1)
-   - Shape the overall dynamics flow across the piece
-   - Values: 40-127 (40=pp, 64=mp, 80=mf, 100=f, 120=ff)
-   - SMOOTH transitions - avoid jumps >20 between consecutive breakpoints
-   - Cover the full length with breakpoints every 2-4 bars
+3. DYNAMICS CURVE (CC1): Per-note dynamics for sustained notes
+   - Add gentle swells within each sustained note (start -> peak -> release)
+   - Keep per-note motion smooth; avoid abrupt jumps within a note
+   - Short notes can rely on velocity alone (CC1 optional)
 
-DYNAMICS CURVE EXAMPLE:
+DYNAMICS CURVE EXAMPLE (per-note swell):
 ```
 "dynamics": {"interp": "cubic", "breakpoints": [
-  {"bar": 1, "beat": 1, "value": 50},
-  {"bar": 4, "beat": 1, "value": 70},
-  {"bar": 8, "beat": 1, "value": 90},
-  {"bar": 12, "beat": 1, "value": 100},
-  {"bar": 16, "beat": 1, "value": 80}
+  {"bar": 1, "beat": 1, "value": 58},
+  {"bar": 1, "beat": 1.5, "value": 78},
+  {"bar": 1, "beat": 2, "value": 62}
 ]}
 ```
 
 DYNAMICS CURVE RULES:
-- 8+ breakpoints for 16+ bars, 4+ for shorter pieces
-- Follow DYNAMIC ARC from composition plan
-- Climax bars: values 90-120
-- Quiet sections: values 40-60
+- For sustained notes, add 2-3 CC1 points (start/peak/release)
+- Keep CC1 changes smooth (avoid jumps >20 within a note)
+- Follow DYNAMIC ARC with CC11 (global), not CC1
 
 INSTRUMENT-SPECIFIC:
 - WIND/BRASS: Must breathe! Max single note = 4 beats, then rest 0.25-0.5 beats
@@ -271,17 +268,17 @@ ALTERNATIVE FORMAT (also accepted):
 === DYNAMICS SYSTEM ===
 
 1. DYNAMICS (dyn): Note attack - p, mp, mf, f, ff
-2. EXPRESSION CURVE: Global phrase shape (CC11)
-3. DYNAMICS CURVE: Per-section dynamics envelope (CC1)
+2. EXPRESSION CURVE (CC11): Global phrase shape across the whole part
+3. DYNAMICS CURVE (CC1): Per-note swells for sustained notes
    - Values: 40-127 (40=pp, 64=mp, 80=mf, 100=f, 120=ff)
-   - SMOOTH changes - max jump 20 between breakpoints
-   - 4-8 breakpoints for typical piece
+   - Smooth motion within each note (avoid jumps >20 within a note)
+   - Use 2-3 points per sustained note; short notes can omit CC1
 
-DYNAMICS CURVE EXAMPLE:
+DYNAMICS CURVE EXAMPLE (per-note swell):
 "dynamics": {"interp": "cubic", "breakpoints": [
   {"bar": 1, "beat": 1, "value": 60},
-  {"bar": 5, "beat": 1, "value": 80},
-  {"bar": 9, "beat": 1, "value": 100}
+  {"bar": 1, "beat": 1.5, "value": 78},
+  {"bar": 1, "beat": 2, "value": 64}
 ]}
 
 === ARTICULATIONS ===
@@ -382,6 +379,7 @@ OUTPUT VALID JSON ONLY (no markdown). Do NOT output notes or MIDI data.
   "plan_summary": "Overall guidance: arc, texture, register spacing, role balance. Max 150 words.",
   
   "initial_bpm": 72,
+  "time_sig": "3/4",
   "tempo_map": [
     {"bar": 1, "bpm": 72},
     {"bar": 9, "bpm": 84, "linear": true},
@@ -472,14 +470,20 @@ OUTPUT VALID JSON ONLY (no markdown). Do NOT output notes or MIDI data.
   "role_guidance": [
     {
       "instrument": "Bass",
+      "instrument_index": 1,
+      "role": "bass",
       "register": "E2-G3 (low)",
-      "musical_intent": "What this instrument should contribute to the texture",
+      "guidance": "Anchor roots and drive the pulse",
+      "relationship": "Leave midrange space for harmony",
       "entry_bar": 1
     },
     {
       "instrument": "Violin 1",
+      "instrument_index": 3,
+      "role": "melody",
       "register": "G4-E6 (high)",
-      "musical_intent": "What this instrument should contribute to the texture",
+      "guidance": "Carry the main motif with lyrical phrasing",
+      "relationship": "Lead above inner voices",
       "entry_bar": 5
     }
   ],
@@ -526,7 +530,10 @@ IMPORTANT: Write the motif as ACTUAL NOTES, not abstract intervals!
 === ROLE_GUIDANCE ===
 
 - register: Use note names "E2-G3 (low)" not MIDI numbers
-- musical_intent: Describe the musical contribution, not fixed roles
+- role: Provide clear role labels (melody, bass, harmony, rhythm, pad, countermelody)
+- guidance: Describe the musical contribution (musical intent)
+- relationship: How this part should interact with others (optional)
+- instrument_index: Include when available to disambiguate instruments
 - The actual behavior depends on genre/style context
 
 === GENERATION_PROGRESS ===
@@ -540,13 +547,13 @@ Track what has been generated and what remains:
 === TEMPO CONTROL ===
 
 - initial_bpm: The main tempo for the composition (REQUIRED)
+- time_sig: Optional time signature override (e.g. "6/8", "3/4")
 - tempo_map: List of tempo changes by bar number (OPTIONAL)
   - bar: Bar number where tempo changes
   - bpm: New tempo in BPM
   - linear: true for gradual change (accelerando/ritardando), false for instant
 
-The initial_bpm will be applied BEFORE generation starts.
-All other tempo_map entries will be applied AFTER all parts are generated.
+When tempo/time signature control is enabled, initial_bpm/time_sig/tempo_map are applied AFTER all parts are generated.
 
 EXAMPLES:
 - Romantic: initial_bpm: 68, tempo_map with ritardando at end
@@ -698,12 +705,13 @@ Register adjustment: {register_adjustment}
 - NEVER overlap notes in a melodic line! If note starts at beat 1 with "dh" (3q), next note must start at beat 4+
 
 === DYNAMICS ===
-- DYNAMICS curve (CC1) = section dynamics envelope (values 40-127)
-- EXPRESSION curve (CC11) = global phrase dynamics
+- EXPRESSION curve (CC11) = global phrase dynamics (smooth arc)
+- DYNAMICS curve (CC1) = per-note swells on sustained notes (values 40-127)
 
 DYNAMICS CURVE RULES:
-- Provide 4-8 breakpoints covering the piece
-- SMOOTH transitions (max jump 20 between points)
+- Use CC11 for section-level dynamics
+- For sustained notes, add 2-3 CC1 points (start/peak/release)
+- Keep CC1 changes smooth (max jump 20 within a note)
 - Follow source material dynamics
 - NO FLAT dynamics on sustained notes!
 

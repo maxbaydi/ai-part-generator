@@ -458,7 +458,7 @@ def generate(request: GenerateRequest) -> JSONResponse:
     source_instrument = ""
     current_role = ""
     is_ensemble = bool(request.ensemble and request.ensemble.total_instruments > 1)
-    if request.free_mode and request.ensemble:
+    if request.ensemble:
         current_inst = request.ensemble.current_instrument or {}
         current_role = str(current_inst.get("role", "")).lower()
         gen_order = request.ensemble.generation_order or 1

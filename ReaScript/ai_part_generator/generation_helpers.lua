@@ -181,6 +181,15 @@ function M.apply_plan_order(plan, tracks)
 
   for _, entry in ipairs(plan.role_guidance) do
     if type(entry) == "table" then
+      local entry_index = tonumber(entry.instrument_index)
+      if entry_index and tracks[entry_index] and not used[entry_index] then
+        local track_data = tracks[entry_index]
+        if entry.role and entry.role ~= "" then
+          track_data.role = entry.role
+        end
+        table.insert(ordered, track_data)
+        used[entry_index] = true
+      else
       local instrument_key = M.normalize_plan_name(entry.instrument)
       if instrument_key ~= "" then
         local best_idx = nil
@@ -212,6 +221,7 @@ function M.apply_plan_order(plan, tracks)
           table.insert(ordered, track_data)
           used[best_idx] = true
         end
+      end
       end
     end
   end
@@ -321,6 +331,14 @@ function M.validate_time_signature(num, denom)
     return nil, nil
   end
   return num_int, denom_int
+end
+
+function M.parse_time_signature_string(value)
+  if not value then
+    return nil, nil
+  end
+  local num_str, denom_str = tostring(value):match("(%d+)%s*/%s*(%d+)")
+  return M.validate_time_signature(num_str, denom_str)
 end
 
 function M.normalize_tempo_markers(markers, length_q)
@@ -500,19 +518,6 @@ function M.build_request(start_sec, end_sec, bpm, num, denom, key, profile_id, a
   return request
 end
 
-function M.apply_initial_bpm(bpm, start_sec, num, denom)
-  if not bpm or bpm <= 0 then
-    return false
-  end
-
-  local idx = M.find_tempo_marker_index(start_sec)
-  reaper.SetTempoTimeSigMarker(0, idx or NEW_MARKER_INDEX, start_sec, REAPER_KEEP_VALUE, REAPER_KEEP_VALUE, bpm, num, denom, false)
-  reaper.UpdateTimeline()
-  reaper.UpdateArrange()
-  utils.log(string.format("apply_initial_bpm: set initial tempo to %.1f BPM at %.2f sec", bpm, start_sec))
-  return true
-end
-
 function M.build_tempo_markers_from_map(tempo_map, num, denom)
   local markers = {}
   if type(tempo_map) ~= "table" or #tempo_map == 0 then
@@ -520,15 +525,52 @@ function M.build_tempo_markers_from_map(tempo_map, num, denom)
   end
   local quarters_per_bar = num * (DEFAULT_TIME_SIG_NUM / denom)
   for _, tm in ipairs(tempo_map) do
-    if tm.bar and tm.bar > 1 and tm.bpm then
+    if tm.bar and tm.bar >= 1 and tm.bpm then
       local time_q = (tm.bar - 1) * quarters_per_bar
-      table.insert(markers, {
+      local marker = {
         time_q = time_q,
         bpm = tm.bpm,
         linear = tm.linear or false,
-      })
+      }
+      local num_raw = tm.num or tm.numerator or tm.time_sig_num
+      local denom_raw = tm.denom or tm.denominator or tm.time_sig_denom
+      local map_num, map_denom = M.validate_time_signature(num_raw, denom_raw)
+      if map_num and map_denom then
+        marker.num = map_num
+        marker.denom = map_denom
+      end
+      table.insert(markers, marker)
     end
   end
+  return markers
+end
+
+function M.build_tempo_markers_from_plan(plan, num, denom)
+  local markers = {}
+  if type(plan) ~= "table" then
+    return markers
+  end
+
+  local initial_bpm = tonumber(plan.initial_bpm)
+  if initial_bpm and initial_bpm > 0 then
+    local entry = { time_q = 0, bpm = initial_bpm }
+    if num and denom then
+      entry.num = num
+      entry.denom = denom
+    end
+    table.insert(markers, entry)
+  elseif num and denom then
+    table.insert(markers, { time_q = 0, num = num, denom = denom })
+  end
+
+  local tempo_map = plan.tempo_map
+  if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
+    local map_markers = M.build_tempo_markers_from_map(tempo_map, num, denom)
+    for _, marker in ipairs(map_markers) do
+      table.insert(markers, marker)
+    end
+  end
+
   return markers
 end
 
@@ -544,18 +586,25 @@ function M.apply_plan_tempo_if_allowed(state, label)
     return
   end
 
+  local plan_time_sig = state.plan.time_sig or state.plan.time_signature
+  local plan_num, plan_denom = M.parse_time_signature_string(plan_time_sig)
+  if plan_num and plan_denom then
+    state.num = plan_num
+    state.denom = plan_denom
+    utils.log(string.format("%s: time_sig from plan = %d/%d", label, plan_num, plan_denom))
+  end
+
   local initial_bpm = state.plan.initial_bpm
   if initial_bpm and initial_bpm > 0 then
-    M.apply_initial_bpm(initial_bpm, state.start_sec, state.num, state.denom)
     state.bpm = initial_bpm
     state.original_bpm = initial_bpm
     utils.log(string.format("%s: initial_bpm from plan = %.1f", label, initial_bpm))
   end
 
-  local tempo_map = state.plan.tempo_map
-  if tempo_map and type(tempo_map) == "table" and #tempo_map > 0 then
-    state.deferred_tempo_markers = tempo_map
-    utils.log(string.format("%s: saved %d deferred tempo markers for later", label, #tempo_map))
+  local markers = M.build_tempo_markers_from_plan(state.plan, state.num, state.denom)
+  if #markers > 0 then
+    state.deferred_tempo_markers = markers
+    utils.log(string.format("%s: saved %d deferred tempo markers for later", label, #markers))
   end
 end
 
@@ -567,8 +616,14 @@ function M.apply_deferred_tempo_markers_if_allowed(state, label)
     return false
   end
   utils.log(string.format("%s: applying %d deferred tempo markers...", label, #state.deferred_tempo_markers))
-  local markers_to_apply = M.build_tempo_markers_from_map(state.deferred_tempo_markers, state.num, state.denom)
-  if #markers_to_apply > 0 then
+  local markers_to_apply = nil
+  local first_marker = state.deferred_tempo_markers[1]
+  if first_marker and type(first_marker) == "table" and first_marker.time_q ~= nil then
+    markers_to_apply = state.deferred_tempo_markers
+  else
+    markers_to_apply = M.build_tempo_markers_from_map(state.deferred_tempo_markers, state.num, state.denom)
+  end
+  if markers_to_apply and #markers_to_apply > 0 then
     M.apply_tempo_markers(markers_to_apply, state.start_sec, state.end_sec)
     utils.log(string.format("%s: deferred tempo markers applied successfully", label))
     return true
