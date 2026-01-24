@@ -12,6 +12,7 @@ try:
     from models import ArrangeRequest, EnhanceRequest, GenerateRequest
     from profile_utils import deep_merge, load_profile, resolve_preset
     from prompt_builder import build_arrange_plan_prompt, build_chat_messages, build_plan_prompt, build_prompt
+    from prompt_builder_common import extract_role_from_plan
     from llm_client import call_llm, parse_llm_json, resolve_model
     from prompt_enhancer import ENHANCER_SYSTEM_PROMPT, build_enhancer_prompt, extract_enhanced_prompt
     from promts import (
@@ -37,6 +38,7 @@ except ImportError:
     from .models import ArrangeRequest, EnhanceRequest, GenerateRequest
     from .profile_utils import deep_merge, load_profile, resolve_preset
     from .prompt_builder import build_arrange_plan_prompt, build_chat_messages, build_plan_prompt, build_prompt
+    from .prompt_builder_common import extract_role_from_plan
     from .llm_client import call_llm, parse_llm_json, resolve_model
     from .prompt_enhancer import ENHANCER_SYSTEM_PROMPT, build_enhancer_prompt, extract_enhanced_prompt
     from .promts import (
@@ -461,6 +463,15 @@ def generate(request: GenerateRequest) -> JSONResponse:
     if request.ensemble:
         current_inst = request.ensemble.current_instrument or {}
         current_role = str(current_inst.get("role", "")).lower()
+        if current_role in ("", "unknown"):
+            plan_data = request.ensemble.plan if request.ensemble else None
+            inst_index = current_inst.get("index") or request.ensemble.current_instrument_index
+            profile_name = current_inst.get("profile_name") or ""
+            track_name = current_inst.get("track_name") or ""
+            family = current_inst.get("family") or ""
+            resolved = extract_role_from_plan(plan_data, profile_name, track_name, inst_index, family)
+            if resolved and resolved.lower() != "unknown":
+                current_role = resolved.lower()
         gen_order = request.ensemble.generation_order or 1
         existing_motif = request.ensemble.generated_motif
         if current_role in ("melody", "lead") and gen_order <= 2 and not existing_motif:

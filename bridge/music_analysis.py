@@ -533,7 +533,7 @@ def build_full_context_prompt(
         lines.append("")
 
     lines.append("### YOUR TASK")
-    if current_role:
+    if current_role and str(current_role).lower() != "unknown":
         lines.append(f"Your role: {current_role.upper()}")
 
     lines.append("1. DO NOT duplicate existing melodies/rhythms")

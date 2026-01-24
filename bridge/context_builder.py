@@ -107,6 +107,80 @@ ROLE_HINTS = {
     "drums": "Percussion section",
 }
 
+ROLE_FAMILY_DEFAULTS = {
+    "bass": "bass",
+    "drums": "rhythm",
+    "percussion": "rhythm",
+    "strings": "harmony",
+    "woodwinds": "melody",
+    "brass": "melody",
+}
+
+
+def normalize_role(role: Any) -> str:
+    role_str = str(role or "").strip()
+    if role_str.lower() == "unknown":
+        return ""
+    return role_str
+
+
+def resolve_role_from_plan(
+    plan: Optional[Dict[str, Any]],
+    inst_index: Optional[int],
+    track_name: str,
+    profile_name: str,
+) -> str:
+    if not isinstance(plan, dict):
+        return ""
+    role_guidance = plan.get("role_guidance", [])
+    if not isinstance(role_guidance, list):
+        return ""
+    track_norm = normalize_track_name(track_name)
+    profile_norm = normalize_track_name(profile_name)
+    for entry in role_guidance:
+        if not isinstance(entry, dict):
+            continue
+        entry_index = entry.get("instrument_index")
+        if entry_index is not None and inst_index is not None:
+            try:
+                if int(entry_index) != int(inst_index):
+                    continue
+            except (TypeError, ValueError):
+                continue
+        else:
+            inst_name = normalize_track_name(entry.get("instrument"))
+            if not inst_name:
+                continue
+            if inst_name not in {track_norm, profile_norm}:
+                continue
+        role = normalize_role(entry.get("role"))
+        if role:
+            return role
+    return ""
+
+
+def resolve_current_role(
+    ensemble: Optional[EnsembleInfo],
+    current_inst: Dict[str, Any],
+    current_role: str,
+) -> str:
+    role = normalize_role(current_role)
+    if role:
+        return role
+    inst_index = None
+    if current_inst:
+        inst_index = current_inst.get("index")
+    if inst_index is None and ensemble:
+        inst_index = ensemble.current_instrument_index
+    track_name = str(current_inst.get("track_name", "")).strip()
+    profile_name = str(current_inst.get("profile_name", "")).strip()
+    plan = ensemble.plan if ensemble else None
+    role = resolve_role_from_plan(plan, inst_index, track_name, profile_name)
+    if role:
+        return role
+    family = str(current_inst.get("family", "")).strip().lower()
+    return ROLE_FAMILY_DEFAULTS.get(family, "")
+
 CC_TREND_WINDOW_RATIO = 0.2
 CC_TREND_MIN_DELTA = 8
 CC_TREND_MIN_EVENTS = 4
@@ -1156,7 +1230,7 @@ def build_ensemble_context(
     current_inst = ensemble.current_instrument or {}
     current_track = str(current_inst.get("track_name", "")).strip().lower()
     current_profile = str(current_inst.get("profile_name", "")).strip().lower()
-    current_role = str(current_inst.get("role", "")).strip()
+    current_role = resolve_current_role(ensemble, current_inst, current_inst.get("role", ""))
 
     def format_inst_label(inst: Any) -> str:
         track = str(inst.track_name or "").strip()
@@ -1267,7 +1341,7 @@ def build_ensemble_context(
 
     current_inst = ensemble.current_instrument
     if current_inst:
-        role = current_inst.get("role", "unknown").lower()
+        role = normalize_role(current_inst.get("role", "")).lower()
         family = current_inst.get("family", "unknown").lower()
         hint = ROLE_HINTS.get(role) or ROLE_HINTS.get(family, "")
         if hint:
